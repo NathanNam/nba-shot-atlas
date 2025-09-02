@@ -132,8 +132,8 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
     const threePointY = courtHeight - threePointSideHeight;
     // Left straight line
     let pathD = `M ${centerX - threePointSideRadius} 0 L ${centerX - threePointSideRadius} ${threePointY}`;
-    // Arc (sweep flag 0 to curve away from basket)
-    pathD += ` A ${threePointRadius} ${threePointRadius} 0 0 0 ${centerX + threePointSideRadius} ${threePointY}`;
+    // Arc (sweep flag 1 to curve toward baseline)
+    pathD += ` A ${threePointRadius} ${threePointRadius} 0 0 1 ${centerX + threePointSideRadius} ${threePointY}`;
     // Right straight line
     pathD += ` L ${centerX + threePointSideRadius} 0`;
     
