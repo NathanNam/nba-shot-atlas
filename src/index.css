@@ -2,41 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* NBA Shot Chart Analytics Design System
+All colors MUST be HSL for proper theming
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* NBA Dark Theme */
+    --background: 220 13% 8%;
+    --foreground: 210 20% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 220 13% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 220 13% 12%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* NBA Primary Colors */
+    --primary: 350 85% 47%; /* NBA Red */
+    --primary-foreground: 210 20% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 13% 15%;
+    --secondary-foreground: 210 20% 95%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 13% 15%;
+    --muted-foreground: 215 15% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* NBA Accent */
+    --accent: 45 95% 58%; /* NBA Gold */
+    --accent-foreground: 220 13% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* NBA Blue */
+    --nba-blue: 212 85% 32%;
+    --nba-blue-foreground: 210 20% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 98%;
 
-    --radius: 0.5rem;
+    --border: 220 13% 20%;
+    --input: 220 13% 15%;
+    --ring: 350 85% 47%;
+
+    --radius: 0.75rem;
+
+    /* Court Colors */
+    --court-background: 25 35% 45%; /* Basketball court brown */
+    --court-lines: 0 0% 95%; /* White court lines */
+    --court-restricted: 220 13% 25%; /* Restricted area */
+
+    /* Heat Map Colors */
+    --heat-cold: 220 85% 45%; /* Cold zones - blue */
+    --heat-neutral: 45 15% 75%; /* Neutral zones */
+    --heat-warm: 25 85% 55%; /* Warm zones - orange */
+    --heat-hot: 350 85% 55%; /* Hot zones - red */
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--nba-blue)));
+    --gradient-court: radial-gradient(ellipse at center, hsl(var(--court-background)), hsl(25 25% 35%));
+    --gradient-stats: linear-gradient(180deg, hsl(var(--card)), hsl(220 13% 8%));
+
+    /* Shadows */
+    --shadow-court: 0 20px 60px -20px hsl(var(--primary) / 0.3);
+    --shadow-card: 0 10px 30px -10px hsl(220 13% 5% / 0.5);
+    --shadow-glow: 0 0 40px hsl(var(--accent) / 0.2);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     --sidebar-background: 0 0% 98%;
 
@@ -55,42 +87,14 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Light mode keeps the same NBA theme but with lighter backgrounds */
+  .light {
+    --background: 210 20% 98%;
+    --foreground: 220 13% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 15%;
+    --border: 220 13% 85%;
+    --input: 220 13% 85%;
   }
 }
 
@@ -100,6 +104,68 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* NBA Typography */
+  .text-nba-primary {
+    @apply text-primary;
+  }
+
+  .text-nba-blue {
+    color: hsl(var(--nba-blue));
+  }
+
+  .text-court-lines {
+    color: hsl(var(--court-lines));
+  }
+
+  /* Heat Map Colors */
+  .bg-heat-cold {
+    background-color: hsl(var(--heat-cold));
+  }
+
+  .bg-heat-warm {
+    background-color: hsl(var(--heat-warm));
+  }
+
+  .bg-heat-hot {
+    background-color: hsl(var(--heat-hot));
+  }
+
+  /* Gradients */
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .bg-gradient-court {
+    background: var(--gradient-court);
+  }
+
+  .bg-gradient-stats {
+    background: var(--gradient-stats);
+  }
+
+  /* Animations */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-spring {
+    transition: var(--transition-spring);
+  }
+
+  /* Glowing effects */
+  .glow-accent {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-court {
+    box-shadow: var(--shadow-court);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
   }
 }
