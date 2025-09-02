@@ -130,12 +130,12 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
     // Three-point line
     const threePointLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
     const threePointY = courtHeight - threePointSideHeight;
-    // Left straight line
-    let pathD = `M ${centerX - threePointSideRadius} 0 L ${centerX - threePointSideRadius} ${threePointY}`;
+    // Left straight line - extend to baseline
+    let pathD = `M ${centerX - threePointSideRadius} ${courtHeight} L ${centerX - threePointSideRadius} ${threePointY}`;
     // Arc (sweep flag 1 to curve toward baseline)
     pathD += ` A ${threePointRadius} ${threePointRadius} 0 0 1 ${centerX + threePointSideRadius} ${threePointY}`;
-    // Right straight line
-    pathD += ` L ${centerX + threePointSideRadius} 0`;
+    // Right straight line - extend to baseline
+    pathD += ` L ${centerX + threePointSideRadius} ${courtHeight}`;
     
     threePointLine.setAttribute("d", pathD);
     threePointLine.setAttribute("fill", "none");
