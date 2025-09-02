@@ -90,8 +90,11 @@ const Index = () => {
             <div className="text-sm text-muted-foreground">
               NBA Shot Analytics • Data from 2004-2025 seasons
             </div>
-            <div className="text-sm text-muted-foreground">
-              Built with modern web technologies
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>Built with modern web technologies</span>
+              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-mono text-xs">
+                v1.0.0
+              </span>
             </div>
           </div>
         </div>
