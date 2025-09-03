@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { NBAApiService } from '@/services/nbaApi';
 
 interface PlayerOption {
   id: string;
@@ -40,37 +39,34 @@ export function useAvailablePlayers(season: string) {
         
         const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
         const playerIdIndex = headers.indexOf('personId');
+        const playerNameIndex = headers.indexOf('playerNameI');
         
-        if (playerIdIndex === -1) {
+        if (playerIdIndex === -1 || playerNameIndex === -1) {
           setPlayers([]);
           return;
         }
         
-        const uniquePlayerIds = new Set<string>();
+        const uniquePlayers = new Map<string, string>();
         
-        for (let i = 1; i < Math.min(lines.length, 1000); i++) { // Sample first 1000 rows for performance
-          const values = lines[i].split(',');
-          if (values.length > playerIdIndex && values[playerIdIndex]) {
-            const playerId = values[playerIdIndex].replace(/"/g, '').trim();
-            if (playerId && !isNaN(Number(playerId))) {
-              uniquePlayerIds.add(playerId);
+        // Extract unique player ID -> Name pairs from CSV (much faster than API calls)
+        for (let i = 1; i < Math.min(lines.length, 2000); i++) {
+          const values = parseCsvLine(lines[i]);
+          if (values.length > Math.max(playerIdIndex, playerNameIndex)) {
+            const playerId = values[playerIdIndex]?.replace(/"/g, '').trim();
+            const playerName = values[playerNameIndex]?.replace(/"/g, '').trim();
+            
+            if (playerId && playerName && !isNaN(Number(playerId))) {
+              uniquePlayers.set(playerId, playerName);
             }
           }
         }
         
-        // Fetch player names from NBA API
-        const playerIds = Array.from(uniquePlayerIds).slice(0, 50); // Limit to 50 players for performance
-        const playerInfoMap = await NBAApiService.getMultiplePlayerInfo(playerIds);
+        const playersArray: PlayerOption[] = Array.from(uniquePlayers.entries()).map(([id, name]) => ({
+          id,
+          name
+        }));
         
-        const playersWithNames: PlayerOption[] = [];
-        playerInfoMap.forEach((info, playerId) => {
-          playersWithNames.push({
-            id: playerId,
-            name: info.displayName
-          });
-        });
-        
-        setPlayers(playersWithNames.sort((a, b) => a.name.localeCompare(b.name)));
+        setPlayers(playersArray.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error) {
         console.error('Error loading players:', error);
         // Fallback to hardcoded players
@@ -91,4 +87,27 @@ export function useAvailablePlayers(season: string) {
   }, [season]);
 
   return { players, loading };
+}
+
+// Helper function to properly parse CSV lines with quoted values
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current.trim());
+  return result;
 }
