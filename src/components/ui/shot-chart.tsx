@@ -205,6 +205,29 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
           className="border border-border rounded-lg shadow-court"
         />
       </div>
+      
+      {/* Legend */}
+      <div className="flex justify-center items-center gap-6 mt-4 pt-4 border-t border-border">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-4 h-4 rounded-full border border-green-500" 
+            style={{ backgroundColor: "hsl(var(--heat-hot))" }}
+          />
+          <span className="text-sm text-muted-foreground">Made Shot</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-4 h-4 rounded-full border border-red-500" 
+            style={{ backgroundColor: "hsl(var(--heat-cold))" }}
+          />
+          <span className="text-sm text-muted-foreground">Missed Shot</span>
+        </div>
+        {data && data.length > 0 && (
+          <div className="text-xs text-muted-foreground ml-4">
+            {data.length} total shots
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
