@@ -270,6 +270,38 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
       hexPath.setAttribute("data-efficiency", (efficiency * 100).toFixed(1));
       
       svg.appendChild(hexPath);
+      
+      // Add percentage text inside hexagon
+      if (bin.total >= 5) { // Only show text for zones with enough shots
+        const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        
+        // Player percentage
+        const playerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        playerText.setAttribute("x", bin.x.toString());
+        playerText.setAttribute("y", (bin.y - 2).toString());
+        playerText.setAttribute("text-anchor", "middle");
+        playerText.setAttribute("font-size", "8");
+        playerText.setAttribute("font-weight", "bold");
+        playerText.setAttribute("fill", "white");
+        playerText.setAttribute("stroke", "black");
+        playerText.setAttribute("stroke-width", "0.3");
+        playerText.textContent = `${(percentage * 100).toFixed(0)}%`;
+        
+        // League average
+        const leagueText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        leagueText.setAttribute("x", bin.x.toString());
+        leagueText.setAttribute("y", (bin.y + 6).toString());
+        leagueText.setAttribute("text-anchor", "middle");
+        leagueText.setAttribute("font-size", "6");
+        leagueText.setAttribute("fill", "white");
+        leagueText.setAttribute("stroke", "black");
+        leagueText.setAttribute("stroke-width", "0.2");
+        leagueText.textContent = `(${(leagueAvg * 100).toFixed(0)}%)`;
+        
+        textGroup.appendChild(playerText);
+        textGroup.appendChild(leagueText);
+        svg.appendChild(textGroup);
+      }
     });
   };
 
