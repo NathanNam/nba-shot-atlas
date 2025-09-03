@@ -2,25 +2,13 @@ import { useState } from "react";
 import { NavigationBar } from "@/components/ui/navigation-bar";
 import { PlayerSelector } from "@/components/ui/player-selector";
 import { ShotChart } from "@/components/ui/shot-chart";
-import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { EntityShotChart } from "@/components/EntityShotChart";
+import { EntityStatistics } from "@/components/EntityStatistics";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
   const [selectedEntities, setSelectedEntities] = useState<string[]>(["Stephen Curry"]);
-
-  // Sample statistics data - will be replaced with real data
-  const sampleStats = {
-    totalShots: 1247,
-    madeShots: 623,
-    fieldGoalPercentage: 0.499,
-    twoPointPercentage: 0.567,
-    threePointPercentage: 0.342,
-    hottestZone: "Paint Area",
-    coldestZone: "Left Corner 3",
-    favoriteSpot: "Right Elbow"
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,16 +56,17 @@ const Index = () => {
             {/* Statistics Panels */}
             <div className="space-y-6">
               {viewMode === "league" ? (
-                <StatisticsPanel
-                  entityName="NBA League"
-                  stats={sampleStats}
-                />
+                <div className="p-6 bg-card border-border shadow-card rounded-lg text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">League Statistics</h3>
+                  <p className="text-muted-foreground">League-wide statistics coming soon</p>
+                </div>
               ) : (
                 selectedEntities.map((entity) => (
-                  <StatisticsPanel
+                  <EntityStatistics
                     key={entity}
                     entityName={entity}
-                    stats={sampleStats}
+                    selectedSeason={selectedSeason}
+                    viewMode={viewMode}
                   />
                 ))
               )}
