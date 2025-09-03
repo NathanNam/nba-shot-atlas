@@ -30,7 +30,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
-  const { players, loading } = useAvailablePlayers(selectedSeason);
+  const { players, loading, enhancing } = useAvailablePlayers(selectedSeason);
   
   const entities = viewMode === "player" ? players.map(p => p.name) : teams;
   const entityOptions = viewMode === "player" ? players : teams.map(t => ({ id: t, name: t }));
@@ -129,7 +129,12 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
             />
             {loading ? (
               <div className="p-4 text-center text-muted-foreground">Loading players...</div>
-            ) : (
+            ) : enhancing ? (
+              <div className="p-2 text-center text-xs text-muted-foreground border-b">
+                Enhancing player names...
+              </div>
+            ) : null}
+            {!loading ? (
               <>
                 <CommandEmpty>No {viewMode} found.</CommandEmpty>
                 <CommandGroup className="max-h-64 overflow-auto">

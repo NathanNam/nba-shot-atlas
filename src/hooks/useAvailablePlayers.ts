@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { NBAApiService } from '@/services/nbaApi';
 
 interface PlayerOption {
   id: string;
   name: string;
+  isEnhanced?: boolean; // Indicates if we have the full name from NBA API
 }
 
 export function useAvailablePlayers(season: string) {
   const [players, setPlayers] = useState<PlayerOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -20,13 +23,14 @@ export function useAvailablePlayers(season: string) {
         if (!response.ok) {
           // Fallback to hardcoded players if CSV not found
           setPlayers([
-            { id: "2544", name: "LeBron James" },
-            { id: "201939", name: "Stephen Curry" },
-            { id: "201142", name: "Kevin Durant" },
-            { id: "203507", name: "Giannis Antetokounmpo" },
-            { id: "1629029", name: "Luka Dončić" },
-            { id: "1628369", name: "Jayson Tatum" }
+            { id: "2544", name: "LeBron James", isEnhanced: true },
+            { id: "201939", name: "Stephen Curry", isEnhanced: true },
+            { id: "201142", name: "Kevin Durant", isEnhanced: true },
+            { id: "203507", name: "Giannis Antetokounmpo", isEnhanced: true },
+            { id: "1629029", name: "Luka Dončić", isEnhanced: true },
+            { id: "1628369", name: "Jayson Tatum", isEnhanced: true }
           ]);
+          setLoading(false);
           return;
         }
         
@@ -34,6 +38,7 @@ export function useAvailablePlayers(season: string) {
         const lines = csvText.trim().split('\n');
         if (lines.length < 2) {
           setPlayers([]);
+          setLoading(false);
           return;
         }
         
@@ -43,6 +48,7 @@ export function useAvailablePlayers(season: string) {
         
         if (playerIdIndex === -1 || playerNameIndex === -1) {
           setPlayers([]);
+          setLoading(false);
           return;
         }
         
@@ -61,32 +67,76 @@ export function useAvailablePlayers(season: string) {
           }
         }
         
-        const playersArray: PlayerOption[] = Array.from(uniquePlayers.entries()).map(([id, name]) => ({
+        const initialPlayers: PlayerOption[] = Array.from(uniquePlayers.entries()).map(([id, name]) => ({
           id,
-          name
+          name,
+          isEnhanced: false
         }));
         
-        setPlayers(playersArray.sort((a, b) => a.name.localeCompare(b.name)));
+        const sortedPlayers = initialPlayers.sort((a, b) => a.name.localeCompare(b.name));
+        setPlayers(sortedPlayers);
+        setLoading(false);
+        
+        // Now enhance with full names from NBA API in the background
+        enhancePlayerNames(sortedPlayers);
+        
       } catch (error) {
         console.error('Error loading players:', error);
         // Fallback to hardcoded players
         setPlayers([
-          { id: "2544", name: "LeBron James" },
-          { id: "201939", name: "Stephen Curry" },
-          { id: "201142", name: "Kevin Durant" },
-          { id: "203507", name: "Giannis Antetokounmpo" },
-          { id: "1629029", name: "Luka Dončić" },
-          { id: "1628369", name: "Jayson Tatum" }
+          { id: "2544", name: "LeBron James", isEnhanced: true },
+          { id: "201939", name: "Stephen Curry", isEnhanced: true },
+          { id: "201142", name: "Kevin Durant", isEnhanced: true },
+          { id: "203507", name: "Giannis Antetokounmpo", isEnhanced: true },
+          { id: "1629029", name: "Luka Dončić", isEnhanced: true },
+          { id: "1628369", name: "Jayson Tatum", isEnhanced: true }
         ]);
-      } finally {
         setLoading(false);
+      }
+    };
+
+    const enhancePlayerNames = async (initialPlayers: PlayerOption[]) => {
+      setEnhancing(true);
+      
+      try {
+        // Take the most popular players first (first 20 in the list)
+        const playersToEnhance = initialPlayers.slice(0, 20);
+        const playerIds = playersToEnhance.map(p => p.id);
+        
+        const playerInfoMap = await NBAApiService.getMultiplePlayerInfo(playerIds);
+        
+        setPlayers(currentPlayers => {
+          const enhancedPlayers = currentPlayers.map(player => {
+            const enhancedInfo = playerInfoMap.get(player.id);
+            if (enhancedInfo) {
+              return {
+                ...player,
+                name: enhancedInfo.displayName,
+                isEnhanced: true
+              };
+            }
+            return player;
+          });
+          
+          return enhancedPlayers.sort((a, b) => a.name.localeCompare(b.name));
+        });
+        
+      } catch (error) {
+        console.warn('Failed to enhance player names:', error);
+      } finally {
+        setEnhancing(false);
       }
     };
 
     loadPlayers();
   }, [season]);
 
-  return { players, loading };
+  return { 
+    players, 
+    loading, 
+    enhancing,
+    hasEnhancedNames: players.some(p => p.isEnhanced)
+  };
 }
 
 // Helper function to properly parse CSV lines with quoted values
