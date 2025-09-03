@@ -15,6 +15,11 @@ interface PlayerSelectorProps {
   selectedSeason: string;
 }
 
+interface PlayerOption {
+  id: string;
+  name: string;
+}
+
 const teams = [
   "ATL", "BOS", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW", "HOU",
   "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NYK", "OKC",
@@ -27,20 +32,21 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   
   const { players, loading } = useAvailablePlayers(selectedSeason);
   
-  const entities = viewMode === "player" ? players : teams;
+  const entities = viewMode === "player" ? players.map(p => p.name) : teams;
+  const entityOptions = viewMode === "player" ? players : teams.map(t => ({ id: t, name: t }));
   const maxSelections = 4;
   const isLeagueView = viewMode === "league";
 
-  const handleSelect = (entity: string) => {
-    if (selectedEntities.includes(entity)) {
-      onEntitiesChange(selectedEntities.filter(item => item !== entity));
+  const handleSelect = (entityName: string) => {
+    if (selectedEntities.includes(entityName)) {
+      onEntitiesChange(selectedEntities.filter(item => item !== entityName));
     } else if (selectedEntities.length < maxSelections) {
-      onEntitiesChange([...selectedEntities, entity]);
+      onEntitiesChange([...selectedEntities, entityName]);
     }
   };
 
-  const handleRemove = (entity: string) => {
-    onEntitiesChange(selectedEntities.filter(item => item !== entity));
+  const handleRemove = (entityName: string) => {
+    onEntitiesChange(selectedEntities.filter(item => item !== entityName));
   };
 
   const filteredEntities = entities.filter(entity =>
@@ -127,27 +133,27 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
               <>
                 <CommandEmpty>No {viewMode} found.</CommandEmpty>
                 <CommandGroup className="max-h-64 overflow-auto">
-              {filteredEntities.map((entity) => (
-                <CommandItem
-                  key={entity}
-                  value={entity}
-                  onSelect={() => handleSelect(entity)}
-                  className="cursor-pointer hover:bg-accent/20"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedEntities.includes(entity) ? "opacity-100 text-primary" : "opacity-0"
-                    )}
-                  />
-                  {entity}
-                  {selectedEntities.includes(entity) && (
-                    <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary text-xs">
-                      Selected
-                    </Badge>
-                  )}
-                </CommandItem>
-              ))}
+                  {filteredEntities.map((entityName) => (
+                    <CommandItem
+                      key={entityName}
+                      value={entityName}
+                      onSelect={() => handleSelect(entityName)}
+                      className="cursor-pointer hover:bg-accent/20"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedEntities.includes(entityName) ? "opacity-100 text-primary" : "opacity-0"
+                        )}
+                      />
+                      {entityName}
+                      {selectedEntities.includes(entityName) && (
+                        <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary text-xs">
+                          Selected
+                        </Badge>
+                      )}
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               </>
             )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export interface ShotData {
-  playerNameI: string;
+  personId: string;
   teamTricode: string;
   xLegacy: number;
   yLegacy: number;
@@ -12,14 +12,14 @@ export interface ShotData {
   shotValue: number;
 }
 
-export function useShotData(season: string, entityName: string, viewMode: 'player' | 'team' | 'league') {
+export function useShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
   const [shotData, setShotData] = useState<ShotData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadShotData = async () => {
-      if (!entityName) return;
+      if (!entityId) return;
       
       setLoading(true);
       setError(null);
@@ -42,11 +42,11 @@ export function useShotData(season: string, entityName: string, viewMode: 'playe
         
         if (viewMode === 'player') {
           filteredShots = shots.filter(shot => 
-            shot.playerNameI === entityName
+            shot.personId === entityId
           );
         } else if (viewMode === 'team') {
           filteredShots = shots.filter(shot => 
-            shot.teamTricode === entityName
+            shot.teamTricode === entityId
           );
         }
         // For league mode, use all shots
@@ -61,7 +61,7 @@ export function useShotData(season: string, entityName: string, viewMode: 'playe
     };
 
     loadShotData();
-  }, [season, entityName, viewMode]);
+  }, [season, entityId, viewMode]);
 
   return { shotData, loading, error };
 }
@@ -83,6 +83,7 @@ function parseCsv(csvText: string): ShotData[] {
     });
     
     // Convert numeric fields
+    shot.personId = shot.personId ? shot.personId.toString() : '';
     shot.xLegacy = parseFloat(shot.xLegacy) || 0;
     shot.yLegacy = parseFloat(shot.yLegacy) || 0;
     shot.shotDistance = parseFloat(shot.shotDistance) || 0;

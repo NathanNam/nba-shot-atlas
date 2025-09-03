@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
+import { NBAApiService } from '@/services/nbaApi';
+
+interface PlayerOption {
+  id: string;
+  name: string;
+}
 
 export function useAvailablePlayers(season: string) {
-  const [players, setPlayers] = useState<string[]>([]);
+  const [players, setPlayers] = useState<PlayerOption[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -15,10 +21,12 @@ export function useAvailablePlayers(season: string) {
         if (!response.ok) {
           // Fallback to hardcoded players if CSV not found
           setPlayers([
-            "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo",
-            "Luka Dončić", "Jayson Tatum", "Joel Embiid", "Nikola Jokić",
-            "Jimmy Butler", "Kawhi Leonard", "Paul George", "Damian Lillard",
-            "Anthony Davis", "Ja Morant", "Devin Booker", "Trae Young"
+            { id: "2544", name: "LeBron James" },
+            { id: "201939", name: "Stephen Curry" },
+            { id: "201142", name: "Kevin Durant" },
+            { id: "203507", name: "Giannis Antetokounmpo" },
+            { id: "1629029", name: "Luka Dončić" },
+            { id: "1628369", name: "Jayson Tatum" }
           ]);
           return;
         }
@@ -31,34 +39,48 @@ export function useAvailablePlayers(season: string) {
         }
         
         const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
-        const playerNameIndex = headers.indexOf('playerNameI');
+        const playerIdIndex = headers.indexOf('personId');
         
-        if (playerNameIndex === -1) {
+        if (playerIdIndex === -1) {
           setPlayers([]);
           return;
         }
         
-        const uniquePlayers = new Set<string>();
+        const uniquePlayerIds = new Set<string>();
         
         for (let i = 1; i < Math.min(lines.length, 1000); i++) { // Sample first 1000 rows for performance
           const values = lines[i].split(',');
-          if (values.length > playerNameIndex && values[playerNameIndex]) {
-            const playerName = values[playerNameIndex].replace(/"/g, '').trim();
-            if (playerName) {
-              uniquePlayers.add(playerName);
+          if (values.length > playerIdIndex && values[playerIdIndex]) {
+            const playerId = values[playerIdIndex].replace(/"/g, '').trim();
+            if (playerId && !isNaN(Number(playerId))) {
+              uniquePlayerIds.add(playerId);
             }
           }
         }
         
-        setPlayers(Array.from(uniquePlayers).sort());
+        // Fetch player names from NBA API
+        const playerIds = Array.from(uniquePlayerIds).slice(0, 50); // Limit to 50 players for performance
+        const playerInfoMap = await NBAApiService.getMultiplePlayerInfo(playerIds);
+        
+        const playersWithNames: PlayerOption[] = [];
+        playerInfoMap.forEach((info, playerId) => {
+          playersWithNames.push({
+            id: playerId,
+            name: info.displayName
+          });
+        });
+        
+        setPlayers(playersWithNames.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error) {
         console.error('Error loading players:', error);
         // Fallback to hardcoded players
         setPlayers([
-          "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo",
-          "Luka Dončić", "Jayson Tatum", "Joel Embiid", "Nikola Jokić",
-          "Jimmy Butler", "Kawhi Leonard", "Paul George", "Damian Lillard",
-          "Anthony Davis", "Ja Morant", "Devin Booker", "Trae Young"
+          { id: "2544", name: "LeBron James" },
+          { id: "201939", name: "Stephen Curry" },
+          { id: "201142", name: "Kevin Durant" },
+          { id: "203507", name: "Giannis Antetokounmpo" },
+          { id: "1629029", name: "Luka Dončić" },
+          { id: "1628369", name: "Jayson Tatum" }
         ]);
       } finally {
         setLoading(false);

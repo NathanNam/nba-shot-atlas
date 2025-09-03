@@ -1,5 +1,6 @@
 import { ShotChart } from "@/components/ui/shot-chart";
 import { useShotData } from "@/hooks/useShotData";
+import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
 interface EntityShotChartProps {
   entityName: string;
@@ -8,7 +9,19 @@ interface EntityShotChartProps {
 }
 
 export function EntityShotChart({ entityName, selectedSeason, viewMode }: EntityShotChartProps) {
-  const { shotData, loading, error } = useShotData(selectedSeason, entityName, viewMode);
+  const { players } = useAvailablePlayers(selectedSeason);
+  
+  // Convert player name to player ID for data fetching
+  const getEntityId = () => {
+    if (viewMode === 'player') {
+      const player = players.find(p => p.name === entityName);
+      return player?.id || entityName;
+    }
+    return entityName; // For teams, use the name directly
+  };
+  
+  const entityId = getEntityId();
+  const { shotData, loading, error } = useShotData(selectedSeason, entityId, viewMode);
   
   if (error) {
     return (

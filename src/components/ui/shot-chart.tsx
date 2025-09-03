@@ -178,7 +178,7 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
         shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
         
         // Add tooltip data
-        shotCircle.setAttribute("data-player", shot.playerNameI);
+        shotCircle.setAttribute("data-player", shot.personId);
         shotCircle.setAttribute("data-shot-type", shot.subType);
         shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
         shotCircle.setAttribute("data-description", shot.description);
