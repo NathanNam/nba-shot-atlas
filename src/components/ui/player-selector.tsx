@@ -34,7 +34,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   
   const entities = viewMode === "player" ? players.map(p => p.name) : teams;
   const entityOptions = viewMode === "player" ? players : teams.map(t => ({ id: t, name: t }));
-  const maxSelections = 4;
+  const maxSelections = 2;
   const isLeagueView = viewMode === "league";
 
   const handleSelect = (entityName: string) => {
