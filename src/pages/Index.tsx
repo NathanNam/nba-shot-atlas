@@ -6,7 +6,7 @@ import { EntityShotChart } from "@/components/EntityShotChart";
 import { EntityStatistics } from "@/components/EntityStatistics";
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2024");
+  const [selectedSeason, setSelectedSeason] = useState("2024-2025");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
   const [selectedEntities, setSelectedEntities] = useState<string[]>(["Stephen Curry"]);
 
@@ -80,7 +80,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              NBA Shot Analytics • Data from 2013-2024 seasons
+              NBA Shot Analytics • Data from 2013-2014 to 2024-2025 seasons
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>Built with modern web technologies</span>
