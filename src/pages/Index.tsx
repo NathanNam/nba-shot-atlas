@@ -3,7 +3,7 @@ import { NavigationBar } from "@/components/ui/navigation-bar";
 import { PlayerSelector } from "@/components/ui/player-selector";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
-import { useShotData } from "@/hooks/useShotData";
+import { EntityShotChart } from "@/components/EntityShotChart";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024");
@@ -53,16 +53,14 @@ const Index = () => {
                   <ShotChart title="NBA League Average" />
                 </div>
               ) : (
-                selectedEntities.map((entity) => {
-                  const { shotData, loading, error } = useShotData(selectedSeason, entity, viewMode);
-                  return (
-                    <ShotChart
-                      key={entity}
-                      title={entity}
-                      data={loading ? undefined : shotData}
-                    />
-                  );
-                })
+                selectedEntities.map((entity) => (
+                  <EntityShotChart
+                    key={entity}
+                    entityName={entity}
+                    selectedSeason={selectedSeason}
+                    viewMode={viewMode}
+                  />
+                ))
               )}
             </div>
 
