@@ -31,7 +31,7 @@ export function useAvailablePlayers(season: string) {
         }
         
         const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
-        const playerNameIndex = headers.indexOf('playerName');
+        const playerNameIndex = headers.indexOf('playerNameI');
         
         if (playerNameIndex === -1) {
           setPlayers([]);

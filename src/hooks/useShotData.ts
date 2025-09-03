@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export interface ShotData {
-  playerName: string;
+  playerNameI: string;
   teamTricode: string;
   xLegacy: number;
   yLegacy: number;
@@ -42,7 +42,7 @@ export function useShotData(season: string, entityName: string, viewMode: 'playe
         
         if (viewMode === 'player') {
           filteredShots = shots.filter(shot => 
-            shot.playerName === entityName
+            shot.playerNameI === entityName
           );
         } else if (viewMode === 'team') {
           filteredShots = shots.filter(shot => 
