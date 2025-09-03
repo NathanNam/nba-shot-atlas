@@ -390,8 +390,8 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
           <>
             <div className="text-sm text-muted-foreground">FG% vs. League Avg</div>
             <div className="flex items-center gap-1">
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 45%, 65%)" }} />
               <span className="text-xs">-</span>
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 45%, 65%)" }} />
               <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 55%, 55%)" }} />
               <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 65%, 45%)" }} />
               <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 75%, 35%)" }} />
