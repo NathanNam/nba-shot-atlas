@@ -1,5 +1,7 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ShotData } from "@/hooks/useShotData";
 
 interface ShotChartProps {
@@ -9,8 +11,11 @@ interface ShotChartProps {
   height?: number;
 }
 
+type ViewMode = "shots" | "heatmap";
+
 export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("shots");
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -155,47 +160,146 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
 
     svg.appendChild(courtGroup);
 
-    // Render shot data if available
+    // Render shot data based on view mode
     if (data && data.length > 0) {
-      data.forEach((shot, index) => {
-        const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        
-        // Convert NBA coordinates to SVG coordinates
-        // NBA coordinates: (0,0) is center of hoop, positive Y goes toward half-court
-        // xLegacy: positive right, negative left (-250 to 250 roughly)
-        // yLegacy: positive toward half-court, negative toward baseline (-50 to 400 roughly)
-        
-        // Scale and transform coordinates
-        const svgX = centerX + (shot.xLegacy * scale / 10);  // Center X + scaled X position
-        const svgY = hoopCenterY - (shot.yLegacy * scale / 10); // Hoop Y - scaled Y position (flip Y axis)
-        
-        const isMade = shot.shotResult === 'Made';
-        
-        shotCircle.setAttribute("cx", svgX.toString());
-        shotCircle.setAttribute("cy", svgY.toString());
-        shotCircle.setAttribute("r", "3");
-        shotCircle.setAttribute("fill", isMade ? "hsl(var(--heat-hot))" : "hsl(var(--heat-cold))");
-        shotCircle.setAttribute("stroke", isMade ? "#22c55e" : "#ef4444");
-        shotCircle.setAttribute("stroke-width", "0.5");
-        shotCircle.setAttribute("opacity", "0.7");
-        shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
-        
-        // Add unique key for React reconciliation
-        shotCircle.setAttribute("data-shot-key", `${shot.personId}-${index}`);
-        shotCircle.setAttribute("data-player", shot.personId);
-        shotCircle.setAttribute("data-shot-type", shot.subType || '');
-        shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
-        shotCircle.setAttribute("data-description", shot.description || '');
-        
-        svg.appendChild(shotCircle);
-      });
+      if (viewMode === "shots") {
+        // Individual shots view
+        data.forEach((shot, index) => {
+          const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          
+          const svgX = centerX + (shot.xLegacy * scale / 10);
+          const svgY = hoopCenterY - (shot.yLegacy * scale / 10);
+          
+          const isMade = shot.shotResult === 'Made';
+          
+          shotCircle.setAttribute("cx", svgX.toString());
+          shotCircle.setAttribute("cy", svgY.toString());
+          shotCircle.setAttribute("r", "3");
+          shotCircle.setAttribute("fill", isMade ? "hsl(var(--heat-hot))" : "hsl(var(--heat-cold))");
+          shotCircle.setAttribute("stroke", isMade ? "#22c55e" : "#ef4444");
+          shotCircle.setAttribute("stroke-width", "0.5");
+          shotCircle.setAttribute("opacity", "0.7");
+          shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
+          
+          shotCircle.setAttribute("data-shot-key", `${shot.personId}-${index}`);
+          shotCircle.setAttribute("data-player", shot.personId);
+          shotCircle.setAttribute("data-shot-type", shot.subType || '');
+          shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
+          shotCircle.setAttribute("data-description", shot.description || '');
+          
+          svg.appendChild(shotCircle);
+        });
+      } else {
+        // Heat map view
+        renderHeatMap(data, svg, centerX, hoopCenterY, scale);
+      }
     }
 
-  }, [data]);
+  }, [data, viewMode]);
+
+  // Heat map rendering function
+  const renderHeatMap = (shots: ShotData[], svg: SVGSVGElement, centerX: number, hoopCenterY: number, scale: number) => {
+    const hexSize = 12; // Size of hexagons
+    const hexGrid = new Map<string, { made: number; total: number; x: number; y: number }>();
+    
+    // Bin shots into hexagonal grid
+    shots.forEach(shot => {
+      const x = centerX + (shot.xLegacy * scale / 10);
+      const y = hoopCenterY - (shot.yLegacy * scale / 10);
+      
+      // Calculate hex grid position
+      const hexX = Math.round(x / (hexSize * 1.5)) * (hexSize * 1.5);
+      const hexY = Math.round(y / (hexSize * Math.sqrt(3) / 2)) * (hexSize * Math.sqrt(3) / 2);
+      const key = `${hexX},${hexY}`;
+      
+      if (!hexGrid.has(key)) {
+        hexGrid.set(key, { made: 0, total: 0, x: hexX, y: hexY });
+      }
+      
+      const bin = hexGrid.get(key)!;
+      bin.total += 1;
+      if (shot.shotResult === 'Made') {
+        bin.made += 1;
+      }
+    });
+    
+    // Render hexagons
+    hexGrid.forEach(bin => {
+      if (bin.total < 3) return; // Skip bins with too few shots
+      
+      const percentage = bin.made / bin.total;
+      const leagueAvg = 0.46; // Approximate league average FG%
+      const efficiency = percentage - leagueAvg;
+      
+      // Color based on efficiency vs league average
+      let fillColor: string;
+      let opacity: number;
+      
+      if (efficiency > 0.15) {
+        fillColor = "hsl(220, 85%, 25%)"; // Dark blue - much better
+        opacity = 0.9;
+      } else if (efficiency > 0.05) {
+        fillColor = "hsl(220, 75%, 35%)"; // Medium dark blue - better
+        opacity = 0.8;
+      } else if (efficiency > -0.05) {
+        fillColor = "hsl(220, 65%, 45%)"; // Medium blue - average
+        opacity = 0.6;
+      } else if (efficiency > -0.15) {
+        fillColor = "hsl(220, 55%, 55%)"; // Light blue - worse
+        opacity = 0.5;
+      } else {
+        fillColor = "hsl(220, 45%, 65%)"; // Very light blue - much worse
+        opacity = 0.4;
+      }
+      
+      // Create hexagon path
+      const hexPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const hexagonPath = createHexagonPath(bin.x, bin.y, hexSize);
+      
+      hexPath.setAttribute("d", hexagonPath);
+      hexPath.setAttribute("fill", fillColor);
+      hexPath.setAttribute("opacity", opacity.toString());
+      hexPath.setAttribute("stroke", "hsl(var(--court-lines))");
+      hexPath.setAttribute("stroke-width", "0.5");
+      hexPath.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
+      
+      // Add data attributes for tooltip
+      hexPath.setAttribute("data-percentage", (percentage * 100).toFixed(1));
+      hexPath.setAttribute("data-made", bin.made.toString());
+      hexPath.setAttribute("data-total", bin.total.toString());
+      hexPath.setAttribute("data-efficiency", (efficiency * 100).toFixed(1));
+      
+      svg.appendChild(hexPath);
+    });
+  };
+
+  // Helper function to create hexagon path
+  const createHexagonPath = (centerX: number, centerY: number, size: number): string => {
+    const angles = [0, 60, 120, 180, 240, 300];
+    const points = angles.map(angle => {
+      const radian = (angle * Math.PI) / 180;
+      const x = centerX + size * Math.cos(radian);
+      const y = centerY + size * Math.sin(radian);
+      return `${x},${y}`;
+    });
+    
+    return `M ${points[0]} L ${points.slice(1).join(' L ')} Z`;
+  };
 
   return (
     <Card className="p-6 bg-card border-border shadow-card">
-      <h3 className="text-lg font-semibold text-foreground mb-4 text-center">{title}</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="view-mode" className="text-sm">Heat Map</Label>
+          <Switch
+            id="view-mode"
+            checked={viewMode === "heatmap"}
+            onCheckedChange={(checked) => setViewMode(checked ? "heatmap" : "shots")}
+          />
+        </div>
+      </div>
+      
       <div className="flex justify-center">
         <svg
           ref={svgRef}
@@ -208,20 +312,37 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
       
       {/* Legend */}
       <div className="flex justify-center items-center gap-6 mt-4 pt-4 border-t border-border">
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-4 h-4 rounded-full border border-green-500" 
-            style={{ backgroundColor: "hsl(var(--heat-hot))" }}
-          />
-          <span className="text-sm text-muted-foreground">Made Shot</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-4 h-4 rounded-full border border-red-500" 
-            style={{ backgroundColor: "hsl(var(--heat-cold))" }}
-          />
-          <span className="text-sm text-muted-foreground">Missed Shot</span>
-        </div>
+        {viewMode === "shots" ? (
+          <>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded-full border border-green-500" 
+                style={{ backgroundColor: "hsl(var(--heat-hot))" }}
+              />
+              <span className="text-sm text-muted-foreground">Made Shot</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded-full border border-red-500" 
+                style={{ backgroundColor: "hsl(var(--heat-cold))" }}
+              />
+              <span className="text-sm text-muted-foreground">Missed Shot</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground">FG% vs. League Avg</div>
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 45%, 65%)" }} />
+              <span className="text-xs">-</span>
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 55%, 55%)" }} />
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 65%, 45%)" }} />
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 75%, 35%)" }} />
+              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 85%, 25%)" }} />
+              <span className="text-xs">+</span>
+            </div>
+          </>
+        )}
         {data && data.length > 0 && (
           <div className="text-xs text-muted-foreground ml-4">
             {data.length} total shots
