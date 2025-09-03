@@ -129,13 +129,13 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
             />
             {loading ? (
               <div className="p-4 text-center text-muted-foreground">Loading players...</div>
-            ) : enhancing ? (
-              <div className="p-2 text-center text-xs text-muted-foreground border-b">
-                Enhancing player names...
-              </div>
-            ) : null}
-            {!loading ? (
+            ) : (
               <>
+                {enhancing && (
+                  <div className="p-2 text-center text-xs text-muted-foreground border-b">
+                    Enhancing player names...
+                  </div>
+                )}
                 <CommandEmpty>No {viewMode} found.</CommandEmpty>
                 <CommandGroup className="max-h-64 overflow-auto">
                   {filteredEntities.map((entityName) => (
