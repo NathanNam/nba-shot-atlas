@@ -157,14 +157,17 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
 
     // Render shot data if available
     if (data && data.length > 0) {
-      data.forEach((shot) => {
+      data.forEach((shot, index) => {
         const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         
         // Convert NBA coordinates to SVG coordinates
-        // NBA coordinates: center court = (0,0), Y increases toward basket
-        // Our SVG: top-left = (0,0), need to flip Y and scale
-        const svgX = centerX + (shot.xLegacy / 10);  // Scale down by 10
-        const svgY = courtHeight - ((shot.yLegacy + 50) * scale / 10);  // Adjust origin and scale
+        // NBA coordinates: (0,0) is center of hoop, positive Y goes toward half-court
+        // xLegacy: positive right, negative left (-250 to 250 roughly)
+        // yLegacy: positive toward half-court, negative toward baseline (-50 to 400 roughly)
+        
+        // Scale and transform coordinates
+        const svgX = centerX + (shot.xLegacy * scale / 10);  // Center X + scaled X position
+        const svgY = hoopCenterY - (shot.yLegacy * scale / 10); // Hoop Y - scaled Y position (flip Y axis)
         
         const isMade = shot.shotResult === 'Made';
         
@@ -177,11 +180,12 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
         shotCircle.setAttribute("opacity", "0.7");
         shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
         
-        // Add tooltip data
+        // Add unique key for React reconciliation
+        shotCircle.setAttribute("data-shot-key", `${shot.personId}-${index}`);
         shotCircle.setAttribute("data-player", shot.personId);
-        shotCircle.setAttribute("data-shot-type", shot.subType);
+        shotCircle.setAttribute("data-shot-type", shot.subType || '');
         shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
-        shotCircle.setAttribute("data-description", shot.description);
+        shotCircle.setAttribute("data-description", shot.description || '');
         
         svg.appendChild(shotCircle);
       });
