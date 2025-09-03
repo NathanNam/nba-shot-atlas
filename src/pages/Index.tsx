@@ -85,7 +85,7 @@ const Index = () => {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>Built with modern web technologies</span>
               <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-mono text-xs">
-                v1.0.0
+                v1.2.0
               </span>
             </div>
           </div>
