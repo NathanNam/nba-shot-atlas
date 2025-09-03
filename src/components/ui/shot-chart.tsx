@@ -268,41 +268,66 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
       hexPath.setAttribute("data-made", bin.made.toString());
       hexPath.setAttribute("data-total", bin.total.toString());
       hexPath.setAttribute("data-efficiency", (efficiency * 100).toFixed(1));
+      hexPath.setAttribute("data-league-avg", (leagueAvg * 100).toFixed(1));
+      
+      // Add hover events for tooltip
+      hexPath.addEventListener("mouseenter", (e) => {
+        showTooltip(e, {
+          playerPercentage: (percentage * 100).toFixed(1),
+          leagueAverage: (leagueAvg * 100).toFixed(1),
+          made: bin.made,
+          total: bin.total,
+          efficiency: (efficiency * 100).toFixed(1)
+        });
+      });
+      
+      hexPath.addEventListener("mouseleave", hideTooltip);
       
       svg.appendChild(hexPath);
-      
-      // Add percentage text inside hexagon
-      if (bin.total >= 5) { // Only show text for zones with enough shots
-        const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        
-        // Player percentage
-        const playerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        playerText.setAttribute("x", bin.x.toString());
-        playerText.setAttribute("y", (bin.y - 2).toString());
-        playerText.setAttribute("text-anchor", "middle");
-        playerText.setAttribute("font-size", "8");
-        playerText.setAttribute("font-weight", "bold");
-        playerText.setAttribute("fill", "white");
-        playerText.setAttribute("stroke", "black");
-        playerText.setAttribute("stroke-width", "0.3");
-        playerText.textContent = `${(percentage * 100).toFixed(0)}%`;
-        
-        // League average
-        const leagueText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        leagueText.setAttribute("x", bin.x.toString());
-        leagueText.setAttribute("y", (bin.y + 6).toString());
-        leagueText.setAttribute("text-anchor", "middle");
-        leagueText.setAttribute("font-size", "6");
-        leagueText.setAttribute("fill", "white");
-        leagueText.setAttribute("stroke", "black");
-        leagueText.setAttribute("stroke-width", "0.2");
-        leagueText.textContent = `(${(leagueAvg * 100).toFixed(0)}%)`;
-        
-        textGroup.appendChild(playerText);
-        textGroup.appendChild(leagueText);
-        svg.appendChild(textGroup);
-      }
     });
+  };
+
+  // Tooltip functions
+  const showTooltip = (event: MouseEvent, data: {
+    playerPercentage: string;
+    leagueAverage: string;
+    made: number;
+    total: number;
+    efficiency: string;
+  }) => {
+    const tooltip = document.getElementById("shot-chart-tooltip") || createTooltip();
+    
+    tooltip.innerHTML = `
+      <div class="bg-popover border border-border rounded-lg p-3 shadow-lg">
+        <div class="text-sm font-semibold text-foreground">${data.playerPercentage}% (${data.made}/${data.total})</div>
+        <div class="text-xs text-muted-foreground">League Avg: ${data.leagueAverage}%</div>
+        <div class="text-xs ${parseFloat(data.efficiency) >= 0 ? 'text-green-500' : 'text-red-500'}">
+          ${parseFloat(data.efficiency) >= 0 ? '+' : ''}${data.efficiency}% vs avg
+        </div>
+      </div>
+    `;
+    
+    tooltip.style.display = "block";
+    tooltip.style.left = (event.pageX + 10) + "px";
+    tooltip.style.top = (event.pageY - 10) + "px";
+  };
+
+  const hideTooltip = () => {
+    const tooltip = document.getElementById("shot-chart-tooltip");
+    if (tooltip) {
+      tooltip.style.display = "none";
+    }
+  };
+
+  const createTooltip = () => {
+    const tooltip = document.createElement("div");
+    tooltip.id = "shot-chart-tooltip";
+    tooltip.style.position = "absolute";
+    tooltip.style.zIndex = "1000";
+    tooltip.style.pointerEvents = "none";
+    tooltip.style.display = "none";
+    document.body.appendChild(tooltip);
+    return tooltip;
   };
 
   // Helper function to create hexagon path
