@@ -6,32 +6,27 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
 interface PlayerSelectorProps {
   viewMode: "player" | "team" | "league";
   selectedEntities: string[];
   onEntitiesChange: (entities: string[]) => void;
+  selectedSeason: string;
 }
 
-// Sample data - will be replaced with real NBA data
-const players = [
-  "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo",
-  "Luka Dončić", "Jayson Tatum", "Joel Embiid", "Nikola Jokić",
-  "Jimmy Butler", "Kawhi Leonard", "Paul George", "Damian Lillard",
-  "Anthony Davis", "Ja Morant", "Devin Booker", "Trae Young"
-];
-
 const teams = [
-  "Los Angeles Lakers", "Golden State Warriors", "Boston Celtics", "Miami Heat",
-  "Milwaukee Bucks", "Philadelphia 76ers", "Phoenix Suns", "Dallas Mavericks",
-  "Denver Nuggets", "Los Angeles Clippers", "Brooklyn Nets", "Memphis Grizzlies",
-  "Atlanta Hawks", "Portland Trail Blazers", "Utah Jazz", "Chicago Bulls"
+  "ATL", "BOS", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW", "HOU",
+  "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NYK", "OKC",
+  "ORL", "PHI", "PHX", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
 ];
 
-export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange }: PlayerSelectorProps) {
+export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, selectedSeason }: PlayerSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-
+  
+  const { players, loading } = useAvailablePlayers(selectedSeason);
+  
   const entities = viewMode === "player" ? players : teams;
   const maxSelections = 4;
   const isLeagueView = viewMode === "league";
@@ -126,8 +121,12 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange }:
               onValueChange={setSearchValue}
               className="border-0 focus:ring-0"
             />
-            <CommandEmpty>No {viewMode} found.</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
+            {loading ? (
+              <div className="p-4 text-center text-muted-foreground">Loading players...</div>
+            ) : (
+              <>
+                <CommandEmpty>No {viewMode} found.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
               {filteredEntities.map((entity) => (
                 <CommandItem
                   key={entity}
@@ -149,7 +148,9 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange }:
                   )}
                 </CommandItem>
               ))}
-            </CommandGroup>
+                </CommandGroup>
+              </>
+            )}
           </Command>
         </PopoverContent>
       </Popover>

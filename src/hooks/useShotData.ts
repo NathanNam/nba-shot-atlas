@@ -26,7 +26,7 @@ export function useShotData(season: string, entityName: string, viewMode: 'playe
       
       try {
         // Map season format (e.g., "2024-25" to "2024")
-        const year = season.split('-')[0];
+        const year = season.includes('-') ? season.split('-')[0] : season;
         const csvPath = `/data/nbastatsv3_${year}_enriched_shots.csv`;
         
         const response = await fetch(csvPath);

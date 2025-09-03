@@ -6,9 +6,9 @@ import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { EntityShotChart } from "@/components/EntityShotChart";
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2024");
+  const [selectedSeason, setSelectedSeason] = useState("2024-25");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
-  const [selectedEntities, setSelectedEntities] = useState<string[]>(["Z. Risacher"]);
+  const [selectedEntities, setSelectedEntities] = useState<string[]>(["Stephen Curry"]);
 
   // Sample statistics data - will be replaced with real data
   const sampleStats = {
@@ -41,6 +41,7 @@ const Index = () => {
               viewMode={viewMode}
               selectedEntities={selectedEntities}
               onEntitiesChange={setSelectedEntities}
+              selectedSeason={selectedSeason}
             />
           </div>
 
