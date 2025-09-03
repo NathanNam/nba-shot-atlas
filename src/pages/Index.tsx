@@ -3,11 +3,12 @@ import { NavigationBar } from "@/components/ui/navigation-bar";
 import { PlayerSelector } from "@/components/ui/player-selector";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
+import { useShotData } from "@/hooks/useShotData";
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2024-25");
+  const [selectedSeason, setSelectedSeason] = useState("2024");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
-  const [selectedEntities, setSelectedEntities] = useState<string[]>(["LeBron James"]);
+  const [selectedEntities, setSelectedEntities] = useState<string[]>(["Z. Risacher"]);
 
   // Sample statistics data - will be replaced with real data
   const sampleStats = {
@@ -52,13 +53,16 @@ const Index = () => {
                   <ShotChart title="NBA League Average" />
                 </div>
               ) : (
-                selectedEntities.map((entity, index) => (
-                  <ShotChart
-                    key={entity}
-                    title={entity}
-                    data={null} // Will be populated with real data
-                  />
-                ))
+                selectedEntities.map((entity) => {
+                  const { shotData, loading, error } = useShotData(selectedSeason, entity, viewMode);
+                  return (
+                    <ShotChart
+                      key={entity}
+                      title={entity}
+                      data={loading ? undefined : shotData}
+                    />
+                  );
+                })
               )}
             </div>
 

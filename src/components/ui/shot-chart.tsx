@@ -1,9 +1,10 @@
 import { useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { ShotData } from "@/hooks/useShotData";
 
 interface ShotChartProps {
   title: string;
-  data?: any; // Will be replaced with actual shot data structure
+  data?: ShotData[];
   width?: number;
   height?: number;
 }
@@ -154,37 +155,37 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
 
     svg.appendChild(courtGroup);
 
-    // Add sample shot data (coordinate system: center court = (0,0), scale by 10)
-    const sampleShots = [
-      { x: 0, y: 5, made: true },     // Close to basket
-      { x: -8, y: 15, made: true },   // Left side mid-range
-      { x: 12, y: 18, made: false },  // Right side mid-range
-      { x: -15, y: 8, made: true },   // Left paint
-      { x: 18, y: 12, made: false },  // Right mid-range
-      { x: 0, y: 25, made: true },    // Top of key
-      { x: -20, y: 25, made: false }, // Left three
-      { x: 22, y: 28, made: true },   // Right three
-      { x: 8, y: 35, made: false },   // Above the break
-      { x: -12, y: 30, made: true },  // Wing three
-    ];
-
-    sampleShots.forEach((shot) => {
-      const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      // Convert coordinates (center origin to top-left SVG origin)
-      const svgX = centerX + (shot.x * scale);
-      const svgY = courtHeight - (shot.y * scale);
-      
-      shotCircle.setAttribute("cx", svgX.toString());
-      shotCircle.setAttribute("cy", svgY.toString());
-      shotCircle.setAttribute("r", "4");
-      shotCircle.setAttribute("fill", shot.made ? "hsl(var(--heat-hot))" : "hsl(var(--heat-cold))");
-      shotCircle.setAttribute("stroke", shot.made ? "#22c55e" : "#ef4444");
-      shotCircle.setAttribute("stroke-width", "1");
-      shotCircle.setAttribute("opacity", "0.8");
-      shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
-      
-      svg.appendChild(shotCircle);
-    });
+    // Render shot data if available
+    if (data && data.length > 0) {
+      data.forEach((shot) => {
+        const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        
+        // Convert NBA coordinates to SVG coordinates
+        // NBA coordinates: center court = (0,0), Y increases toward basket
+        // Our SVG: top-left = (0,0), need to flip Y and scale
+        const svgX = centerX + (shot.xLegacy / 10);  // Scale down by 10
+        const svgY = courtHeight - ((shot.yLegacy + 50) * scale / 10);  // Adjust origin and scale
+        
+        const isMade = shot.shotResult === 'Made';
+        
+        shotCircle.setAttribute("cx", svgX.toString());
+        shotCircle.setAttribute("cy", svgY.toString());
+        shotCircle.setAttribute("r", "3");
+        shotCircle.setAttribute("fill", isMade ? "hsl(var(--heat-hot))" : "hsl(var(--heat-cold))");
+        shotCircle.setAttribute("stroke", isMade ? "#22c55e" : "#ef4444");
+        shotCircle.setAttribute("stroke-width", "0.5");
+        shotCircle.setAttribute("opacity", "0.7");
+        shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
+        
+        // Add tooltip data
+        shotCircle.setAttribute("data-player", shot.playerName);
+        shotCircle.setAttribute("data-shot-type", shot.subType);
+        shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
+        shotCircle.setAttribute("data-description", shot.description);
+        
+        svg.appendChild(shotCircle);
+      });
+    }
 
   }, [data]);
 
