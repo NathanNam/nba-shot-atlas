@@ -9,6 +9,8 @@ interface LeagueStatisticsProps {
 
 export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
   const { shotData, loading, error } = useShotData(selectedSeason, "", "league");
+  
+  console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error);
 
   if (loading) {
     return (
