@@ -69,10 +69,10 @@ const loggerProvider = new LoggerProvider({
   ],
 });
 
-// Global instances
-let tracer: Tracer;
-let logger: Logger;
-let meter: Meter;
+// Global instances - initialize with safe defaults
+let tracer: Tracer = trace.getTracer(serviceName);
+let logger: Logger = loggerProvider.getLogger(serviceName);
+let meter: Meter = metrics.getMeter(serviceName);
 
 // Initialize OpenTelemetry and return initialized components
 export function initOtel(): { tracer: Tracer; logger: Logger; meter: Meter } {
