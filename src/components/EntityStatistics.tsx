@@ -94,8 +94,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       twoPointPercentage,
       threePointPercentage,
       hottestZone: zones.hottestZone,
+      hottestZoneStats: zones.hottestZoneStats,
       coldestZone: zones.coldestZone,
-      favoriteSpot: zones.favoriteSpot
+      coldestZoneStats: zones.coldestZoneStats,
+      favoriteSpot: zones.favoriteSpot,
+      favoriteSpotStats: zones.favoriteSpotStats
     };
   }, [shotData, entityName, playersLoading, entityId]);
 
@@ -194,10 +197,13 @@ function analyzeZones(shotData: any[]) {
       console.log(`  ${zone}: ${stats.made}/${stats.total} (${(stats.percentage * 100).toFixed(1)}%)`);
     });
   
-  // Find hottest, coldest, and favorite zones
+  // Find hottest, coldest, and favorite zones with detailed stats
   let hottestZone = "No data";
+  let hottestZoneStats = { made: 0, total: 0, percentage: 0 };
   let coldestZone = "No data";
+  let coldestZoneStats = { made: 0, total: 0, percentage: 0 };
   let favoriteSpot = "No data";
+  let favoriteSpotStats = { made: 0, total: 0, percentage: 0 };
   
   let highestPercentage = 0;
   let lowestPercentage = 1;
@@ -209,16 +215,19 @@ function analyzeZones(shotData: any[]) {
       if (stats.percentage > highestPercentage) {
         highestPercentage = stats.percentage;
         hottestZone = zone;
+        hottestZoneStats = { ...stats };
       }
       if (stats.percentage < lowestPercentage) {
         lowestPercentage = stats.percentage;
         coldestZone = zone;
+        coldestZoneStats = { ...stats };
       }
     }
     
     if (stats.total > mostAttempts) {
       mostAttempts = stats.total;
       favoriteSpot = zone;
+      favoriteSpotStats = { ...stats };
     }
   });
   
@@ -226,7 +235,10 @@ function analyzeZones(shotData: any[]) {
   
   return {
     hottestZone: hottestZone,
+    hottestZoneStats: hottestZoneStats,
     coldestZone: coldestZone,
-    favoriteSpot: favoriteSpot
+    coldestZoneStats: coldestZoneStats,
+    favoriteSpot: favoriteSpot,
+    favoriteSpotStats: favoriteSpotStats
   };
 }

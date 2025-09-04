@@ -11,13 +11,21 @@ interface StatisticsPanelProps {
     twoPointPercentage: number;
     threePointPercentage: number;
     hottestZone: string;
+    hottestZoneStats?: { made: number; total: number; percentage: number };
     coldestZone: string;
+    coldestZoneStats?: { made: number; total: number; percentage: number };
     favoriteSpot: string;
+    favoriteSpotStats?: { made: number; total: number; percentage: number };
   };
 }
 
 export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
   const formatPercentage = (value: number) => `${(value * 100).toFixed(1)}%`;
+  
+  const formatZoneStats = (zoneStats?: { made: number; total: number; percentage: number }) => {
+    if (!zoneStats || zoneStats.total === 0) return null;
+    return `${zoneStats.made}/${zoneStats.total} (${formatPercentage(zoneStats.percentage)})`;
+  };
 
   return (
     <Card className="p-4 sm:p-6 bg-gradient-stats border-border shadow-card">
@@ -87,7 +95,9 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
             <span className="font-medium text-heat-hot text-sm sm:text-base">Hottest Zone</span>
           </div>
           <div className="text-base sm:text-lg font-semibold text-foreground">{stats.hottestZone}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">High efficiency</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            {formatZoneStats(stats.hottestZoneStats) || "High efficiency"}
+          </div>
         </div>
 
         {/* Coldest Zone */}
@@ -97,7 +107,9 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
             <span className="font-medium text-heat-cold text-sm sm:text-base">Coldest Zone</span>
           </div>
           <div className="text-base sm:text-lg font-semibold text-foreground">{stats.coldestZone}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Needs work</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            {formatZoneStats(stats.coldestZoneStats) || "Needs work"}
+          </div>
         </div>
 
         {/* Favorite Spot */}
@@ -107,7 +119,9 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
             <span className="font-medium text-accent text-sm sm:text-base">Favorite Spot</span>
           </div>
           <div className="text-base sm:text-lg font-semibold text-foreground">{stats.favoriteSpot}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Most attempts</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            {formatZoneStats(stats.favoriteSpotStats) || "Most attempts"}
+          </div>
         </div>
       </div>
 

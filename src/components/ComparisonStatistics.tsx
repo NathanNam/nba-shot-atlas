@@ -37,8 +37,11 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
     if (shotData.length === 0) {
       return {
         hottestZone: "No data",
-        coldestZone: "No data", 
-        favoriteSpot: "No data"
+        hottestZoneStats: { made: 0, total: 0, percentage: 0 },
+        coldestZone: "No data",
+        coldestZoneStats: { made: 0, total: 0, percentage: 0 },
+        favoriteSpot: "No data",
+        favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
       };
     }
     
@@ -96,38 +99,47 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
     });
     
-    // Find hottest, coldest, and favorite zones
+    // Find hottest, coldest, and favorite zones with detailed stats
     let hottestZone = "No data";
+    let hottestZoneStats = { made: 0, total: 0, percentage: 0 };
     let coldestZone = "No data";
+    let coldestZoneStats = { made: 0, total: 0, percentage: 0 };
     let favoriteSpot = "No data";
+    let favoriteSpotStats = { made: 0, total: 0, percentage: 0 };
     
     let highestPercentage = 0;
     let lowestPercentage = 1;
     let mostAttempts = 0;
     
     zoneStats.forEach((stats, zone) => {
-      // Only consider zones with at least 3 attempts (lowered threshold)
+      // Only consider zones with at least 3 attempts (lowered threshold)  
       if (stats.total >= 3) {
         if (stats.percentage > highestPercentage) {
           highestPercentage = stats.percentage;
           hottestZone = zone;
+          hottestZoneStats = { ...stats };
         }
         if (stats.percentage < lowestPercentage) {
           lowestPercentage = stats.percentage;
           coldestZone = zone;
+          coldestZoneStats = { ...stats };
         }
       }
       
       if (stats.total > mostAttempts) {
         mostAttempts = stats.total;
         favoriteSpot = zone;
+        favoriteSpotStats = { ...stats };
       }
     });
     
     return {
       hottestZone: hottestZone,
+      hottestZoneStats: hottestZoneStats,
       coldestZone: coldestZone,
-      favoriteSpot: favoriteSpot
+      coldestZoneStats: coldestZoneStats,
+      favoriteSpot: favoriteSpot,
+      favoriteSpotStats: favoriteSpotStats
     };
   };
   
@@ -203,8 +215,11 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       totalShots,
       madeShots,
       hottestZone: zoneAnalysis.hottestZone,
+      hottestZoneStats: zoneAnalysis.hottestZoneStats,
       coldestZone: zoneAnalysis.coldestZone,
-      favoriteSpot: zoneAnalysis.favoriteSpot
+      coldestZoneStats: zoneAnalysis.coldestZoneStats,
+      favoriteSpot: zoneAnalysis.favoriteSpot,
+      favoriteSpotStats: zoneAnalysis.favoriteSpotStats
     };
   };
 
