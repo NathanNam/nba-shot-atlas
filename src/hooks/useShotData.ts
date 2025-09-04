@@ -19,7 +19,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
 
   useEffect(() => {
     const loadShotData = async () => {
-      if (!entityId) return;
+      if (!entityId && viewMode !== 'league') return;
       
       setLoading(true);
       setError(null);
