@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import JSZip from 'jszip';
 
 export interface ShotData {
   personId: string;
@@ -73,16 +74,36 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
       setError(null);
       
       try {
-        const csvPath = `/data/nbastatsv3_${year}_enriched_shots.csv`;
+        let csvText = '';
         
-        const response = await fetch(csvPath, { signal });
-        if (!response.ok) {
-          throw new Error(`Failed to load data for ${season}`);
+        // Try loading compressed file first
+        const zipPath = `/data/nbastatsv3_${year}_enriched_shots.csv.zip`;
+        try {
+          const zipResponse = await fetch(zipPath, { signal });
+          if (zipResponse.ok) {
+            const zipBlob = await zipResponse.blob();
+            const zip = new JSZip();
+            const zipContent = await zip.loadAsync(zipBlob);
+            const csvFileName = `nbastatsv3_${year}_enriched_shots.csv`;
+            const csvFile = zipContent.file(csvFileName);
+            if (csvFile) {
+              csvText = await csvFile.async('string');
+            } else {
+              throw new Error(`CSV file ${csvFileName} not found in zip`);
+            }
+          } else {
+            throw new Error('Zip file not found');
+          }
+        } catch (zipError) {
+          // Fallback to uncompressed CSV
+          const csvPath = `/data/nbastatsv3_${year}_enriched_shots.csv`;
+          const response = await fetch(csvPath, { signal });
+          if (!response.ok) {
+            throw new Error(`Failed to load data for ${season} (tried both .zip and .csv)`);
+          }
+          csvText = await response.text();
         }
         
-        if (signal.aborted) return;
-        
-        const csvText = await response.text();
         if (signal.aborted) return;
         
         const shots = parseCsv(csvText);
