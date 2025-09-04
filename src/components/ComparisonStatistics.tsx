@@ -230,11 +230,26 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   const stats1 = calculateStats(data1);
   const stats2 = calculateStats(data2);
   
-  // Calculate differences
-  const fgDiff = stats2.fieldGoalPercentage - stats1.fieldGoalPercentage;
-  const twoPtDiff = stats2.twoPointPercentage - stats1.twoPointPercentage;
-  const threePtDiff = stats2.threePointPercentage - stats1.threePointPercentage;
-  const shotsDiff = stats2.totalShots - stats1.totalShots;
+  // Determine chronological order for proper comparison direction
+  const getSeasonYear = (season: string) => {
+    return parseInt(season.split('-')[0]);
+  };
+  
+  const season1Year = getSeasonYear(season1);
+  const season2Year = getSeasonYear(season2);
+  
+  // Always show progress from earlier season to later season
+  const isChronological = season1Year < season2Year;
+  const earlierSeason = isChronological ? season1 : season2;
+  const laterSeason = isChronological ? season2 : season1;
+  const earlierStats = isChronological ? stats1 : stats2;
+  const laterStats = isChronological ? stats2 : stats1;
+  
+  // Calculate differences (later - earlier for chronological progress)
+  const fgDiff = laterStats.fieldGoalPercentage - earlierStats.fieldGoalPercentage;
+  const twoPtDiff = laterStats.twoPointPercentage - earlierStats.twoPointPercentage;
+  const threePtDiff = laterStats.threePointPercentage - earlierStats.threePointPercentage;
+  const shotsDiff = laterStats.totalShots - earlierStats.totalShots;
 
   const getTrendIcon = (diff: number) => {
     if (Math.abs(diff) < 0.001) return <Minus className="h-4 w-4" />;
@@ -263,10 +278,10 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       {/* Comparison Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Season Comparison: {season2} vs {season1}
+          <CardTitle className="text-lg flex items-center gap-2">
+            Season Comparison: {earlierSeason} vs {laterSeason}
             <Badge variant="secondary" className="text-xs">
-              {season2} → {season1}
+              {earlierSeason} → {laterSeason}
             </Badge>
           </CardTitle>
         </CardHeader>
