@@ -45,11 +45,13 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
 
     console.log(`📊 Statistics calculation for ${entityName}:`, {
       totalShots: shotData.length,
-      sampleShots: shotData.slice(0, 3).map(s => ({ 
+      sampleShots: shotData.slice(0, 10).map(s => ({ 
         result: s.shotResult, 
         value: s.shotValue,
         distance: s.shotDistance 
-      }))
+      })),
+      // Check for different shot result values in the data
+      uniqueResults: [...new Set(shotData.slice(0, 100).map(s => s.shotResult))]
     });
 
     const totalShots = shotData.length;
