@@ -14,11 +14,23 @@ export interface ShotData {
 }
 
 // Global cache for shot data to persist across component unmounts
-const dataCache = new Map<string, {
-  rawData: ShotData[];
-  filteredData: Map<string, ShotData[]>;
-  timestamp: number;
-}>();
+// Use window global to share with preloader
+declare global {
+  interface Window {
+    __NBA_DATA_CACHE__?: Map<string, {
+      rawData: ShotData[];
+      filteredData: Map<string, ShotData[]>;
+      timestamp: number;
+    }>;
+  }
+}
+
+// Initialize global cache if it doesn't exist
+if (typeof window !== 'undefined' && !window.__NBA_DATA_CACHE__) {
+  window.__NBA_DATA_CACHE__ = new Map();
+}
+
+const dataCache = typeof window !== 'undefined' ? window.__NBA_DATA_CACHE__! : new Map();
 
 // Cache TTL: 5 minutes
 const CACHE_TTL = 5 * 60 * 1000;
@@ -56,6 +68,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         // Check if we have this specific filter cached
         const cachedFiltered = cached.filteredData.get(filterKey);
         if (cachedFiltered) {
+          console.log(`✅ Cache hit: ${viewMode} ${entityId} for ${season} (${cachedFiltered.length} shots)`);
           setShotData(cachedFiltered);
           setLoading(false);
           return;
@@ -64,6 +77,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         // We have raw data but not this filter, compute filter
         const filteredShots = applyFilter(cached.rawData, viewMode, entityId);
         cached.filteredData.set(filterKey, filteredShots);
+        console.log(`✅ Cache + filter: ${viewMode} ${entityId} for ${season} (${filteredShots.length} shots)`);
         setShotData(filteredShots);
         setLoading(false);
         return;
@@ -159,31 +173,28 @@ function applyFilter(shots: ShotData[], viewMode: 'player' | 'team' | 'league', 
 
 function parseCsv(csvText: string): ShotData[] {
   const lines = csvText.trim().split('\n');
-  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]);
   
-  const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
-  const shots: ShotData[] = [];
+  // Create a mapping from header names to indices for more robust parsing
+  const headerMap: { [key: string]: number } = {};
+  headers.forEach((header, index) => {
+    headerMap[header.toLowerCase().replace(/"/g, '')] = index;
+  });
   
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCsvLine(lines[i]);
-    if (values.length < headers.length) continue;
-    
-    const shot: any = {};
-    headers.forEach((header, index) => {
-      shot[header] = values[index];
-    });
-    
-    // Convert numeric fields
-    shot.personId = shot.personId ? shot.personId.toString() : '';
-    shot.xLegacy = parseFloat(shot.xLegacy) || 0;
-    shot.yLegacy = parseFloat(shot.yLegacy) || 0;
-    shot.shotDistance = parseFloat(shot.shotDistance) || 0;
-    shot.shotValue = parseInt(shot.shotValue) || 0;
-    
-    shots.push(shot as ShotData);
-  }
-  
-  return shots;
+  return lines.slice(1).map(line => {
+    const values = parseCsvLine(line);
+    return {
+      personId: values[headerMap['person_id']] || values[headerMap['personid']] || '',
+      teamTricode: values[headerMap['team_tricode']] || values[headerMap['teamtricode']] || '',
+      xLegacy: parseFloat(values[headerMap['loc_x']] || values[headerMap['xlegacy']]) || 0,
+      yLegacy: parseFloat(values[headerMap['loc_y']] || values[headerMap['ylegacy']]) || 0,
+      shotResult: values[headerMap['shot_made_flag']] === '1' ? 'Made' : 'Missed',
+      shotDistance: parseFloat(values[headerMap['shot_distance']] || values[headerMap['shotdistance']]) || 0,
+      description: values[headerMap['action_type']] || values[headerMap['description']] || '',
+      subType: values[headerMap['shot_type']] || values[headerMap['subtype']] || '',
+      shotValue: parseInt(values[headerMap['shot_type']]?.includes('3PT') ? '3' : '2') || 2
+    };
+  });
 }
 
 function parseCsvLine(line: string): string[] {
