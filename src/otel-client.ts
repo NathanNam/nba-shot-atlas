@@ -28,15 +28,20 @@ let authHeader = {};
 // Function to fetch OTEL configuration from Supabase Edge Function
 async function fetchOtelConfig() {
   try {
-    const response = await fetch('/functions/v1/get-otel-config', {
+    // Use the full Supabase URL with authentication
+    const supabaseUrl = 'https://icfqngdeohzzjvzcmawo.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9Cy-4cG4A1A';
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/get-otel-config`, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
         'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch OTEL config: ${response.statusText}`);
+      throw new Error(`Failed to fetch OTEL config: ${response.status} ${response.statusText}`);
     }
 
     const config = await response.json();
@@ -51,6 +56,7 @@ async function fetchOtelConfig() {
       ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
       : {};
 
+    console.log(`✅ OTEL config fetched from Supabase: ${otlpEndpoint}`);
     return config;
   } catch (error) {
     console.warn("Failed to fetch OTEL config from Supabase, using defaults:", error);
