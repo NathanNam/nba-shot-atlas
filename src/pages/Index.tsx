@@ -13,7 +13,7 @@ const Index = () => {
   
   // Cache selections for each view mode
   const [playerSelections, setPlayerSelections] = useState<string[]>(["Stephen Curry"]);
-  const [teamSelections, setTeamSelections] = useState<string[]>([]);
+  const [teamSelections, setTeamSelections] = useState<string[]>(["GSW"]);
   const [leagueSelections] = useState<string[]>([]); // League doesn't have selections
   
   // Get current selections based on view mode
