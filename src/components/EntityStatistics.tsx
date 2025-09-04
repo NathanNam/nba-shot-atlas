@@ -30,13 +30,17 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
   const { shotData, loading, error } = useShotData(selectedSeason, entityId || '', viewMode);
   
   const calculatedStats = useMemo(() => {
-    if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
+  if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,
         fieldGoalPercentage: 0,
         twoPointPercentage: 0,
+        twoPointMade: 0,
+        twoPointAttempted: 0,
         threePointPercentage: 0,
+        threePointMade: 0,
+        threePointAttempted: 0,
         hottestZone: "No data",
         coldestZone: "No data",
         favoriteSpot: "No data"
@@ -92,7 +96,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       madeShots,
       fieldGoalPercentage,
       twoPointPercentage,
+      twoPointMade,
+      twoPointAttempted: twoPointShots.length,
       threePointPercentage,
+      threePointMade,
+      threePointAttempted: threePointShots.length,
       hottestZone: zones.hottestZone,
       hottestZoneStats: zones.hottestZoneStats,
       coldestZone: zones.coldestZone,

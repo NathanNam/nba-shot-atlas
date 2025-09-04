@@ -211,7 +211,11 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
     return {
       fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
       twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
+      twoPointMade: made2PT,
+      twoPointAttempted: twoPointers.length,
       threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
+      threePointMade: made3PT,
+      threePointAttempted: threePointers.length,
       totalShots,
       madeShots,
       hottestZone: zoneAnalysis.hottestZone,

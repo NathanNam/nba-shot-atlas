@@ -9,7 +9,11 @@ interface StatisticsPanelProps {
     madeShots: number;
     fieldGoalPercentage: number;
     twoPointPercentage: number;
+    twoPointMade: number;
+    twoPointAttempted: number;
     threePointPercentage: number;
+    threePointMade: number;
+    threePointAttempted: number;
     hottestZone: string;
     hottestZoneStats?: { made: number; total: number; percentage: number };
     coldestZone: string;
@@ -54,10 +58,8 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
             {formatPercentage(stats.twoPointPercentage)}
           </div>
           <div className="text-xs sm:text-sm text-muted-foreground">2PT%</div>
-          <div className="flex items-center justify-center mt-1">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-nba-blue mr-1"></div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Inside Arc</span>
-            <span className="text-xs text-muted-foreground sm:hidden">2PT</span>
+          <div className="text-xs text-muted-foreground mt-1">
+            {stats.twoPointMade}/{stats.twoPointAttempted}
           </div>
         </div>
 
@@ -67,10 +69,8 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
             {formatPercentage(stats.threePointPercentage)}
           </div>
           <div className="text-xs sm:text-sm text-muted-foreground">3PT%</div>
-          <div className="flex items-center justify-center mt-1">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-accent mr-1"></div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Beyond Arc</span>
-            <span className="text-xs text-muted-foreground sm:hidden">3PT</span>
+          <div className="text-xs text-muted-foreground mt-1">
+            {stats.threePointMade}/{stats.threePointAttempted}
           </div>
         </div>
 

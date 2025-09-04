@@ -79,7 +79,11 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
   const stats = {
     fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
     twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
+    twoPointMade: made2PT,
+    twoPointAttempted: twoPointers.length,
     threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
+    threePointMade: made3PT,
+    threePointAttempted: threePointers.length,
     totalShots,
     madeShots: madeShots,
     hottestZone: hottestZone ? `${hottestZone.zone} (${(hottestZone.percentage * 100).toFixed(1)}%)` : "N/A",
