@@ -7,10 +7,14 @@ import { EntityStatistics } from "@/components/EntityStatistics";
 import { LeagueShotChart } from "@/components/LeagueShotChart";
 import { LeagueStatistics } from "@/components/LeagueStatistics";
 import { VersionMarker } from "@/components/ui/version-marker";
+import { ComparisonShotChart } from "@/components/ComparisonShotChart";
+import { ComparisonStatistics } from "@/components/ComparisonStatistics";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
+  const [isComparisonMode, setIsComparisonMode] = useState(false);
+  const [selectedSeason2, setSelectedSeason2] = useState("2023-24");
   
   // Cache selections for each view mode
   const [playerSelections, setPlayerSelections] = useState<string[]>(["Stephen Curry"]);
@@ -44,6 +48,10 @@ const Index = () => {
         onSeasonChange={setSelectedSeason}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
+        isComparisonMode={isComparisonMode}
+        onComparisonModeChange={setIsComparisonMode}
+        selectedSeason2={selectedSeason2}
+        onSeason2Change={setSelectedSeason2}
       />
 
       {/* Main Content */}
@@ -62,36 +70,84 @@ const Index = () => {
           {/* Main Content Area */}
           <div className="lg:col-span-3 space-y-8">
             {/* Shot Charts Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {viewMode === "league" ? (
-                <div className="xl:col-span-2">
-                  <LeagueShotChart selectedSeason={selectedSeason} />
-                </div>
-              ) : (
-                selectedEntities.map((entity) => (
-                  <EntityShotChart
-                    key={entity}
-                    entityName={entity}
-                    selectedSeason={selectedSeason}
+            <div className="space-y-6">
+              {isComparisonMode ? (
+                // Comparison Mode
+                viewMode === "league" ? (
+                  <ComparisonShotChart
+                    entityName="NBA League"
+                    season1={selectedSeason}
+                    season2={selectedSeason2}
                     viewMode={viewMode}
                   />
-                ))
+                ) : (
+                  selectedEntities.map((entity) => (
+                    <ComparisonShotChart
+                      key={entity}
+                      entityName={entity}
+                      season1={selectedSeason}
+                      season2={selectedSeason2}
+                      viewMode={viewMode}
+                    />
+                  ))
+                )
+              ) : (
+                // Single Season Mode (original functionality)
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {viewMode === "league" ? (
+                    <div className="xl:col-span-2">
+                      <LeagueShotChart selectedSeason={selectedSeason} />
+                    </div>
+                  ) : (
+                    selectedEntities.map((entity) => (
+                      <EntityShotChart
+                        key={entity}
+                        entityName={entity}
+                        selectedSeason={selectedSeason}
+                        viewMode={viewMode}
+                      />
+                    ))
+                  )}
+                </div>
               )}
             </div>
 
             {/* Statistics Panels */}
             <div className="space-y-6">
-            {viewMode === "league" ? (
-                <LeagueStatistics selectedSeason={selectedSeason} />
-              ) : (
-                selectedEntities.map((entity) => (
-                  <EntityStatistics
-                    key={entity}
-                    entityName={entity}
-                    selectedSeason={selectedSeason}
+              {isComparisonMode ? (
+                // Comparison Mode Statistics
+                viewMode === "league" ? (
+                  <ComparisonStatistics
+                    entityName="NBA League"
+                    season1={selectedSeason}
+                    season2={selectedSeason2}
                     viewMode={viewMode}
                   />
-                ))
+                ) : (
+                  selectedEntities.map((entity) => (
+                    <ComparisonStatistics
+                      key={entity}
+                      entityName={entity}
+                      season1={selectedSeason}
+                      season2={selectedSeason2}
+                      viewMode={viewMode}
+                    />
+                  ))
+                )
+              ) : (
+                // Single Season Mode Statistics (original functionality)
+                viewMode === "league" ? (
+                  <LeagueStatistics selectedSeason={selectedSeason} />
+                ) : (
+                  selectedEntities.map((entity) => (
+                    <EntityStatistics
+                      key={entity}
+                      entityName={entity}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  ))
+                )
               )}
             </div>
           </div>

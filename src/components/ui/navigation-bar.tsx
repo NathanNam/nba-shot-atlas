@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { BarChart3, Users, Trophy, TrendingUp } from "lucide-react";
 
 interface NavigationBarProps {
@@ -9,6 +11,10 @@ interface NavigationBarProps {
   onSeasonChange: (season: string) => void;
   viewMode: "player" | "team" | "league";
   onViewModeChange: (mode: "player" | "team" | "league") => void;
+  isComparisonMode: boolean;
+  onComparisonModeChange: (enabled: boolean) => void;
+  selectedSeason2?: string;
+  onSeason2Change?: (season: string) => void;
 }
 
 const seasons = [
@@ -20,7 +26,11 @@ export function NavigationBar({
   selectedSeason, 
   onSeasonChange, 
   viewMode, 
-  onViewModeChange 
+  onViewModeChange,
+  isComparisonMode,
+  onComparisonModeChange,
+  selectedSeason2,
+  onSeason2Change
 }: NavigationBarProps) {
   return (
     <nav className="bg-card border-b border-border shadow-card">
@@ -40,22 +50,56 @@ export function NavigationBar({
           </div>
 
           {/* Controls */}
-          <div className="flex items-center space-x-6">
-            {/* Season Selector */}
+          <div className="flex items-center space-x-4">
+            {/* Season Comparison Toggle */}
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-foreground hidden sm:block">Season:</span>
-              <Select value={selectedSeason} onValueChange={onSeasonChange}>
-                <SelectTrigger className="w-32 bg-secondary/50 border-border">
-                  <SelectValue placeholder="Select season" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {seasons.map((season) => (
-                    <SelectItem key={season} value={season} className="focus:bg-accent/20">
-                      {season}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="comparison-mode" className="text-sm font-medium text-foreground hidden sm:block">
+                Compare:
+              </Label>
+              <Switch
+                id="comparison-mode"
+                checked={isComparisonMode}
+                onCheckedChange={onComparisonModeChange}
+              />
+            </div>
+
+            {/* Season Selectors */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-foreground hidden sm:block">
+                {isComparisonMode ? "Seasons:" : "Season:"}
+              </span>
+              <div className="flex items-center space-x-2">
+                <Select value={selectedSeason} onValueChange={onSeasonChange}>
+                  <SelectTrigger className="w-32 bg-secondary/50 border-border">
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {seasons.map((season) => (
+                      <SelectItem key={season} value={season} className="focus:bg-accent/20">
+                        {season}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {isComparisonMode && (
+                  <>
+                    <span className="text-muted-foreground">vs</span>
+                    <Select value={selectedSeason2} onValueChange={onSeason2Change}>
+                      <SelectTrigger className="w-32 bg-secondary/50 border-border">
+                        <SelectValue placeholder="Compare with" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {seasons.filter(s => s !== selectedSeason).map((season) => (
+                          <SelectItem key={season} value={season} className="focus:bg-accent/20">
+                            {season}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* View Mode Toggle */}
