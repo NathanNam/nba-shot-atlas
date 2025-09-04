@@ -375,62 +375,67 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
   };
 
   return (
-    <Card className="p-6 bg-card border-border shadow-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="view-mode" className="text-sm">Heat Map</Label>
-          <Switch
-            id="view-mode"
-            checked={viewMode === "heatmap"}
-            onCheckedChange={(checked) => setViewMode(checked ? "heatmap" : "shots")}
+    <Card className="p-3 sm:p-6 bg-card border-border shadow-card">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <h3 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h3>
+        <div className="flex items-center justify-between sm:justify-end">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="view-mode" className="text-sm font-medium">Heat Map</Label>
+            <Switch
+              id="view-mode"
+              checked={viewMode === "heatmap"}
+              onCheckedChange={(checked) => setViewMode(checked ? "heatmap" : "shots")}
+              className="data-[state=checked]:bg-primary"
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Responsive shot chart container */}
+      <div className="flex justify-center mb-4">
+        <div className="w-full max-w-lg sm:max-w-2xl">
+          <svg
+            ref={svgRef}
+            width="100%"
+            height="auto"
+            viewBox={`0 0 ${width} ${height}`}
+            className="border border-border rounded-lg shadow-court w-full h-auto touch-manipulation"
+            style={{ aspectRatio: `${width}/${height}` }}
           />
         </div>
       </div>
       
-      <div className="flex justify-center">
-        <svg
-          ref={svgRef}
-          width="100%"
-          height="auto"
-          viewBox={`0 0 ${width} ${height}`}
-          className="border border-border rounded-lg shadow-court max-w-full h-auto"
-          style={{ aspectRatio: `${width}/${height}` }}
-        />
-      </div>
-      
-      {/* Legend */}
-      <div className="flex justify-center items-center gap-6 mt-4 pt-4 border-t border-border">
+      {/* Mobile-optimized legend */}
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 pt-4 border-t border-border">
         {viewMode === "shots" ? (
-          <>
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
+            <div className="flex items-center gap-2 justify-center">
               <div 
-                className="w-4 h-4 rounded-full border border-green-500" 
+                className="w-4 h-4 rounded-full border border-green-500 flex-shrink-0" 
                 style={{ backgroundColor: "hsl(var(--heat-hot))" }}
               />
-              <span className="text-sm text-muted-foreground">Made Shot</span>
+              <span className="text-sm font-medium text-muted-foreground">Made Shot</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
               <div 
-                className="w-4 h-4 rounded-full border border-red-500" 
+                className="w-4 h-4 rounded-full border border-red-500 flex-shrink-0" 
                 style={{ backgroundColor: "hsl(var(--heat-cold))" }}
               />
-              <span className="text-sm text-muted-foreground">Missed Shot</span>
+              <span className="text-sm font-medium text-muted-foreground">Missed Shot</span>
             </div>
-          </>
+          </div>
         ) : (
-          <>
-            <div className="text-sm text-muted-foreground">FG% vs. League Avg</div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs">-</span>
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 45%, 65%)" }} />
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 55%, 55%)" }} />
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 65%, 45%)" }} />
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 75%, 35%)" }} />
-              <div className="w-4 h-4" style={{ backgroundColor: "hsl(220, 85%, 25%)" }} />
-              <span className="text-xs">+</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
+            <div className="flex items-center gap-2 justify-center">
+              <div className="w-4 h-4 rounded-full bg-blue-600 flex-shrink-0"/>
+              <span className="text-sm font-medium text-muted-foreground">Above League Avg</span>
             </div>
-          </>
+            <div className="flex items-center gap-2 justify-center">
+              <div className="w-4 h-4 rounded-full bg-blue-300 flex-shrink-0"/>
+              <span className="text-sm font-medium text-muted-foreground">Below League Avg</span>
+            </div>
+          </div>
         )}
         {data && data.length > 0 && (
           <div className="text-xs text-muted-foreground ml-4">

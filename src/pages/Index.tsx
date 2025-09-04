@@ -55,10 +55,10 @@ const Index = () => {
       />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Sidebar - Entity Selector */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
             <PlayerSelector
               viewMode={viewMode}
               selectedEntities={selectedEntities}
@@ -68,9 +68,9 @@ const Index = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Shot Charts Grid */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
                 // Comparison Mode
                 viewMode === "league" ? (
@@ -113,7 +113,7 @@ const Index = () => {
             </div>
 
             {/* Statistics Panels */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
                 // Comparison Mode Statistics
                 viewMode === "league" ? (
@@ -155,14 +155,14 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
+      <footer className="border-t border-border bg-card/50 backdrop-blur-sm mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
               NBA Shot Analytics • Data from 2013-2014 to 2024-2025 seasons
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>Built with modern web technologies</span>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+              <span className="text-center">Built with modern web technologies</span>
               <VersionMarker version="v1.2.0" />
             </div>
           </div>
