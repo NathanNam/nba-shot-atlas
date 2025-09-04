@@ -162,13 +162,33 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
 }
 
 function applyFilter(shots: ShotData[], viewMode: 'player' | 'team' | 'league', entityId: string): ShotData[] {
-  if (viewMode === 'player') {
-    return shots.filter(shot => shot.personId === entityId);
+  // Log filtered data for debugging
+  console.log(`🔍 Filtering ${shots.length} shots: ${viewMode} = "${entityId}"`);
+  
+  let filtered: ShotData[];
+  if (viewMode === 'league') {
+    filtered = shots;
+  } else if (viewMode === 'player') {
+    filtered = shots.filter(shot => shot.personId === entityId);
+    console.log(`👤 Player filter: found ${filtered.length} shots for ID ${entityId}`);
+    if (filtered.length === 0) {
+      // Debug: show sample of available player IDs
+      const sampleIds = [...new Set(shots.slice(0, 100).map(s => s.personId))].slice(0, 10);
+      console.log('🔍 Sample player IDs in data:', sampleIds);
+    }
   } else if (viewMode === 'team') {
-    return shots.filter(shot => shot.teamTricode === entityId);
+    filtered = shots.filter(shot => shot.teamTricode === entityId);
+    console.log(`🏀 Team filter: found ${filtered.length} shots for team ${entityId}`);
+    if (filtered.length === 0) {
+      // Debug: show sample of available team codes
+      const sampleTeams = [...new Set(shots.slice(0, 100).map(s => s.teamTricode))].slice(0, 10);
+      console.log('🔍 Sample team codes in data:', sampleTeams);
+    }
+  } else {
+    filtered = shots;
   }
-  // For league mode, use all shots
-  return shots;
+  
+  return filtered;
 }
 
 function parseCsv(csvText: string): ShotData[] {
@@ -178,23 +198,64 @@ function parseCsv(csvText: string): ShotData[] {
   // Create a mapping from header names to indices for more robust parsing
   const headerMap: { [key: string]: number } = {};
   headers.forEach((header, index) => {
-    headerMap[header.toLowerCase().replace(/"/g, '')] = index;
+    const cleanHeader = header.toLowerCase().replace(/"/g, '').trim();
+    headerMap[cleanHeader] = index;
   });
+  
+  console.log('CSV Headers found:', Object.keys(headerMap));
   
   return lines.slice(1).map(line => {
     const values = parseCsvLine(line);
+    
+    // More robust field mapping to handle different CSV formats
+    const personId = values[headerMap['person_id']] || 
+                    values[headerMap['personid']] || 
+                    values[headerMap['player_id']] ||
+                    values[headerMap['playerid']] || '';
+                    
+    const teamTricode = values[headerMap['team_tricode']] || 
+                       values[headerMap['teamtricode']] || 
+                       values[headerMap['team_abbreviation']] ||
+                       values[headerMap['team']] || '';
+                       
+    const shotMadeFlag = values[headerMap['shot_made_flag']] || 
+                        values[headerMap['shotmadeflag']] || 
+                        values[headerMap['made']] || '0';
+                        
+    const locX = values[headerMap['loc_x']] || 
+                values[headerMap['locx']] || 
+                values[headerMap['x']] || 
+                values[headerMap['xlegacy']] || '0';
+                
+    const locY = values[headerMap['loc_y']] || 
+                values[headerMap['locy']] || 
+                values[headerMap['y']] || 
+                values[headerMap['ylegacy']] || '0';
+                
+    const shotDistance = values[headerMap['shot_distance']] || 
+                        values[headerMap['shotdistance']] || 
+                        values[headerMap['distance']] || '0';
+                        
+    const actionType = values[headerMap['action_type']] || 
+                      values[headerMap['actiontype']] || 
+                      values[headerMap['description']] || '';
+                      
+    const shotType = values[headerMap['shot_type']] || 
+                    values[headerMap['shottype']] || 
+                    values[headerMap['subtype']] || '';
+    
     return {
-      personId: values[headerMap['person_id']] || values[headerMap['personid']] || '',
-      teamTricode: values[headerMap['team_tricode']] || values[headerMap['teamtricode']] || '',
-      xLegacy: parseFloat(values[headerMap['loc_x']] || values[headerMap['xlegacy']]) || 0,
-      yLegacy: parseFloat(values[headerMap['loc_y']] || values[headerMap['ylegacy']]) || 0,
-      shotResult: values[headerMap['shot_made_flag']] === '1' ? 'Made' : 'Missed',
-      shotDistance: parseFloat(values[headerMap['shot_distance']] || values[headerMap['shotdistance']]) || 0,
-      description: values[headerMap['action_type']] || values[headerMap['description']] || '',
-      subType: values[headerMap['shot_type']] || values[headerMap['subtype']] || '',
-      shotValue: parseInt(values[headerMap['shot_type']]?.includes('3PT') ? '3' : '2') || 2
+      personId: personId.toString(),
+      teamTricode: teamTricode,
+      xLegacy: parseFloat(locX) || 0,
+      yLegacy: parseFloat(locY) || 0,
+      shotResult: shotMadeFlag === '1' ? 'Made' : 'Missed',
+      shotDistance: parseFloat(shotDistance) || 0,
+      description: actionType,
+      subType: shotType,
+      shotValue: shotType?.includes('3PT') ? 3 : 2
     };
-  });
+  }).filter(shot => shot.personId && shot.teamTricode); // Filter out invalid entries
 }
 
 function parseCsvLine(line: string): string[] {
