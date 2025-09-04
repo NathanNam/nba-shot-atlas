@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
+import { trace, context, SpanStatusCode } from '@opentelemetry/api';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { tracer, logger, meter } from '../otel-client';
 
 export interface ShotData {
   personId: string;
@@ -35,66 +38,190 @@ const dataCache = typeof window !== 'undefined' ? window.__NBA_DATA_CACHE__! : n
 // Cache TTL: 5 minutes
 const CACHE_TTL = 5 * 60 * 1000;
 
+// Metrics for useShotData hook
+const hookUsageCounter = meter.createCounter('use_shot_data_hook_usage_total', {
+  description: 'Total number of useShotData hook invocations',
+});
+
+const dataLoadDuration = meter.createHistogram('use_shot_data_load_duration_ms', {
+  description: 'Duration of data loading in useShotData hook',
+});
+
+const cacheHitCounter = meter.createCounter('use_shot_data_cache_hits_total', {
+  description: 'Total number of cache hits in useShotData hook',
+});
+
 export function useShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
   const [shotData, setShotData] = useState<ShotData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Track hook usage
+  useEffect(() => {
+    hookUsageCounter.add(1, {
+      season: season,
+      view_mode: viewMode,
+      entity_id: entityId || 'none',
+    });
+
+    logger.emit({
+      severityNumber: SeverityNumber.DEBUG,
+      severityText: 'DEBUG',
+      body: 'useShotData hook invoked',
+      attributes: {
+        season: season,
+        entity_id: entityId,
+        view_mode: viewMode,
+      },
+    });
+  }, [season, entityId, viewMode]);
+
   useEffect(() => {
     const loadShotData = async () => {
-      if (!entityId && viewMode !== 'league') {
-        setShotData([]);
-        return;
-      }
+      const span = tracer.startSpan('use_shot_data.load_shot_data', {
+        attributes: {
+          'hook.operation': 'load_shot_data',
+          'hook.season': season,
+          'hook.entity_id': entityId,
+          'hook.view_mode': viewMode,
+        },
+      });
+
+      const startTime = Date.now();
+
+      try {
+        if (!entityId && viewMode !== 'league') {
+          setShotData([]);
+          span.setAttributes({
+            'hook.early_return': true,
+            'hook.reason': 'no_entity_id',
+          });
+          return;
+        }
+
+        // Cancel any previous request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
       
-      // Cancel any previous request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
-      
-      const year = season.includes('-') ? season.split('-')[0] : season;
-      const cacheKey = `${season}-${year}`;
-      const filterKey = `${viewMode}-${entityId}`;
-      
-      // Check if we have cached data for this season
-      const cached = dataCache.get(cacheKey);
-      const now = Date.now();
-      
-      if (cached && (now - cached.timestamp) < CACHE_TTL) {
-        // Check if we have this specific filter cached
-        const cachedFiltered = cached.filteredData.get(filterKey);
-        if (cachedFiltered) {
-          console.log(`✅ Cache hit: ${viewMode} ${entityId} for ${season} (${cachedFiltered.length} shots)`);
-          setShotData(cachedFiltered);
+        const year = season.includes('-') ? season.split('-')[0] : season;
+        const cacheKey = `${season}-${year}`;
+        const filterKey = `${viewMode}-${entityId}`;
+
+        span.setAttributes({
+          'hook.cache_key': cacheKey,
+          'hook.filter_key': filterKey,
+        });
+
+        // Check if we have cached data for this season
+        const cached = dataCache.get(cacheKey);
+        const now = Date.now();
+
+        if (cached && (now - cached.timestamp) < CACHE_TTL) {
+          // Check if we have this specific filter cached
+          const cachedFiltered = cached.filteredData.get(filterKey);
+          if (cachedFiltered) {
+            cacheHitCounter.add(1, {
+              season: season,
+              view_mode: viewMode,
+              cache_type: 'filtered',
+            });
+
+            span.setAttributes({
+              'hook.cache_hit': true,
+              'hook.cache_type': 'filtered',
+              'hook.result_count': cachedFiltered.length,
+            });
+
+            logger.emit({
+              severityNumber: SeverityNumber.DEBUG,
+              severityText: 'DEBUG',
+              body: 'Cache hit for filtered data',
+              attributes: {
+                season: season,
+                view_mode: viewMode,
+                entity_id: entityId,
+                result_count: cachedFiltered.length,
+              },
+            });
+
+            console.log(`✅ Cache hit: ${viewMode} ${entityId} for ${season} (${cachedFiltered.length} shots)`);
+            setShotData(cachedFiltered);
+            setLoading(false);
+            return;
+          }
+
+          // We have raw data but not this filter, compute filter
+          cacheHitCounter.add(1, {
+            season: season,
+            view_mode: viewMode,
+            cache_type: 'raw',
+          });
+
+          const filteredShots = applyFilter(cached.rawData, viewMode, entityId);
+          cached.filteredData.set(filterKey, filteredShots);
+
+          span.setAttributes({
+            'hook.cache_hit': true,
+            'hook.cache_type': 'raw_with_filter',
+            'hook.result_count': filteredShots.length,
+          });
+
+          logger.emit({
+            severityNumber: SeverityNumber.DEBUG,
+            severityText: 'DEBUG',
+            body: 'Cache hit for raw data, applied filter',
+            attributes: {
+              season: season,
+              view_mode: viewMode,
+              entity_id: entityId,
+              result_count: filteredShots.length,
+            },
+          });
+
+          console.log(`✅ Cache + filter: ${viewMode} ${entityId} for ${season} (${filteredShots.length} shots)`);
+          setShotData(filteredShots);
           setLoading(false);
           return;
         }
-        
-        // We have raw data but not this filter, compute filter
-        const filteredShots = applyFilter(cached.rawData, viewMode, entityId);
-        cached.filteredData.set(filterKey, filteredShots);
-        console.log(`✅ Cache + filter: ${viewMode} ${entityId} for ${season} (${filteredShots.length} shots)`);
-        setShotData(filteredShots);
-        setLoading(false);
-        return;
-      }
       
-      // Need to load fresh data
-      setLoading(true);
-      setError(null);
-      
-      try {
+        // Need to load fresh data
+        span.setAttributes({
+          'hook.cache_hit': false,
+        });
+
+        setLoading(true);
+        setError(null);
+
+        logger.emit({
+          severityNumber: SeverityNumber.INFO,
+          severityText: 'INFO',
+          body: 'Loading fresh shot data',
+          attributes: {
+            season: season,
+            view_mode: viewMode,
+            entity_id: entityId,
+          },
+        });
+
         let csvText = '';
-        
+
         // Try loading compressed file first
         const zipPath = `/data/nbastatsv3_${year}_enriched_shots.csv.zip`;
+        span.addEvent('attempting_zip_load', { path: zipPath });
+
         try {
           const zipResponse = await fetch(zipPath, { signal });
           if (zipResponse.ok) {
+            span.setAttributes({
+              'hook.data_source': 'zip',
+              'hook.file_path': zipPath,
+            });
+
             const zipBlob = await zipResponse.blob();
             const zip = new JSZip();
             const zipContent = await zip.loadAsync(zipBlob);
@@ -111,40 +238,101 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         } catch (zipError) {
           // Fallback to uncompressed CSV
           const csvPath = `/data/nbastatsv3_${year}_enriched_shots.csv`;
+          span.addEvent('attempting_csv_load', { path: csvPath });
+
           const response = await fetch(csvPath, { signal });
           if (!response.ok) {
             throw new Error(`Failed to load data for ${season} (tried both .zip and .csv)`);
           }
+
+          span.setAttributes({
+            'hook.data_source': 'csv',
+            'hook.file_path': csvPath,
+          });
+
           csvText = await response.text();
         }
         
         if (signal.aborted) return;
-        
+
+        span.addEvent('parsing_csv', { csv_size: csvText.length });
         const shots = parseCsv(csvText);
         if (signal.aborted) return;
-        
+
         // Cache the raw data
         const newCache = {
           rawData: shots,
           filteredData: new Map<string, ShotData[]>(),
           timestamp: now
         };
-        
+
         // Apply current filter and cache it
         const filteredShots = applyFilter(shots, viewMode, entityId);
         newCache.filteredData.set(filterKey, filteredShots);
-        
+
         dataCache.set(cacheKey, newCache);
+
+        span.setAttributes({
+          'hook.raw_data_count': shots.length,
+          'hook.filtered_data_count': filteredShots.length,
+          'hook.csv_size_bytes': csvText.length,
+        });
+
+        logger.emit({
+          severityNumber: SeverityNumber.INFO,
+          severityText: 'INFO',
+          body: 'Successfully loaded and cached shot data',
+          attributes: {
+            season: season,
+            view_mode: viewMode,
+            entity_id: entityId,
+            raw_data_count: shots.length,
+            filtered_data_count: filteredShots.length,
+          },
+        });
+
         setShotData(filteredShots);
-        
+
       } catch (err) {
         if (signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load shot data');
+
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
+
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorMessage,
+        });
+
+        logger.emit({
+          severityNumber: SeverityNumber.ERROR,
+          severityText: 'ERROR',
+          body: 'Error loading shot data',
+          attributes: {
+            season: season,
+            view_mode: viewMode,
+            entity_id: entityId,
+            error: errorMessage,
+          },
+        });
+
+        setError(errorMessage);
         setShotData([]);
       } finally {
         if (!signal.aborted) {
           setLoading(false);
+
+          const duration = Date.now() - startTime;
+          dataLoadDuration.record(duration, {
+            season: season,
+            view_mode: viewMode,
+          });
+
+          span.setAttributes({
+            'hook.load_duration_ms': duration,
+          });
         }
+
+        span.end();
       }
     };
 
