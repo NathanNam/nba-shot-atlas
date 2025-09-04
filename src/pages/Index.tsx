@@ -10,7 +10,30 @@ import { LeagueStatistics } from "@/components/LeagueStatistics";
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-2025");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
-  const [selectedEntities, setSelectedEntities] = useState<string[]>(["Stephen Curry"]);
+  
+  // Cache selections for each view mode
+  const [playerSelections, setPlayerSelections] = useState<string[]>(["Stephen Curry"]);
+  const [teamSelections, setTeamSelections] = useState<string[]>([]);
+  const [leagueSelections] = useState<string[]>([]); // League doesn't have selections
+  
+  // Get current selections based on view mode
+  const selectedEntities = viewMode === "player" ? playerSelections : 
+                          viewMode === "team" ? teamSelections : 
+                          leagueSelections;
+  
+  // Handle view mode changes
+  const handleViewModeChange = (newViewMode: "player" | "team" | "league") => {
+    setViewMode(newViewMode);
+  };
+  
+  // Handle entity changes based on current view mode
+  const handleEntitiesChange = (entities: string[]) => {
+    if (viewMode === "player") {
+      setPlayerSelections(entities);
+    } else if (viewMode === "team") {
+      setTeamSelections(entities);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,7 +42,7 @@ const Index = () => {
         selectedSeason={selectedSeason}
         onSeasonChange={setSelectedSeason}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Main Content */}
@@ -30,7 +53,7 @@ const Index = () => {
             <PlayerSelector
               viewMode={viewMode}
               selectedEntities={selectedEntities}
-              onEntitiesChange={setSelectedEntities}
+              onEntitiesChange={handleEntitiesChange}
               selectedSeason={selectedSeason}
             />
           </div>
