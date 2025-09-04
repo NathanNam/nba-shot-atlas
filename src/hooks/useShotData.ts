@@ -294,7 +294,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         setShotData(filteredShots);
 
       } catch (err) {
-        if (signal.aborted) return;
+        if (abortControllerRef.current?.signal.aborted) return;
 
         const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
 
@@ -318,7 +318,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         setError(errorMessage);
         setShotData([]);
       } finally {
-        if (!signal.aborted) {
+        if (!abortControllerRef.current?.signal.aborted) {
           setLoading(false);
 
           const duration = Date.now() - startTime;
