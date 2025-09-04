@@ -20,62 +20,108 @@ import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 // Configuration
 const serviceName = "hoops-analytics-viz"; // NBA analytics visualization app
 
-// Vite environment variables
-const otlpEndpoint =
-  import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ?? 
-  import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 
-  "http://localhost:4318";
-const otlpEndpointBearerToken = 
-  import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN ??
-  import.meta.env.OTEL_EXPORTER_OTLP_BEARER_TOKEN;
+// Default values
+let otlpEndpoint = "http://localhost:4318";
+let otlpEndpointBearerToken: string | undefined;
+let authHeader = {};
 
-const authHeader = otlpEndpointBearerToken
-  ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
-  : {};
+// Function to fetch OTEL configuration from Supabase Edge Function
+async function fetchOtelConfig() {
+  try {
+    const response = await fetch('/functions/v1/get-otel-config', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch OTEL config: ${response.statusText}`);
+    }
+
+    const config = await response.json();
+    
+    if (config.error) {
+      throw new Error(config.error);
+    }
+
+    otlpEndpoint = config.endpoint || "http://localhost:4318";
+    otlpEndpointBearerToken = config.bearerToken;
+    authHeader = otlpEndpointBearerToken
+      ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
+      : {};
+
+    return config;
+  } catch (error) {
+    console.warn("Failed to fetch OTEL config from Supabase, using defaults:", error);
+    // Fallback to environment variables if available
+    otlpEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
+    otlpEndpointBearerToken = import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN;
+    authHeader = otlpEndpointBearerToken
+      ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
+      : {};
+  }
+}
 
 // Create resource
 const resource = resourceFromAttributes({
   [ATTR_SERVICE_NAME]: serviceName,
 });
 
-const provider = new WebTracerProvider({
-  resource: resource,
-  spanProcessors: [
-    new SimpleSpanProcessor(
-      new OTLPTraceExporter({
-        url: `${otlpEndpoint}/v1/traces`,
-        headers: {
-          ...authHeader,
-          "x-observe-target-package": "Tracing",
-        },
-      })
-    ),
-  ],
-});
+// These will be initialized after fetching config
+let provider: WebTracerProvider;
+let loggerProvider: LoggerProvider;
 
-// Initialize Logger Provider
-const loggerProvider = new LoggerProvider({
-  resource: resource,
-  processors: [
-    new BatchLogRecordProcessor(
-      new OTLPLogExporter({
-        url: `${otlpEndpoint}/v1/logs`,
-        headers: {
-          ...authHeader,
-          "x-observe-target-package": "Logs",
-        },
-      })
-    ),
-  ],
-});
+function createProviders() {
+  provider = new WebTracerProvider({
+    resource: resource,
+    spanProcessors: [
+      new SimpleSpanProcessor(
+        new OTLPTraceExporter({
+          url: `${otlpEndpoint}/v1/traces`,
+          headers: {
+            ...authHeader,
+            "x-observe-target-package": "Tracing",
+          },
+        })
+      ),
+    ],
+  });
+
+  // Initialize Logger Provider
+  loggerProvider = new LoggerProvider({
+    resource: resource,
+    processors: [
+      new BatchLogRecordProcessor(
+        new OTLPLogExporter({
+          url: `${otlpEndpoint}/v1/logs`,
+          headers: {
+            ...authHeader,
+            "x-observe-target-package": "Logs",
+          },
+        })
+      ),
+    ],
+  });
+}
 
 // Global instances - initialize with safe defaults
 let tracer: Tracer = trace.getTracer(serviceName);
-let logger: Logger = loggerProvider.getLogger(serviceName);
+let logger: Logger;
 let meter: Meter = metrics.getMeter(serviceName);
 
+// Initialize logger with a default provider first
+const defaultLoggerProvider = new LoggerProvider({ resource });
+logger = defaultLoggerProvider.getLogger(serviceName);
+
 // Initialize OpenTelemetry and return initialized components
-export function initOtel(): { tracer: Tracer; logger: Logger; meter: Meter } {
+export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; meter: Meter }> {
+  // Fetch OTEL configuration from Supabase first
+  await fetchOtelConfig();
+  
+  // Create providers with the fetched configuration
+  createProviders();
+  
   try {
     // Registering instrumentations / plugins
     registerInstrumentations({
