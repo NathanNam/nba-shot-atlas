@@ -3,26 +3,47 @@ import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
 
-// Performance metrics
-const pageLoadDuration = meter.createHistogram('page_load_duration_ms', {
-  description: 'Duration of page load events',
-});
+// Safe logger function that checks if logger is initialized
+const safeLog = (logData: any) => {
+  if (logger?.emit) {
+    logger.emit(logData);
+  }
+};
 
-const componentRenderDuration = meter.createHistogram('component_render_duration_ms', {
-  description: 'Duration of component render cycles',
-});
+// Performance metrics with safe initialization
+let pageLoadDuration: any;
+let componentRenderDuration: any;
+let userInteractionCounter: any;
+let performanceObservationCounter: any;
+let memoryUsageGauge: any;
 
-const userInteractionCounter = meter.createCounter('user_interactions_total', {
-  description: 'Total number of user interactions',
-});
+// Initialize metrics safely
+const initMetrics = () => {
+  if (meter?.createHistogram) {
+    pageLoadDuration = meter.createHistogram('page_load_duration_ms', {
+      description: 'Duration of page load events',
+    });
 
-const performanceObservationCounter = meter.createCounter('performance_observations_total', {
-  description: 'Total number of performance observations',
-});
+    componentRenderDuration = meter.createHistogram('component_render_duration_ms', {
+      description: 'Duration of component render cycles',
+    });
 
-const memoryUsageGauge = meter.createUpDownCounter('memory_usage_mb', {
-  description: 'Current memory usage in megabytes',
-});
+    userInteractionCounter = meter.createCounter('user_interactions_total', {
+      description: 'Total number of user interactions',
+    });
+
+    performanceObservationCounter = meter.createCounter('performance_observations_total', {
+      description: 'Total number of performance observations',
+    });
+
+    memoryUsageGauge = meter.createUpDownCounter('memory_usage_mb', {
+      description: 'Current memory usage in megabytes',
+    });
+  }
+};
+
+// Initialize metrics when module loads
+initMetrics();
 
 interface PerformanceMonitorProps {
   componentName?: string;
@@ -45,12 +66,14 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
       // Record component mount time
       const mountDuration = Date.now() - mountTime.current;
       
-      componentRenderDuration.record(mountDuration, {
-        component_name: componentName,
-        lifecycle_event: 'mount',
-      });
+      if (componentRenderDuration?.record) {
+        componentRenderDuration.record(mountDuration, {
+          component_name: componentName,
+          lifecycle_event: 'mount',
+        });
+      }
 
-      logger.emit({
+      safeLog({
         severityNumber: SeverityNumber.DEBUG,
         severityText: 'DEBUG',
         body: 'Component mounted',
@@ -76,7 +99,7 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
         try {
           const totalLifetime = Date.now() - mountTime.current;
           
-          logger.emit({
+          safeLog({
             severityNumber: SeverityNumber.DEBUG,
             severityText: 'DEBUG',
             body: 'Component unmounted',
@@ -102,13 +125,15 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
   useEffect(() => {
     const renderDuration = Date.now() - renderStartTime.current;
     
-    componentRenderDuration.record(renderDuration, {
-      component_name: componentName,
-      lifecycle_event: 'render',
-    });
+    if (componentRenderDuration?.record) {
+      componentRenderDuration.record(renderDuration, {
+        component_name: componentName,
+        lifecycle_event: 'render',
+      });
+    }
 
     if (renderDuration > 100) { // Log slow renders
-      logger.emit({
+      safeLog({
         severityNumber: SeverityNumber.WARN,
         severityText: 'WARN',
         body: 'Slow component render detected',
@@ -142,18 +167,20 @@ export function setupGlobalPerformanceMonitoring() {
             const firstPaint = performance.getEntriesByName('first-paint')[0]?.startTime || 0;
             const firstContentfulPaint = performance.getEntriesByName('first-contentful-paint')[0]?.startTime || 0;
 
-            pageLoadDuration.record(loadTime, { event_type: 'load' });
-            pageLoadDuration.record(domContentLoaded, { event_type: 'dom_content_loaded' });
-            
-            if (firstPaint > 0) {
-              pageLoadDuration.record(firstPaint, { event_type: 'first_paint' });
-            }
-            
-            if (firstContentfulPaint > 0) {
-              pageLoadDuration.record(firstContentfulPaint, { event_type: 'first_contentful_paint' });
+            if (pageLoadDuration?.record) {
+              pageLoadDuration.record(loadTime, { event_type: 'load' });
+              pageLoadDuration.record(domContentLoaded, { event_type: 'dom_content_loaded' });
+              
+              if (firstPaint > 0) {
+                pageLoadDuration.record(firstPaint, { event_type: 'first_paint' });
+              }
+              
+              if (firstContentfulPaint > 0) {
+                pageLoadDuration.record(firstContentfulPaint, { event_type: 'first_contentful_paint' });
+              }
             }
 
-            logger.emit({
+            safeLog({
               severityNumber: SeverityNumber.INFO,
               severityText: 'INFO',
               body: 'Page load performance metrics',
@@ -182,10 +209,12 @@ export function setupGlobalPerformanceMonitoring() {
       // Monitor user interactions
       ['click', 'keydown', 'scroll', 'resize'].forEach(eventType => {
         window.addEventListener(eventType, (event) => {
-          userInteractionCounter.add(1, {
-            interaction_type: eventType,
-            target_tag: (event.target as Element)?.tagName?.toLowerCase() || 'unknown',
-          });
+          if (userInteractionCounter?.add) {
+            userInteractionCounter.add(1, {
+              interaction_type: eventType,
+              target_tag: (event.target as Element)?.tagName?.toLowerCase() || 'unknown',
+            });
+          }
         }, { passive: true });
       });
 
@@ -197,12 +226,14 @@ export function setupGlobalPerformanceMonitoring() {
             const usedMB = memory.usedJSHeapSize / 1024 / 1024;
             const totalMB = memory.totalJSHeapSize / 1024 / 1024;
             
-            memoryUsageGauge.add(usedMB, { memory_type: 'used' });
-            memoryUsageGauge.add(totalMB, { memory_type: 'total' });
+            if (memoryUsageGauge?.add) {
+              memoryUsageGauge.add(usedMB, { memory_type: 'used' });
+              memoryUsageGauge.add(totalMB, { memory_type: 'total' });
+            }
 
             // Log high memory usage
             if (usedMB > 100) {
-              logger.emit({
+              safeLog({
                 severityNumber: SeverityNumber.WARN,
                 severityText: 'WARN',
                 body: 'High memory usage detected',
@@ -226,9 +257,11 @@ export function setupGlobalPerformanceMonitoring() {
         try {
           const longTaskObserver = new PerformanceObserver((list) => {
             list.getEntries().forEach((entry) => {
-              performanceObservationCounter.add(1, { observation_type: 'long_task' });
+              if (performanceObservationCounter?.add) {
+                performanceObservationCounter.add(1, { observation_type: 'long_task' });
+              }
               
-              logger.emit({
+              safeLog({
                 severityNumber: SeverityNumber.WARN,
                 severityText: 'WARN',
                 body: 'Long task detected',
@@ -242,7 +275,7 @@ export function setupGlobalPerformanceMonitoring() {
           
           longTaskObserver.observe({ entryTypes: ['longtask'] });
         } catch (error) {
-          logger.emit({
+          safeLog({
             severityNumber: SeverityNumber.WARN,
             severityText: 'WARN',
             body: 'Failed to setup long task observer',
@@ -253,7 +286,7 @@ export function setupGlobalPerformanceMonitoring() {
         }
       }
 
-      logger.emit({
+      safeLog({
         severityNumber: SeverityNumber.INFO,
         severityText: 'INFO',
         body: 'Global performance monitoring setup completed',
