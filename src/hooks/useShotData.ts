@@ -218,9 +218,12 @@ function parseCsv(csvText: string): ShotData[] {
                        values[headerMap['team_abbreviation']] ||
                        values[headerMap['team']] || '';
                        
-    const shotMadeFlag = values[headerMap['shot_made_flag']] || 
-                        values[headerMap['shotmadeflag']] || 
-                        values[headerMap['made']] || '0';
+    // Fix the shot result mapping - use 'shotresult' (lowercase) directly
+    const shotResult = values[headerMap['shotresult']] || 
+                      values[headerMap['shot_result']] || 
+                      values[headerMap['shotmadeflag']] || 
+                      values[headerMap['shot_made_flag']] || 
+                      values[headerMap['made']] || 'Missed';
                         
     const locX = values[headerMap['loc_x']] || 
                 values[headerMap['locx']] || 
@@ -249,11 +252,13 @@ function parseCsv(csvText: string): ShotData[] {
       teamTricode: teamTricode,
       xLegacy: parseFloat(locX) || 0,
       yLegacy: parseFloat(locY) || 0,
-      shotResult: shotMadeFlag === '1' ? 'Made' : 'Missed',
+      shotResult: shotResult, // This should now correctly map to "Made" or "Missed"
       shotDistance: parseFloat(shotDistance) || 0,
       description: actionType,
       subType: shotType,
-      shotValue: shotType?.includes('3PT') ? 3 : 2
+      shotValue: parseInt(values[headerMap['shotvalue']]) || 
+                 parseInt(values[headerMap['shot_value']]) || 
+                 (shotType?.includes('3PT') ? 3 : 2)
     };
   }).filter(shot => shot.personId && shot.teamTricode); // Filter out invalid entries
 }

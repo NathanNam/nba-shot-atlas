@@ -83,52 +83,59 @@ function parseCsv(csvText: string): ShotData[] {
     const values = parseCsvLine(line);
     
     // More robust field mapping to handle different CSV formats
-    const personId = values[headerMap['person_id']] || 
-                    values[headerMap['personid']] || 
+    const personId = values[headerMap['personid']] || 
+                    values[headerMap['person_id']] || 
                     values[headerMap['player_id']] ||
                     values[headerMap['playerid']] || '';
                     
-    const teamTricode = values[headerMap['team_tricode']] || 
-                       values[headerMap['teamtricode']] || 
+    const teamTricode = values[headerMap['teamtricode']] || 
+                       values[headerMap['team_tricode']] || 
                        values[headerMap['team_abbreviation']] ||
                        values[headerMap['team']] || '';
                        
-    const shotMadeFlag = values[headerMap['shot_made_flag']] || 
-                        values[headerMap['shotmadeflag']] || 
-                        values[headerMap['made']] || '0';
+    // Fix the shot result mapping - use 'shotresult' (lowercase)
+    const shotResult = values[headerMap['shotresult']] || 
+                      values[headerMap['shot_result']] || 
+                      values[headerMap['shotmadeflag']] || 
+                      values[headerMap['shot_made_flag']] || 
+                      values[headerMap['made']] || 'Missed';
                         
-    const locX = values[headerMap['loc_x']] || 
+    const locX = values[headerMap['xlegacy']] || 
+                values[headerMap['loc_x']] || 
                 values[headerMap['locx']] || 
-                values[headerMap['x']] || 
-                values[headerMap['xlegacy']] || '0';
+                values[headerMap['x']] || '0';
                 
-    const locY = values[headerMap['loc_y']] || 
+    const locY = values[headerMap['ylegacy']] || 
+                values[headerMap['loc_y']] || 
                 values[headerMap['locy']] || 
-                values[headerMap['y']] || 
-                values[headerMap['ylegacy']] || '0';
+                values[headerMap['y']] || '0';
                 
-    const shotDistance = values[headerMap['shot_distance']] || 
-                        values[headerMap['shotdistance']] || 
+    const shotDistance = values[headerMap['shotdistance']] || 
+                        values[headerMap['shot_distance']] || 
                         values[headerMap['distance']] || '0';
                         
-    const actionType = values[headerMap['action_type']] || 
-                      values[headerMap['actiontype']] || 
+    const actionType = values[headerMap['actiontype']] || 
+                      values[headerMap['action_type']] || 
                       values[headerMap['description']] || '';
                       
-    const shotType = values[headerMap['shot_type']] || 
-                    values[headerMap['shottype']] || 
-                    values[headerMap['subtype']] || '';
+    const shotType = values[headerMap['subtype']] || 
+                    values[headerMap['shot_type']] || 
+                    values[headerMap['shottype']] || '';
+                    
+    const shotValue = parseInt(values[headerMap['shotvalue']]) || 
+                     parseInt(values[headerMap['shot_value']]) || 
+                     (shotType?.includes('3PT') ? 3 : 2);
     
     return {
       personId: personId.toString(),
       teamTricode: teamTricode,
       xLegacy: parseFloat(locX) || 0,
       yLegacy: parseFloat(locY) || 0,
-      shotResult: shotMadeFlag === '1' ? 'Made' : 'Missed',
+      shotResult: shotResult, // This should now correctly map to "Made" or "Missed"
       shotDistance: parseFloat(shotDistance) || 0,
       description: actionType,
       subType: shotType,
-      shotValue: shotType?.includes('3PT') ? 3 : 2
+      shotValue: shotValue
     };
   }).filter(shot => shot.personId && shot.teamTricode); // Filter out invalid entries
 }
