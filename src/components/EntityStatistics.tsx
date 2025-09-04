@@ -10,22 +10,27 @@ interface EntityStatisticsProps {
 }
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode }: EntityStatisticsProps) {
-  const { players } = useAvailablePlayers(selectedSeason);
+  const { players, loading: playersLoading } = useAvailablePlayers(selectedSeason);
   
   // Convert player name to player ID for data fetching
   const getEntityId = () => {
     if (viewMode === 'player') {
+      if (playersLoading) {
+        // Return undefined while loading to prevent data fetching with incorrect ID
+        return undefined;
+      }
       const player = players.find(p => p.name === entityName);
+      console.log(`🔍 EntityStatistics: Looking for "${entityName}", found player:`, player);
       return player?.id || entityName;
     }
     return entityName; // For teams, use the name directly
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useShotData(selectedSeason, entityId, viewMode);
+  const { shotData, loading, error } = useShotData(selectedSeason, entityId || '', viewMode);
   
   const calculatedStats = useMemo(() => {
-    if (!shotData || shotData.length === 0) {
+    if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,
@@ -38,16 +43,41 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       };
     }
 
+    console.log(`📊 Statistics calculation for ${entityName}:`, {
+      totalShots: shotData.length,
+      sampleShots: shotData.slice(0, 3).map(s => ({ 
+        result: s.shotResult, 
+        value: s.shotValue,
+        distance: s.shotDistance 
+      }))
+    });
+
     const totalShots = shotData.length;
-    const madeShots = shotData.filter(shot => shot.shotResult === 'Made').length;
-    const fieldGoalPercentage = madeShots / totalShots;
+    
+    // More robust shot result checking - check both parsed and raw formats
+    const madeShots = shotData.filter(shot => {
+      const result = shot.shotResult;
+      // Check for various formats: 'Made', 'MADE', '1'
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
+    
+    console.log(`📊 Made shots calculation: ${madeShots} of ${totalShots}`);
+    
+    const fieldGoalPercentage = totalShots > 0 ? madeShots / totalShots : 0;
 
     // Calculate 2PT and 3PT percentages
     const twoPointShots = shotData.filter(shot => shot.shotValue === 2);
     const threePointShots = shotData.filter(shot => shot.shotValue === 3);
     
-    const twoPointMade = twoPointShots.filter(shot => shot.shotResult === 'Made').length;
-    const threePointMade = threePointShots.filter(shot => shot.shotResult === 'Made').length;
+    const twoPointMade = twoPointShots.filter(shot => {
+      const result = shot.shotResult;
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
+    
+    const threePointMade = threePointShots.filter(shot => {
+      const result = shot.shotResult;
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
     
     const twoPointPercentage = twoPointShots.length > 0 ? twoPointMade / twoPointShots.length : 0;
     const threePointPercentage = threePointShots.length > 0 ? threePointMade / threePointShots.length : 0;
@@ -61,13 +91,13 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       fieldGoalPercentage,
       twoPointPercentage,
       threePointPercentage,
-      hottestZone: zones.hottest,
-      coldestZone: zones.coldest,
-      favoriteSpot: zones.favorite
+      hottestZone: zones.hottestZone,
+      coldestZone: zones.coldestZone,
+      favoriteSpot: zones.favoriteSpot
     };
-  }, [shotData]);
+  }, [shotData, entityName, playersLoading, entityId]);
 
-  if (loading) {
+  if (loading || playersLoading || !entityId) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
         <div className="animate-pulse">
@@ -135,7 +165,10 @@ function analyzeZones(shotData: any[]) {
     
     const zoneData = zoneStats.get(zone)!;
     zoneData.total += 1;
-    if (shot.shotResult === 'Made') {
+    
+    // More robust shot result checking
+    const result = shot.shotResult;
+    if (result === 'Made' || result === 'MADE' || result === '1') {
       zoneData.made += 1;
     }
     zoneData.percentage = zoneData.made / zoneData.total;
@@ -169,8 +202,8 @@ function analyzeZones(shotData: any[]) {
   });
   
   return {
-    hottest: hottestZone,
-    coldest: coldestZone,
-    favorite: favoriteSpot
+    hottestZone: hottestZone,
+    coldestZone: coldestZone,
+    favoriteSpot: favoriteSpot
   };
 }

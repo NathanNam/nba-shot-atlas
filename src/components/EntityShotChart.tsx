@@ -9,19 +9,27 @@ interface EntityShotChartProps {
 }
 
 export function EntityShotChart({ entityName, selectedSeason, viewMode }: EntityShotChartProps) {
-  const { players } = useAvailablePlayers(selectedSeason);
+  const { players, loading: playersLoading } = useAvailablePlayers(selectedSeason);
   
   // Convert player name to player ID for data fetching
   const getEntityId = () => {
     if (viewMode === 'player') {
+      if (playersLoading) {
+        // Return undefined while loading to prevent data fetching with incorrect ID
+        return undefined;
+      }
       const player = players.find(p => p.name === entityName);
+      console.log(`🔍 EntityShotChart: Looking for "${entityName}", found player:`, player);
       return player?.id || entityName;
     }
     return entityName; // For teams, use the name directly
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useShotData(selectedSeason, entityId, viewMode);
+  const { shotData, loading, error } = useShotData(selectedSeason, entityId || '', viewMode);
+  
+  // Show loading while players are loading or while shot data is loading
+  const isLoading = playersLoading || loading || !entityId;
   
   if (error) {
     return (
@@ -35,7 +43,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   return (
     <ShotChart
       title={entityName}
-      data={loading ? undefined : shotData}
+      data={isLoading ? undefined : shotData}
     />
   );
 }
