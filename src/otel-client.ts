@@ -87,7 +87,7 @@ function createProviders() {
           url: `${otlpEndpoint}/v1/traces`,
           headers: {
             ...authHeader,
-            "Content-Type": "application/json",
+            "Content-Type": "application/x-protobuf",
           },
         })
       ),
@@ -103,7 +103,7 @@ function createProviders() {
           url: `${otlpEndpoint}/v1/logs`,
           headers: {
             ...authHeader,
-            "Content-Type": "application/json",
+            "Content-Type": "application/x-protobuf",
           },
         })
       ),
