@@ -8,7 +8,7 @@ import { LeagueShotChart } from "@/components/LeagueShotChart";
 import { LeagueStatistics } from "@/components/LeagueStatistics";
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2024-2025");
+  const [selectedSeason, setSelectedSeason] = useState("2024-25");
   const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
   
   // Cache selections for each view mode
