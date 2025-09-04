@@ -85,7 +85,10 @@ function createProviders() {
       new SimpleSpanProcessor(
         new OTLPTraceExporter({
           url: `${otlpEndpoint}/v1/traces`,
-          headers: authHeader,
+          headers: {
+            ...authHeader,
+            "x-observe-target-package": "Tracing",
+          },
         })
       ),
     ],
@@ -98,7 +101,10 @@ function createProviders() {
       new BatchLogRecordProcessor(
         new OTLPLogExporter({
           url: `${otlpEndpoint}/v1/logs`,
-          headers: authHeader,
+          headers: {
+            ...authHeader,
+            "x-observe-target-package": "Host Explorer",
+          },
         })
       ),
     ],
