@@ -119,7 +119,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-popover border-border">
+        <PopoverContent className="w-full p-0 bg-popover border-border z-50" sideOffset={4}>
           <Command>
             <CommandInput 
               placeholder={`Search ${viewMode === "player" ? "players" : "teams"}...`}
