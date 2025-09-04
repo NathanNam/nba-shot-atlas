@@ -129,36 +129,45 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
 function analyzeZones(shotData: any[]) {
   const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
   
-  // Define zones based on shot distance and location
+  console.log(`🏀 Zone analysis for ${shotData.length} shots`);
+  
+  // Define zones based on NBA court coordinates (x: -250 to 250, y: -50 to 400+)
   shotData.forEach(shot => {
     let zone = "Unknown";
     
     const distance = shot.shotDistance;
-    const x = shot.xLegacy;
-    const y = shot.yLegacy;
+    const x = shot.xLegacy; // Court width: -250 to 250
+    const y = shot.yLegacy; // Court length: -50 to 400+
     
-    // Classify zones
-    if (distance <= 5) {
-      zone = "Paint Area";
-    } else if (distance <= 10 && Math.abs(x) < 80) {
-      zone = "Close Range";
+    // NBA court zone classification
+    if (distance <= 3) {
+      zone = "Restricted Area";
+    } else if (distance <= 8) {
+      zone = "Paint";
     } else if (distance <= 16) {
-      zone = "Mid Range";
-    } else if (shot.shotValue === 3) {
-      if (Math.abs(x) > 220 && y < 100) {
-        if (x < 0) zone = "Left Corner 3";
-        else zone = "Right Corner 3";
-      } else if (x > 100) {
-        zone = "Right Wing 3";
-      } else if (x < -100) {
-        zone = "Left Wing 3";
+      if (Math.abs(x) <= 80) {
+        zone = "Mid Range Center";
       } else {
-        zone = "Top of Arc 3";
+        zone = Math.abs(x) > 150 ? "Mid Range Wing" : "Mid Range";
+      }
+    } else if (shot.shotValue === 3) {
+      // 3-point zones
+      if (y <= 100 && Math.abs(x) >= 220) {
+        zone = x < 0 ? "Left Corner 3" : "Right Corner 3";
+      } else if (Math.abs(x) <= 80) {
+        zone = "Above Break 3 Center";
+      } else if (Math.abs(x) <= 160) {
+        zone = x < 0 ? "Above Break 3 Left" : "Above Break 3 Right";
+      } else {
+        zone = x < 0 ? "Left Wing 3" : "Right Wing 3";
       }
     } else {
-      if (x > 100) zone = "Right Elbow";
-      else if (x < -100) zone = "Left Elbow";
-      else zone = "Free Throw Line";
+      // Long 2-pointers
+      if (Math.abs(x) <= 80) {
+        zone = "Long 2 Center";
+      } else {
+        zone = x < 0 ? "Left Elbow" : "Right Elbow";
+      }
     }
     
     if (!zoneStats.has(zone)) {
@@ -173,8 +182,17 @@ function analyzeZones(shotData: any[]) {
     if (result === 'Made' || result === 'MADE' || result === '1') {
       zoneData.made += 1;
     }
-    zoneData.percentage = zoneData.made / zoneData.total;
+    zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
   });
+  
+  // Debug zone statistics
+  console.log('🏀 Zone breakdown:');
+  Array.from(zoneStats.entries())
+    .sort(([,a], [,b]) => b.total - a.total)
+    .slice(0, 5)
+    .forEach(([zone, stats]) => {
+      console.log(`  ${zone}: ${stats.made}/${stats.total} (${(stats.percentage * 100).toFixed(1)}%)`);
+    });
   
   // Find hottest, coldest, and favorite zones
   let hottestZone = "No data";
@@ -186,7 +204,8 @@ function analyzeZones(shotData: any[]) {
   let mostAttempts = 0;
   
   zoneStats.forEach((stats, zone) => {
-    if (stats.total >= 5) { // Only consider zones with at least 5 attempts
+    // Only consider zones with at least 3 attempts (lowered threshold)
+    if (stats.total >= 3) {
       if (stats.percentage > highestPercentage) {
         highestPercentage = stats.percentage;
         hottestZone = zone;
@@ -202,6 +221,8 @@ function analyzeZones(shotData: any[]) {
       favoriteSpot = zone;
     }
   });
+  
+  console.log(`🏀 Zone results: Hottest: ${hottestZone}, Coldest: ${coldestZone}, Favorite: ${favoriteSpot}`);
   
   return {
     hottestZone: hottestZone,
