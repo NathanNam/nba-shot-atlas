@@ -6,6 +6,7 @@ import { EntityShotChart } from "@/components/EntityShotChart";
 import { EntityStatistics } from "@/components/EntityStatistics";
 import { LeagueShotChart } from "@/components/LeagueShotChart";
 import { LeagueStatistics } from "@/components/LeagueStatistics";
+import { VersionMarker } from "@/components/ui/version-marker";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
@@ -106,9 +107,7 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>Built with modern web technologies</span>
-              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-mono text-xs">
-                v1.2.0
-              </span>
+              <VersionMarker version="v1.2.0" />
             </div>
           </div>
         </div>
