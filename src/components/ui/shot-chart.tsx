@@ -391,10 +391,11 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
       <div className="flex justify-center">
         <svg
           ref={svgRef}
-          width={width}
-          height={height}
+          width="100%"
+          height="auto"
           viewBox={`0 0 ${width} ${height}`}
-          className="border border-border rounded-lg shadow-court"
+          className="border border-border rounded-lg shadow-court max-w-full h-auto"
+          style={{ aspectRatio: `${width}/${height}` }}
         />
       </div>
       

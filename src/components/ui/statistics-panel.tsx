@@ -28,7 +28,7 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Field Goal Percentage */}
         <div className="text-center p-4 rounded-lg bg-secondary/30 border border-border">
           <div className="text-2xl font-bold text-primary">
@@ -111,7 +111,7 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
 
       {/* Legend */}
       <div className="mt-6 pt-4 border-t border-border">
-        <div className="flex items-center justify-center space-x-6 text-sm">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-3 sm:space-x-6 text-sm">
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full bg-heat-hot mr-2"></div>
             <span className="text-muted-foreground">Hot Zone (60%+)</span>
