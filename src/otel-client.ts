@@ -85,10 +85,7 @@ function createProviders() {
       new SimpleSpanProcessor(
         new OTLPTraceExporter({
           url: `${otlpEndpoint}/v1/traces`,
-          headers: {
-            ...authHeader,
-            "Content-Type": "application/json",
-          },
+          headers: authHeader,
         })
       ),
     ],
@@ -101,10 +98,7 @@ function createProviders() {
       new BatchLogRecordProcessor(
         new OTLPLogExporter({
           url: `${otlpEndpoint}/v1/logs`,
-          headers: {
-            ...authHeader,
-            "Content-Type": "application/json",
-          },
+          headers: authHeader,
         })
       ),
     ],
