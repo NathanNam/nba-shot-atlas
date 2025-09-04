@@ -296,6 +296,12 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
       } catch (err) {
         if (abortControllerRef.current?.signal.aborted) return;
 
+        // Handle AbortError specifically
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log(`🚫 Request aborted for ${season} ${viewMode} ${entityId}`);
+          return;
+        }
+
         const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
 
         span.setStatus({
