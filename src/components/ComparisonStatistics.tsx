@@ -29,6 +29,107 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   const entityId1 = getEntityId(season1);
   const entityId2 = getEntityId(season2, true);
   const multiSeasonData = useMultiSeasonData(season1, season2, entityId1, viewMode);
+
+  // Helper function to analyze shooting zones (same as EntityStatistics)
+  const analyzeZones = (shotData: any[]) => {
+    const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
+    
+    if (shotData.length === 0) {
+      return {
+        hottestZone: "No data",
+        coldestZone: "No data", 
+        favoriteSpot: "No data"
+      };
+    }
+    
+    // Define zones based on NBA court coordinates (x: -250 to 250, y: -50 to 400+)
+    shotData.forEach(shot => {
+      let zone = "Unknown";
+      
+      const distance = shot.shotDistance;
+      const x = shot.xLegacy; // Court width: -250 to 250
+      const y = shot.yLegacy; // Court length: -50 to 400+
+      
+      // NBA court zone classification
+      if (distance <= 3) {
+        zone = "Restricted Area";
+      } else if (distance <= 8) {
+        zone = "Paint";
+      } else if (distance <= 16) {
+        if (Math.abs(x) <= 80) {
+          zone = "Mid Range Center";
+        } else {
+          zone = Math.abs(x) > 150 ? "Mid Range Wing" : "Mid Range";
+        }
+      } else if (shot.shotValue === 3) {
+        // 3-point zones
+        if (y <= 100 && Math.abs(x) >= 220) {
+          zone = x < 0 ? "Left Corner 3" : "Right Corner 3";
+        } else if (Math.abs(x) <= 80) {
+          zone = "Above Break 3 Center";
+        } else if (Math.abs(x) <= 160) {
+          zone = x < 0 ? "Above Break 3 Left" : "Above Break 3 Right";
+        } else {
+          zone = x < 0 ? "Left Wing 3" : "Right Wing 3";
+        }
+      } else {
+        // Long 2-pointers
+        if (Math.abs(x) <= 80) {
+          zone = "Long 2 Center";
+        } else {
+          zone = x < 0 ? "Left Elbow" : "Right Elbow";
+        }
+      }
+      
+      if (!zoneStats.has(zone)) {
+        zoneStats.set(zone, { made: 0, total: 0, percentage: 0 });
+      }
+      
+      const zoneData = zoneStats.get(zone)!;
+      zoneData.total += 1;
+      
+      // More robust shot result checking
+      const result = shot.shotResult;
+      if (result === 'Made' || result === 'MADE' || result === '1') {
+        zoneData.made += 1;
+      }
+      zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
+    });
+    
+    // Find hottest, coldest, and favorite zones
+    let hottestZone = "No data";
+    let coldestZone = "No data";
+    let favoriteSpot = "No data";
+    
+    let highestPercentage = 0;
+    let lowestPercentage = 1;
+    let mostAttempts = 0;
+    
+    zoneStats.forEach((stats, zone) => {
+      // Only consider zones with at least 3 attempts (lowered threshold)
+      if (stats.total >= 3) {
+        if (stats.percentage > highestPercentage) {
+          highestPercentage = stats.percentage;
+          hottestZone = zone;
+        }
+        if (stats.percentage < lowestPercentage) {
+          lowestPercentage = stats.percentage;
+          coldestZone = zone;
+        }
+      }
+      
+      if (stats.total > mostAttempts) {
+        mostAttempts = stats.total;
+        favoriteSpot = zone;
+      }
+    });
+    
+    return {
+      hottestZone: hottestZone,
+      coldestZone: coldestZone,
+      favoriteSpot: favoriteSpot
+    };
+  };
   
   if (multiSeasonData.season1.loading || multiSeasonData.season2?.loading) {
     return (
@@ -72,11 +173,28 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   // Calculate statistics for both seasons
   const calculateStats = (data: any[]) => {
     const totalShots = data.length;
-    const madeShots = data.filter(shot => shot.shotResult === "Made").length;
+    
+    // More robust shot result checking
+    const madeShots = data.filter(shot => {
+      const result = shot.shotResult;
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
+    
     const threePointers = data.filter(shot => shot.shotValue === 3);
     const twoPointers = data.filter(shot => shot.shotValue === 2);
-    const made3PT = threePointers.filter(shot => shot.shotResult === "Made").length;
-    const made2PT = twoPointers.filter(shot => shot.shotResult === "Made").length;
+    
+    const made3PT = threePointers.filter(shot => {
+      const result = shot.shotResult;
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
+    
+    const made2PT = twoPointers.filter(shot => {
+      const result = shot.shotResult;
+      return result === 'Made' || result === 'MADE' || result === '1';
+    }).length;
+
+    // Analyze zones using the same logic as EntityStatistics
+    const zoneAnalysis = analyzeZones(data);
 
     return {
       fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
@@ -84,9 +202,9 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
       totalShots,
       madeShots,
-      hottestZone: "N/A", // Simplified for comparison view
-      coldestZone: "N/A", // Simplified for comparison view  
-      favoriteSpot: "N/A" // Simplified for comparison view
+      hottestZone: zoneAnalysis.hottestZone,
+      coldestZone: zoneAnalysis.coldestZone,
+      favoriteSpot: zoneAnalysis.favoriteSpot
     };
   };
 
