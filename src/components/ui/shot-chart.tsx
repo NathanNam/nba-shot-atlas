@@ -163,8 +163,13 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
     // Render shot data based on view mode
     if (data && data.length > 0) {
       if (viewMode === "shots") {
-        // Individual shots view
-        data.forEach((shot, index) => {
+        // Individual shots view - sample data if too large to prevent browser crash
+        const maxShotsToRender = 5000;
+        const shotsToRender = data.length > maxShotsToRender 
+          ? sampleArray(data, maxShotsToRender) 
+          : data;
+          
+        shotsToRender.forEach((shot, index) => {
           const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
           
           const svgX = centerX + (shot.xLegacy * scale / 10);
@@ -189,6 +194,17 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
           
           svg.appendChild(shotCircle);
         });
+        
+        // Add sampling notice if data was sampled
+        if (data.length > maxShotsToRender) {
+          const notice = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          notice.setAttribute("x", "10");
+          notice.setAttribute("y", "20");
+          notice.setAttribute("fill", "hsl(var(--muted-foreground))");
+          notice.setAttribute("font-size", "12");
+          notice.textContent = `Showing ${maxShotsToRender} of ${data.length} shots`;
+          svg.appendChild(notice);
+        }
       } else {
         // Heat map view
         renderHeatMap(data, svg, centerX, hoopCenterY, scale);
@@ -341,6 +357,21 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
     });
     
     return `M ${points[0]} L ${points.slice(1).join(' L ')} Z`;
+  };
+
+  // Helper function to sample array efficiently  
+  const sampleArray = <T,>(array: T[], sampleSize: number): T[] => {
+    if (array.length <= sampleSize) return array;
+    
+    const step = array.length / sampleSize;
+    const sampled: T[] = [];
+    
+    for (let i = 0; i < sampleSize; i++) {
+      const index = Math.floor(i * step);
+      sampled.push(array[index]);
+    }
+    
+    return sampled;
   };
 
   return (
