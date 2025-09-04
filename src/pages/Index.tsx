@@ -4,6 +4,8 @@ import { PlayerSelector } from "@/components/ui/player-selector";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { EntityShotChart } from "@/components/EntityShotChart";
 import { EntityStatistics } from "@/components/EntityStatistics";
+import { LeagueShotChart } from "@/components/LeagueShotChart";
+import { LeagueStatistics } from "@/components/LeagueStatistics";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-2025");
@@ -37,9 +39,9 @@ const Index = () => {
           <div className="lg:col-span-3 space-y-8">
             {/* Shot Charts Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {viewMode === "league" ? (
+            {viewMode === "league" ? (
                 <div className="xl:col-span-2">
-                  <ShotChart title="NBA League Average" />
+                  <LeagueShotChart selectedSeason={selectedSeason} />
                 </div>
               ) : (
                 selectedEntities.map((entity) => (
@@ -55,11 +57,8 @@ const Index = () => {
 
             {/* Statistics Panels */}
             <div className="space-y-6">
-              {viewMode === "league" ? (
-                <div className="p-6 bg-card border-border shadow-card rounded-lg text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">League Statistics</h3>
-                  <p className="text-muted-foreground">League-wide statistics coming soon</p>
-                </div>
+            {viewMode === "league" ? (
+                <LeagueStatistics selectedSeason={selectedSeason} />
               ) : (
                 selectedEntities.map((entity) => (
                   <EntityStatistics
