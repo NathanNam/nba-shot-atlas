@@ -150,6 +150,15 @@ export class SupabaseDataService {
         query = query.eq('teamTricode', entityId);
       }
       // For league mode, no filter - load complete dataset with progress reporting
+      
+      // Override PostgREST's default 1000 row limit for league mode
+      if (viewMode === 'league') {
+        console.log(`🔍 SupabaseDataService: Setting headers to override PostgREST limit for league mode`);
+        query = query.select('*', { 
+          head: false, 
+          count: 'exact',
+        }).range(0, 500000); // Set a very high range to get all data
+      }
 
       // Get total count for league mode to show progress
       let estimatedTotal = undefined;
@@ -168,17 +177,16 @@ export class SupabaseDataService {
       let hasMore = true;
       let offset = 0;
       
-      // Use larger batch sizes for league data - removed artificial limits
-      const batchSize = viewMode === 'league' ? 50000 : 1000; // Massive batch for league to test limits
-      let batchCount = 0;
-
-      // For league mode, try to fetch all data in one go first
+      // For league mode, try to fetch all data directly with explicit range
       if (viewMode === 'league') {
-        console.log(`🔍 SupabaseDataService: Attempting to fetch ALL league data without pagination`);
+        console.log(`🔍 SupabaseDataService: Attempting direct fetch of ALL league data with explicit range`);
         try {
-          const { data: allLeagueData, error: allError } = await query;
-          if (!allError && allLeagueData && allLeagueData.length > 1000) {
-            console.log(`🔍 SupabaseDataService: SUCCESS! Fetched ${allLeagueData.length} shots without pagination`);
+          const { data: allLeagueData, error: allError, count } = await query;
+          
+          console.log(`🔍 SupabaseDataService: Direct fetch result - data length: ${allLeagueData?.length}, error:`, allError, 'count:', count);
+          
+          if (!allError && allLeagueData) {
+            console.log(`🔍 SupabaseDataService: SUCCESS! Direct fetch returned ${allLeagueData.length} shots`);
             allData = allLeagueData;
             
             // Report progress
@@ -189,12 +197,19 @@ export class SupabaseDataService {
             // Skip pagination loop
             hasMore = false;
           } else {
-            console.log(`🔍 SupabaseDataService: All-at-once fetch failed or returned <= 1000, falling back to pagination. Error:`, allError);
+            console.log(`🔍 SupabaseDataService: Direct fetch failed, error:`, allError);
+            hasMore = true; // Fall back to pagination
           }
         } catch (err) {
-          console.log(`🔍 SupabaseDataService: All-at-once fetch failed, falling back to pagination:`, err);
+          console.log(`🔍 SupabaseDataService: Direct fetch threw error:`, err);
+          hasMore = true; // Fall back to pagination
         }
       }
+
+      
+      // Use batch processing for fallback if direct fetch doesn't work
+      const batchSize = viewMode === 'league' ? 50000 : 1000;
+      let batchCount = 0;
 
       while (hasMore) {
         console.log(`🔍 SupabaseDataService: Starting batch ${batchCount + 1}, offset: ${offset}, batchSize: ${batchSize}`);
