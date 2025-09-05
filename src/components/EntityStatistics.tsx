@@ -15,11 +15,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
   
-  // Convert player name to player ID for data fetching
-  const getEntityId = () => {
+  // Convert player name to player ID for data fetching with stable memoization
+  const entityId = useMemo(() => {
     if (viewMode === 'player') {
       if (playersLoading) {
-        // Return undefined while loading to prevent data fetching with incorrect ID
+        console.log(`🔍 EntityStatistics: Players still loading for "${cleanEntityName}"`);
         return undefined;
       }
       const player = players.find(p => p.name === cleanEntityName);
@@ -27,19 +27,28 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       return player?.id || cleanEntityName;
     }
     return cleanEntityName; // For teams, use the name directly
-  };
+  }, [viewMode, playersLoading, players, cleanEntityName]);
   
-  const entityId = getEntityId();
+  // Create a stable key to prevent unnecessary re-subscriptions
+  const stableEntityId = entityId && !playersLoading ? String(entityId) : '';
   
   // Only call the hook when we have a valid entityId (after player loading is complete)
   const { shotData, loading, error } = useSingletonShotData(
     selectedSeason, 
-    entityId && !playersLoading ? entityId : '', // Only pass ID when ready
+    stableEntityId,
     viewMode
   );
   
   const calculatedStats = useMemo(() => {
-  if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
+    console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {
+      shotDataLength: shotData?.length,
+      playersLoading,
+      entityId,
+      selectedSeason,
+      dataHash: shotData ? JSON.stringify(shotData.slice(0, 3)) : 'no-data'
+    });
+    
+    if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,

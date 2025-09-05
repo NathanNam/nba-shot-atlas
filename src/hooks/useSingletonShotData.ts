@@ -72,7 +72,10 @@ class ShotDataManager {
       return entry.fetchPromise;
     }
 
-    console.log(`🔐 ShotDataManager: Starting single fetch for ${key}`);
+    console.log(`🔐 ShotDataManager: Starting single fetch for ${key}`, {
+      currentCacheKeys: Array.from(this.cache.keys()),
+      subscriberCount: entry.subscribers.size
+    });
 
     const span = tracer.startSpan('singleton_shot_data.load', {
       attributes: { season, entity_id: entityId, view_mode: viewMode },
@@ -94,7 +97,10 @@ class ShotDataManager {
 
         const data = await SupabaseDataService.getShotData(season, entityId, viewMode);
         
-        console.log(`🔐 ShotDataManager: Fetched ${data.length} shots for ${key}`);
+        console.log(`🔐 ShotDataManager: Fetched ${data.length} shots for ${key}`, {
+          dataHash: JSON.stringify(data.slice(0, 3)),
+          subscriberCount: entry.subscribers.size
+        });
         
         entry.data = data;
         entry.loading = false;
