@@ -59,17 +59,20 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
         </h3>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="animate-pulse text-muted-foreground">Loading league shot chart with parallel processing...</div>
-          {totalShots && (
+          {progress > 0 && (
             <div className="text-sm text-center space-y-2 w-full max-w-xs">
               <div className="text-muted-foreground">
-                Loaded {progress.toLocaleString()} / {totalShots.toLocaleString()} shots
+                Processed {progress.toLocaleString()} shots
+                {totalShots && totalShots > progress && ` / ${totalShots.toLocaleString()} shots`}
               </div>
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${totalShots > 0 ? (progress / totalShots) * 100 : 0}%` }}
-                />
-              </div>
+              {totalShots && totalShots > progress && (
+                <div className="w-full bg-secondary rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${totalShots > 0 ? (progress / totalShots) * 100 : 0}%` }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
