@@ -75,7 +75,7 @@ const Index = () => {
             {/* Shot Charts Grid */}
             <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
-                // Comparison Mode - Always compare across seasons
+                // Comparison Mode - Handle multiple entities or seasons
                 viewMode === "league" ? (
                   <ComparisonShotChart
                     entityName="NBA League"
@@ -83,8 +83,20 @@ const Index = () => {
                     season2={selectedSeason2}
                     viewMode={viewMode}
                   />
+                ) : selectedEntities.length > 1 ? (
+                  // Multi-entity comparison in same season
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    {selectedEntities.map((entity) => (
+                      <EntityShotChart
+                        key={entity}
+                        entityName={entity}
+                        selectedSeason={selectedSeason}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  // Compare each selected entity across two seasons
+                  // Single entity across seasons
                   selectedEntities.map((entity) => (
                     <ComparisonShotChart
                       key={entity}
@@ -119,7 +131,7 @@ const Index = () => {
             {/* Statistics Panels */}
             <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
-                // Comparison Mode Statistics - Always compare across seasons
+                // Comparison Mode Statistics - Handle multiple entities or seasons
                 viewMode === "league" ? (
                   <ComparisonStatistics
                     entityName="NBA League"
@@ -127,8 +139,20 @@ const Index = () => {
                     season2={selectedSeason2}
                     viewMode={viewMode}
                   />
+                ) : selectedEntities.length > 1 ? (
+                  // Multi-entity comparison in same season
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    {selectedEntities.map((entity) => (
+                      <EntityStatistics
+                        key={entity}
+                        entityName={entity}
+                        selectedSeason={selectedSeason}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  // Compare each selected entity across two seasons
+                  // Single entity across seasons
                   selectedEntities.map((entity) => (
                     <ComparisonStatistics
                       key={entity}
