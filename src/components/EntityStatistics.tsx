@@ -12,6 +12,9 @@ interface EntityStatisticsProps {
 export function EntityStatistics({ entityName, selectedSeason, viewMode }: EntityStatisticsProps) {
   const { players, loading: playersLoading } = useAvailablePlayers(selectedSeason);
   
+  // Extract clean entity name from display name (remove season info if present)
+  const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
+  
   // Convert player name to player ID for data fetching
   const getEntityId = () => {
     if (viewMode === 'player') {
@@ -19,11 +22,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
         // Return undefined while loading to prevent data fetching with incorrect ID
         return undefined;
       }
-      const player = players.find(p => p.name === entityName);
-      console.log(`🔍 EntityStatistics: Looking for "${entityName}", found player:`, player);
-      return player?.id || entityName;
+      const player = players.find(p => p.name === cleanEntityName);
+      console.log(`🔍 EntityStatistics: Looking for "${cleanEntityName}", found player:`, player);
+      return player?.id || cleanEntityName;
     }
-    return entityName; // For teams, use the name directly
+    return cleanEntityName; // For teams, use the name directly
   };
   
   const entityId = getEntityId();

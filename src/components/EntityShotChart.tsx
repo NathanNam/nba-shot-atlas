@@ -11,27 +11,30 @@ interface EntityShotChartProps {
 export function EntityShotChart({ entityName, selectedSeason, viewMode }: EntityShotChartProps) {
   const { players, loading: playersLoading } = useAvailablePlayers(selectedSeason);
   
+  // Extract clean entity name from display name (remove season info if present)
+  const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
+  
   // Convert player name to player ID for data fetching
   const getEntityId = () => {
     if (viewMode === 'player') {
       if (playersLoading) {
         // For default player (Stephen Curry), return the known ID immediately
-        if (entityName === 'Stephen Curry') {
+        if (cleanEntityName === 'Stephen Curry') {
           return '201939';
         }
         // For other players, return undefined while loading
         return undefined;
       }
-      const player = players.find(p => p.name === entityName);
-      console.log(`🔍 EntityShotChart: Looking for "${entityName}", found player:`, player);
+      const player = players.find(p => p.name === cleanEntityName);
+      console.log(`🔍 EntityShotChart: Looking for "${cleanEntityName}", found player:`, player);
       return player?.id || undefined; // Return undefined instead of entityName to prevent invalid IDs
     }
-    return entityName; // For teams, use the name directly
+    return cleanEntityName; // For teams, use the name directly
   };
   
   const entityId = getEntityId();
   
-  console.log(`🔍 EntityShotChart: Final entityId for "${entityName}":`, entityId, 'playersLoading:', playersLoading);
+  console.log(`🔍 EntityShotChart: Final entityId for "${cleanEntityName}" (display: "${entityName}"):`, entityId, 'playersLoading:', playersLoading);
   
   // Always pass the correct entityId to the hook, let the hook handle loading logic
   const { shotData, loading, error } = useSupabaseShotData(
