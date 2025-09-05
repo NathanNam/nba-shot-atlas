@@ -23,121 +23,61 @@ export class ParallelDataService {
     // Use parallel fetching for player/team modes to handle large datasets
     console.log(`🚀 ParallelDataService: Using parallel fetch for ${viewMode} data`);
     
-    // First, get total count with filters applied
-    let totalCount = 0;
-    try {
-      let countQuery = (supabase as any)
-        .from(tableName)
-        .select('*', { count: 'estimated', head: true });
-        
-      // Apply filters for count estimation
-      if (viewMode === 'player' && entityId) {
-        const numericEntityId = parseInt(entityId);
-        if (!isNaN(numericEntityId)) {
-          countQuery = countQuery.eq('personId', numericEntityId);
-        }
-      } else if (viewMode === 'team' && entityId) {
-        countQuery = countQuery.eq('teamTricode', entityId);
+    // Use deterministic single query for player/team data to ensure consistency
+    console.log(`🚀 ParallelDataService: Using deterministic single query for ${viewMode} data`);
+    
+    let query = (supabase as any)
+      .from(tableName)
+      .select('*')
+      .order('actionId', { ascending: true }); // Add consistent ordering
+
+    // Apply filters
+    if (viewMode === 'player' && entityId) {
+      const numericEntityId = parseInt(entityId);
+      if (!isNaN(numericEntityId)) {
+        console.log(`🚀 ParallelDataService: Filtering by personId=${numericEntityId}`);
+        query = query.eq('personId', numericEntityId);
+      } else {
+        console.error(`🚀 ParallelDataService: Invalid player ID: ${entityId}`);
+        return [];
       }
-      
-      const { count } = await countQuery;
-      totalCount = count || 0;
-      console.log(`🚀 ParallelDataService: Estimated ${totalCount} total records for ${viewMode} - ${entityId || 'all'}`);
-    } catch (error) {
-      console.log('Could not get count estimate:', error);
-      totalCount = 10000; // Fallback estimate for player/team
+    } else if (viewMode === 'team' && entityId) {
+      console.log(`🚀 ParallelDataService: Filtering by teamTricode=${entityId}`);
+      query = query.eq('teamTricode', entityId);
     }
 
-    // Use parallel fetching for all datasets - no sampling
-    console.log(`🚀 ParallelDataService: Using parallel fetching for ${totalCount} records`);
+    const { data, error } = await query;
     
-    const batchSize = 1000;
-    const maxConcurrent = 8; // Increased concurrent requests for better performance
-    const totalBatches = Math.ceil(totalCount / batchSize);
-    
-    console.log(`🚀 ParallelDataService: Will fetch ${totalBatches} batches of ${batchSize} records each`);
-
-    const allData: any[] = [];
-    let processedBatches = 0;
-
-    // Process batches in chunks to limit concurrent requests - maintain order
-    const orderedResults: any[] = new Array(totalBatches);
-    
-    for (let chunkStart = 0; chunkStart < totalBatches; chunkStart += maxConcurrent) {
-      const chunkEnd = Math.min(chunkStart + maxConcurrent, totalBatches);
-      const batchPromises = [];
-
-      // Create promises for this chunk of batches
-      for (let batchIndex = chunkStart; batchIndex < chunkEnd; batchIndex++) {
-        const offset = batchIndex * batchSize;
-        
-        let query = (supabase as any)
-          .from(tableName)
-          .select('*')
-          .range(offset, offset + batchSize - 1);
-
-        // Apply filters for player/team modes
-        if (viewMode === 'player' && entityId) {
-          const numericEntityId = parseInt(entityId);
-          if (!isNaN(numericEntityId)) {
-            query = query.eq('personId', numericEntityId);
-          }
-        } else if (viewMode === 'team' && entityId) {
-          query = query.eq('teamTricode', entityId);
-        }
-
-        batchPromises.push(
-          query.then((result: any) => ({
-            batchIndex,
-            data: result.data || [],
-            error: result.error
-          }))
-        );
-      }
-
-      // Wait for this chunk to complete
-      const chunkResults = await Promise.all(batchPromises);
-      
-      // Process results and maintain order
-      for (const result of chunkResults) {
-        if (result.error) {
-          console.error(`Error in batch ${result.batchIndex}:`, result.error);
-        } else {
-          // Store results in order to maintain consistency
-          orderedResults[result.batchIndex] = result.data;
-          processedBatches++;
-          
-          console.log(`🚀 ParallelDataService: Completed batch ${result.batchIndex + 1}/${totalBatches}, got ${result.data.length} records`);
-        }
-      }
+    if (error) {
+      console.error(`🚀 ParallelDataService: Query error:`, error);
+      throw new Error(`Query failed: ${error.message}`);
     }
 
-    // Combine ordered results to ensure consistent data ordering
-    for (const batchData of orderedResults) {
-      if (batchData && batchData.length > 0) {
-        allData.push(...batchData);
-        
-        // Report progress
-        if (progressCallback) {
-          progressCallback(allData.length, totalCount);
-        }
-      }
+    console.log(`🚀 ParallelDataService: Single query got ${data?.length || 0} records for ${viewMode}`);
+
+    if (progressCallback) {
+      progressCallback(data?.length || 0, data?.length || 0);
     }
 
-    console.log(`🚀 ParallelDataService: Parallel fetch complete. Got ${allData.length} total records`);
-
-    // Transform data
-    const shots: ShotData[] = allData.map(row => ({
-      personId: row.personId?.toString() || '',
-      teamTricode: row.teamTricode || '',
-      xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
-      yLegacy: parseFloat(row.yLegacy?.toString() || '0'),
-      shotDistance: parseFloat(row.shotDistance?.toString() || '0'),
-      shotResult: row.shotResult || '',
-      shotValue: parseInt(row.shotValue?.toString() || '2'),
-      description: row.description || '',
-      subType: row.subType || '',
+    // Transform data with strict type conversion for consistency
+    const shots: ShotData[] = (data || []).map(row => ({
+      personId: String(row.personId || ''),
+      teamTricode: String(row.teamTricode || ''),
+      xLegacy: Number(row.xLegacy) || 0,
+      yLegacy: Number(row.yLegacy) || 0, 
+      shotDistance: Number(row.shotDistance) || 0,
+      shotResult: String(row.shotResult || ''),
+      shotValue: Number(row.shotValue) || 2,
+      description: String(row.description || ''),
+      subType: String(row.subType || ''),
     }));
+
+    // Sort results by actionId for deterministic ordering
+    shots.sort((a, b) => {
+      const aId = Number(data?.find(row => row.personId === a.personId)?.actionId || 0);
+      const bId = Number(data?.find(row => row.personId === b.personId)?.actionId || 0);
+      return aId - bId;
+    });
 
     return shots;
   }
