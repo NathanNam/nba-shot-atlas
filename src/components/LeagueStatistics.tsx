@@ -8,35 +8,12 @@ interface LeagueStatisticsProps {
   selectedSeason: string;
 }
 
-interface ZoneStats {
-  zone: string;
-  made: number;
-  attempted: number;
-  percentage: number;
-}
-
-interface LeagueStats {
-  totalShots: number;
-  madeShots: number;
-  fieldGoalPercentage: number;
-  twoPointMade: number;
-  twoPointAttempted: number;
-  twoPointPercentage: number;
-  threePointMade: number;
-  threePointAttempted: number;
-  threePointPercentage: number;
-  zoneStats: ZoneStats[];
-  hottestZone: string;
-  coldestZone: string;
-  favoriteSpot: string;
-}
-
 export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
-  const [stats, setStats] = useState<LeagueStats | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  console.log('League Statistics - Using server-side calculation for season:', selectedSeason);
+  console.log('League Statistics - Loading from pre-computed stats table for season:', selectedSeason);
 
   useEffect(() => {
     const fetchLeagueStats = async () => {
@@ -44,22 +21,81 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
       setError(null);
       
       try {
-        console.log('🔍 LeagueStatistics: Calling Edge Function for server-side stats calculation');
+        console.log('🔍 LeagueStatistics: Fetching pre-computed stats from league_stats table');
         
-        const { data, error: functionError } = await supabase.functions.invoke('get-league-stats', {
-          body: { season: selectedSeason }
-        });
+        // First try to get pre-computed stats
+        const { data: precomputedStats, error: statsError } = await supabase
+          .from('league_stats')
+          .select('*')
+          .eq('season', selectedSeason)
+          .single();
         
-        if (functionError) {
-          throw new Error(`Edge Function error: ${functionError.message}`);
+        if (statsError && statsError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+          throw new Error(`Error fetching pre-computed stats: ${statsError.message}`);
         }
         
-        if (data.error) {
-          throw new Error(data.error);
+        if (precomputedStats) {
+          console.log('✅ LeagueStatistics: Found pre-computed stats:', precomputedStats);
+          
+          // Transform to expected format
+          const transformedStats = {
+            fieldGoalPercentage: Number(precomputedStats.field_goal_percentage),
+            twoPointPercentage: Number(precomputedStats.two_point_percentage),
+            twoPointMade: precomputedStats.two_point_made,
+            twoPointAttempted: precomputedStats.two_point_attempted,
+            threePointPercentage: Number(precomputedStats.three_point_percentage),
+            threePointMade: precomputedStats.three_point_made,
+            threePointAttempted: precomputedStats.three_point_attempted,
+            totalShots: precomputedStats.total_shots,
+            madeShots: precomputedStats.made_shots,
+            hottestZone: precomputedStats.hottest_zone,
+            coldestZone: precomputedStats.coldest_zone,
+            favoriteSpot: precomputedStats.favorite_spot
+          };
+          
+          setStats(transformedStats);
+        } else {
+          // No pre-computed stats found, trigger computation
+          console.log('⚠️ No pre-computed stats found, triggering computation...');
+          
+          const { error: computeError } = await supabase.functions.invoke('populate-league-stats', {
+            body: { season: selectedSeason }
+          });
+          
+          if (computeError) {
+            throw new Error(`Error triggering stats computation: ${computeError.message}`);
+          }
+          
+          // Retry fetching after computation
+          const { data: newStats, error: retryError } = await supabase
+            .from('league_stats')
+            .select('*')
+            .eq('season', selectedSeason)
+            .single();
+          
+          if (retryError) {
+            throw new Error(`Error fetching stats after computation: ${retryError.message}`);
+          }
+          
+          if (newStats) {
+            const transformedStats = {
+              fieldGoalPercentage: Number(newStats.field_goal_percentage),
+              twoPointPercentage: Number(newStats.two_point_percentage),
+              twoPointMade: newStats.two_point_made,
+              twoPointAttempted: newStats.two_point_attempted,
+              threePointPercentage: Number(newStats.three_point_percentage),
+              threePointMade: newStats.three_point_made,
+              threePointAttempted: newStats.three_point_attempted,
+              totalShots: newStats.total_shots,
+              madeShots: newStats.made_shots,
+              hottestZone: newStats.hottest_zone,
+              coldestZone: newStats.coldest_zone,
+              favoriteSpot: newStats.favorite_spot
+            };
+            
+            setStats(transformedStats);
+          }
         }
-        
-        console.log('🔍 LeagueStatistics: Received pre-calculated stats:', data);
-        setStats(data);
         
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load league statistics';
@@ -82,7 +118,7 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
         <CardContent>
           <div className="space-y-4">
             <div className="text-center text-muted-foreground">
-              Computing league statistics on server...
+              Loading pre-computed league statistics...
             </div>
             <Skeleton className="h-32 w-full" />
           </div>
@@ -111,32 +147,16 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
           <CardTitle>League Statistics</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">No statistics available</p>
+          <p className="text-muted-foreground">No statistics available for {selectedSeason}</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Transform server stats to match the expected format
-  const transformedStats = {
-    fieldGoalPercentage: stats.fieldGoalPercentage,
-    twoPointPercentage: stats.twoPointPercentage,
-    twoPointMade: stats.twoPointMade,
-    twoPointAttempted: stats.twoPointAttempted,
-    threePointPercentage: stats.threePointPercentage,
-    threePointMade: stats.threePointMade,
-    threePointAttempted: stats.threePointAttempted,
-    totalShots: stats.totalShots,
-    madeShots: stats.madeShots,
-    hottestZone: stats.hottestZone,
-    coldestZone: stats.coldestZone,
-    favoriteSpot: stats.favoriteSpot
-  };
-
   return (
     <StatisticsPanel 
       entityName={`NBA League (${selectedSeason})`}
-      stats={transformedStats}
+      stats={stats}
     />
   );
 }
