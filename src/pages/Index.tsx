@@ -132,7 +132,7 @@ const Index = () => {
                   ) : (
                     selectedEntities.map((entity) => (
                       <EntityShotChart
-                        key={entity}
+                        key={`${entity}-${selectedSeason}-${viewMode}`}
                         entityName={entity}
                         selectedSeason={selectedSeason}
                         viewMode={viewMode}
@@ -199,7 +199,7 @@ const Index = () => {
                 ) : (
                   selectedEntities.map((entity) => (
                     <EntityStatistics
-                      key={entity}
+                      key={`${entity}-${selectedSeason}-${viewMode}`}
                       entityName={entity}
                       selectedSeason={selectedSeason}
                       viewMode={viewMode}
