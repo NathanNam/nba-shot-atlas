@@ -22,13 +22,18 @@ export function BatchEntityLayout({
 }: BatchEntityLayoutProps) {
   const { players: playersData, loading: playersLoading } = useAvailablePlayers(season1);
 
-  // Get entity IDs
+  // Get entity IDs - hardcoded for testing to match EntityShotChart logic
   const getEntityId = (entityName: string) => {
     if (viewMode === 'team') {
       return entityName;
     }
     
+    // Hardcoded player IDs to match working shot charts
+    if (entityName === 'Stephen Curry') return '201939';
+    if (entityName === 'LeBron James') return '2544';
+    
     const player = playersData?.find(p => p.name === entityName);
+    console.log(`🔍 BatchEntityLayout: Looking for "${entityName}", found player:`, player);
     return player ? player.id.toString() : entityName;
   };
 
@@ -71,15 +76,20 @@ export function BatchEntityLayout({
 
   const batchResults = useBatchShotData(batchRequests);
   
-  // Debug logging
-  console.log('🔍 BatchEntityLayout: Batch results', {
-    batchRequests: batchRequests.map(r => r.key),
+  // Debug logging - Enhanced
+  console.log('🔍 BatchEntityLayout: Complete debug info', {
+    entity1, entity2, season1, season2, viewMode,
+    entity1Id, entity2Id,
+    playersLoading,
+    batchRequestsCount: batchRequests.length,
+    batchRequests: batchRequests.map(r => ({ key: r.key, entityId: r.entityId, season: r.season })),
     resultKeys: Object.keys(batchResults),
-    resultData: Object.entries(batchResults).map(([key, value]) => ({
+    resultSummary: Object.entries(batchResults).map(([key, value]) => ({
       key,
       dataLength: value?.data?.length || 0,
       loading: value?.loading,
-      error: value?.error
+      error: value?.error,
+      firstRecord: value?.data?.[0]
     }))
   });
 
