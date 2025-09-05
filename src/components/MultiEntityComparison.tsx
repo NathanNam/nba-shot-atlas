@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { EntityShotChart } from "@/components/EntityShotChart";
-import { MultiEntityStatisticsComparison } from "@/components/MultiEntityStatisticsComparison";
+import { EntityStatistics } from "@/components/EntityStatistics";
 
 interface MultiEntityComparisonProps {
   entities: string[];
@@ -26,8 +26,8 @@ export function MultiEntityComparison({ entities, selectedSeason, viewMode }: Mu
           selectedSeason={selectedSeason}
           viewMode={viewMode}
         />
-        <MultiEntityStatisticsComparison
-          entities={[entities[0]]}
+        <EntityStatistics
+          entityName={entities[0]}
           selectedSeason={selectedSeason}
           viewMode={viewMode}
         />
@@ -51,11 +51,16 @@ export function MultiEntityComparison({ entities, selectedSeason, viewMode }: Mu
       </div>
 
       {/* Statistics Comparison */}
-      <MultiEntityStatisticsComparison
-        entities={entities}
-        selectedSeason={selectedSeason}
-        viewMode={viewMode}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {entities.map((entity) => (
+          <EntityStatistics
+            key={entity}
+            entityName={entity}
+            selectedSeason={selectedSeason}
+            viewMode={viewMode}
+          />
+        ))}
+      </div>
     </div>
   );
 }
