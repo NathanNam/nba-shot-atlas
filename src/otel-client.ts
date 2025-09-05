@@ -87,6 +87,7 @@ function createProviders() {
           url: `${otlpEndpoint}/v1/traces`,
           headers: {
             ...authHeader,
+            "x-observe-target-package": "Tracing",
             "Content-Type": "application/x-protobuf",
           },
         })
@@ -103,6 +104,7 @@ function createProviders() {
           url: `${otlpEndpoint}/v1/logs`,
           headers: {
             ...authHeader,
+            "x-observe-target-package": "Logs",
             "Content-Type": "application/x-protobuf",
           },
         })
