@@ -15,9 +15,9 @@ export class ParallelDataService {
     
     console.log(`🚀 ParallelDataService: Starting fetch for ${viewMode} - ${entityId || 'all'} (season: ${season})`);
     
-    // For league mode, statistics should be calculated server-side via Edge Function
+    // Use league-specific parallel fetching for league mode
     if (viewMode === 'league') {
-      throw new Error('League mode should use server-side calculation. Use LeagueStatsService instead.');
+      return await this.getLeagueDataParallel(season, progressCallback);
     }
     
     // Use parallel fetching for player/team modes to handle large datasets
