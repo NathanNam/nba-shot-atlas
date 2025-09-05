@@ -18,7 +18,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   const { players: players1, loading: loading1 } = useAvailablePlayers(season1);
   const { players: players2, loading: loading2 } = useAvailablePlayers(season2);
   
-  const getEntityId = (season: string, isSecondSeason = false) => {
+  const getEntityId = (entityName: string, season: string, isSecondSeason = false) => {
     if (viewMode === 'player') {
       const players = isSecondSeason ? players2 : players1;
       const loading = isSecondSeason ? loading2 : loading1;
@@ -35,13 +35,18 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     return entityName;
   };
   
-  const entityId1 = getEntityId(season1);
-  const entityId2 = getEntityId(season2, true);
+  // For player vs player comparison, use the same season for both players
+  const isPlayerVsPlayer = entityName2 && entityName2 !== entityName;
+  const actualSeason1 = season1;
+  const actualSeason2 = isPlayerVsPlayer ? season1 : season2; // Use same season for player vs player
+  
+  const entityId1 = getEntityId(entityName, actualSeason1);
+  const entityId2 = getEntityId(entityName2 || entityName, actualSeason2, !isPlayerVsPlayer);
   
   console.log(`🔍 ComparisonStatistics: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}", loading1=${loading1}, loading2=${loading2}`);
   
   // Always call useMultiSeasonData hook - never conditionally call hooks
-  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
+  const multiSeasonData = useMultiSeasonData(actualSeason1, actualSeason2, entityId1 || '', entityId2 || '', viewMode);
 
   // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
@@ -282,11 +287,23 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   const earlierStats = isChronological ? stats1 : stats2;
   const laterStats = isChronological ? stats2 : stats1;
   
-  // Calculate differences (later - earlier for chronological progress)
+  // Calculate differences
   const fgDiff = laterStats.fieldGoalPercentage - earlierStats.fieldGoalPercentage;
   const twoPtDiff = laterStats.twoPointPercentage - earlierStats.twoPointPercentage;
   const threePtDiff = laterStats.threePointPercentage - earlierStats.threePointPercentage;
   const shotsDiff = laterStats.totalShots - earlierStats.totalShots;
+
+  // For display purposes
+  const comparisonTitle = isPlayerVsPlayer 
+    ? `${entityName} vs ${entityName2} (${actualSeason1})`
+    : `${entityName} Season Comparison: ${earlierSeason} → ${laterSeason}`;
+  
+  const firstLabel = isPlayerVsPlayer ? entityName : `${entityName} (${earlierSeason})`;
+  const secondLabel = isPlayerVsPlayer ? entityName2 : `${entityName} (${laterSeason})`;
+  
+  // For player vs player, show difference as Player2 - Player1
+  const actualStats1 = isPlayerVsPlayer ? stats1 : earlierStats;
+  const actualStats2 = isPlayerVsPlayer ? stats2 : laterStats;
 
   const getTrendIcon = (diff: number) => {
     if (Math.abs(diff) < 0.001) return <Minus className="h-4 w-4" />;
@@ -304,46 +321,46 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{entityName} - {season1}</CardTitle>
+            <CardTitle className="text-base">{firstLabel}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Games Analyzed:</span>
-                <div className="font-medium">{stats1.totalShots > 0 ? 'Active' : 'No Data'}</div>
+                <div className="font-medium">{actualStats1.totalShots > 0 ? 'Active' : 'No Data'}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Total Attempts:</span>
-                <div className="font-medium">{stats1.totalShots}</div>
+                <div className="font-medium">{actualStats1.totalShots}</div>
               </div>
             </div>
             <div className="text-xs text-muted-foreground">
-              Overall FG: {(stats1.fieldGoalPercentage * 100).toFixed(1)}% • 
-              2PT: {(stats1.twoPointPercentage * 100).toFixed(1)}% • 
-              3PT: {(stats1.threePointPercentage * 100).toFixed(1)}%
+              Overall FG: {(actualStats1.fieldGoalPercentage * 100).toFixed(1)}% • 
+              2PT: {(actualStats1.twoPointPercentage * 100).toFixed(1)}% • 
+              3PT: {(actualStats1.threePointPercentage * 100).toFixed(1)}%
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{entityName} - {season2}</CardTitle>
+            <CardTitle className="text-base">{secondLabel}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Games Analyzed:</span>
-                <div className="font-medium">{stats2.totalShots > 0 ? 'Active' : 'No Data'}</div>
+                <div className="font-medium">{actualStats2.totalShots > 0 ? 'Active' : 'No Data'}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Total Attempts:</span>
-                <div className="font-medium">{stats2.totalShots}</div>
+                <div className="font-medium">{actualStats2.totalShots}</div>
               </div>
             </div>
             <div className="text-xs text-muted-foreground">
-              Overall FG: {(stats2.fieldGoalPercentage * 100).toFixed(1)}% • 
-              2PT: {(stats2.twoPointPercentage * 100).toFixed(1)}% • 
-              3PT: {(stats2.threePointPercentage * 100).toFixed(1)}%
+              Overall FG: {(actualStats2.fieldGoalPercentage * 100).toFixed(1)}% • 
+              2PT: {(actualStats2.twoPointPercentage * 100).toFixed(1)}% • 
+              3PT: {(actualStats2.threePointPercentage * 100).toFixed(1)}%
             </div>
           </CardContent>
         </Card>
@@ -352,148 +369,64 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
       {/* Individual Season Statistics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StatisticsPanel 
-          entityName={`${entityName} (${season1})`}
-          stats={stats1}
+          entityName={firstLabel}
+          stats={actualStats1}
           size="compact"
         />
         <StatisticsPanel 
-          entityName={`${entityName} (${season2})`}
-          stats={stats2}
+          entityName={secondLabel}
+          stats={actualStats2}
           size="compact"
         />
       </div>
       
       {/* Comparison Summary */}
-      {entityName2 && entityName2 !== entityName ? (
-        // Two different players comparison - show separate cards
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {entityName} Season Comparison: {earlierSeason} → {laterSeason}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">FG%</div>
-                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
-                    {getTrendIcon(fgDiff)}
-                    <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">2PT%</div>
-                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
-                    {getTrendIcon(twoPtDiff)}
-                    <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">3PT%</div>
-                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
-                    {getTrendIcon(threePtDiff)}
-                    <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">Total Shots</div>
-                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
-                    {getTrendIcon(shotsDiff)}
-                    <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
-                  </div>
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            {comparisonTitle}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center space-y-1">
+              <div className="text-sm text-muted-foreground">FG%</div>
+              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
+                {getTrendIcon(fgDiff)}
+                <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {entityName2} Season Comparison: {earlierSeason} → {laterSeason}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">FG%</div>
-                  <div className="text-muted-foreground">
-                    <span>Coming soon</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">2PT%</div>
-                  <div className="text-muted-foreground">
-                    <span>Coming soon</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">3PT%</div>
-                  <div className="text-muted-foreground">
-                    <span>Coming soon</span>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1">
-                  <div className="text-sm text-muted-foreground">Total Shots</div>
-                  <div className="text-muted-foreground">
-                    <span>Coming soon</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        // Same player comparison - show single card
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {entityName} Season Comparison: {earlierSeason} → {laterSeason}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center space-y-1">
-                <div className="text-sm text-muted-foreground">FG%</div>
-                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
-                  {getTrendIcon(fgDiff)}
-                  <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-              
-              <div className="text-center space-y-1">
-                <div className="text-sm text-muted-foreground">2PT%</div>
-                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
-                  {getTrendIcon(twoPtDiff)}
-                  <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-              
-              <div className="text-center space-y-1">
-                <div className="text-sm text-muted-foreground">3PT%</div>
-                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
-                  {getTrendIcon(threePtDiff)}
-                  <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-              
-              <div className="text-center space-y-1">
-                <div className="text-sm text-muted-foreground">Total Shots</div>
-                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
-                  {getTrendIcon(shotsDiff)}
-                  <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
-                </div>
-              </div>
+              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
             </div>
-          </CardContent>
-        </Card>
-      )}
+            
+            <div className="text-center space-y-1">
+              <div className="text-sm text-muted-foreground">2PT%</div>
+              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
+                {getTrendIcon(twoPtDiff)}
+                <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
+              </div>
+              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
+            </div>
+            
+            <div className="text-center space-y-1">
+              <div className="text-sm text-muted-foreground">3PT%</div>
+              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
+                {getTrendIcon(threePtDiff)}
+                <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
+              </div>
+              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
+            </div>
+            
+            <div className="text-center space-y-1">
+              <div className="text-sm text-muted-foreground">Total Shots</div>
+              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
+                {getTrendIcon(shotsDiff)}
+                <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
+              </div>
+              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
