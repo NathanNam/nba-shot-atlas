@@ -174,12 +174,15 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
             <div className="text-center text-muted-foreground">
               Loading league statistics with parallel processing...
             </div>
-            {totalShots && (
+            {progress > 0 && (
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground text-center">
-                  Processed {progress.toLocaleString()} / {totalShots.toLocaleString()} shots
+                  Processed {progress.toLocaleString()} shots
+                  {totalShots && totalShots > progress && ` / ${totalShots.toLocaleString()} shots`}
                 </div>
-                <Progress value={(progress / totalShots) * 100} className="w-full" />
+                {totalShots && totalShots > progress && (
+                  <Progress value={(progress / totalShots) * 100} className="w-full" />
+                )}
               </div>
             )}
             <Skeleton className="h-32 w-full" />
