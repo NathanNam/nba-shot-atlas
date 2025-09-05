@@ -156,6 +156,7 @@ class ShotDataManager {
 
   // Clear cache for debugging
   clearCache() {
+    console.log(`🔐 ShotDataManager: Clearing cache - had ${this.cache.size} entries`);
     this.cache.clear();
   }
 }
@@ -175,6 +176,12 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
 
   useEffect(() => {
     console.log(`🔐 useSingletonShotData: Subscribing to ${season}_${entityId}_${viewMode}`);
+    
+    // Clear cache for league mode to force fresh fetch with new logic
+    if (viewMode === 'league') {
+      console.log(`🔐 useSingletonShotData: Clearing cache for league mode to test new pagination`);
+      manager.current.clearCache();
+    }
     
     const unsubscribe = manager.current.subscribe(
       season, 

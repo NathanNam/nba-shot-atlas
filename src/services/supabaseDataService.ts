@@ -166,6 +166,7 @@ export class SupabaseDataService {
       let batchCount = 0;
 
       while (hasMore) {
+        console.log(`🔍 SupabaseDataService: Starting batch ${batchCount + 1}, offset: ${offset}, batchSize: ${batchSize}`);
         const batchQuery = query.range(offset, offset + batchSize - 1);
         const { data: batchData, error: batchError } = await batchQuery;
         
@@ -175,12 +176,16 @@ export class SupabaseDataService {
           allData = allData.concat(batchData);
           offset += batchSize;
           batchCount++;
+          
+          console.log(`🔍 SupabaseDataService: Batch ${batchCount} returned ${batchData.length} records. Total so far: ${allData.length}`);
+          console.log(`🔍 SupabaseDataService: hasMore check: ${batchData.length} === ${batchSize} = ${batchData.length === batchSize}`);
+          
           hasMore = batchData.length === batchSize; // Continue if we got a full batch
           
           // Report progress for league mode
           if (viewMode === 'league' && progressCallback) {
             progressCallback(allData.length, estimatedTotal);
-            console.log(`🔍 SupabaseDataService: League progress - loaded ${allData.length} shots (batch ${batchCount}, batch size: ${batchData.length})`);
+            console.log(`🔍 SupabaseDataService: League progress - loaded ${allData.length} shots (batch ${batchCount}, batch returned: ${batchData.length})`);
           }
           
           // Add safety check for league mode to prevent infinite loops but allow large datasets
