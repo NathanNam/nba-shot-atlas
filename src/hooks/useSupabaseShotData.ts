@@ -24,7 +24,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
       // Check cache first for immediate response
       const cachedData = dataCache.get(season, entityId, viewMode);
       if (cachedData) {
-        console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}`);
+        console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
         setShotData(cachedData);
         setLoading(false);
         setError(null);

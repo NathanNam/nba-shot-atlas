@@ -12,6 +12,10 @@ export class DataPreloader {
 
     this.isPreloading = true;
     console.log('🚀 DataPreloader: Starting preload of default data...');
+    
+    // Clear any old cache to ensure fresh data
+    dataCache.clear();
+    dataCache.clearPreloaded();
 
     this.preloadingPromise = this.performPreload();
     

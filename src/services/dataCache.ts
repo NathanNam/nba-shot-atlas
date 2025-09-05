@@ -21,10 +21,11 @@ class DataCacheService {
   private cache = new Map<string, CacheEntry>();
   private preloadedData = new Map<string, PreloadedEntry>();
   private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+  private readonly CACHE_VERSION = 'v2'; // Increment to invalidate old cache
 
-  // Generate cache key
+  // Generate cache key with version
   private getCacheKey(season: string, entityId: string, viewMode: string): string {
-    return `${season}_${viewMode}_${entityId || 'all'}`;
+    return `${this.CACHE_VERSION}_${season}_${viewMode}_${entityId || 'all'}`;
   }
 
   // Check if cache entry is valid
