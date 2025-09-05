@@ -41,6 +41,16 @@ export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, p
   const entity2Data = preloadedEntity2Data !== undefined 
     ? { shotData: preloadedEntity2Data, loading: false, error: null }
     : hookEntity2Data;
+    
+  // Debug logging
+  console.log(`🔍 EntityVsEntityComparison [${entity1} vs ${entity2} ${season}]: Data sources`, {
+    hasPreloadedEntity1: preloadedEntity1Data !== undefined,
+    hasPreloadedEntity2: preloadedEntity2Data !== undefined,
+    entity1Length: entity1Data.shotData?.length,
+    entity2Length: entity2Data.shotData?.length,
+    entity1Sample: entity1Data.shotData?.slice(0, 2),
+    entity2Sample: entity2Data.shotData?.slice(0, 2)
+  });
 
   // Zone analysis helper
   const analyzeZones = (shotData: any[]) => {

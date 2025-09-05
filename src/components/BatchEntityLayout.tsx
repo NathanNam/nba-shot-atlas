@@ -187,7 +187,7 @@ export function BatchEntityLayout({
         </div>
       </div>
 
-      {/* Head-to-Head Comparisons */}
+      {/* Head-to-Head Comparisons - Debug data passed */}
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-center">Head-to-Head Comparisons</h2>
         <div className="space-y-8">
@@ -196,16 +196,44 @@ export function BatchEntityLayout({
             entity2={entity2}
             season={season1}
             viewMode={viewMode}
-            preloadedEntity1Data={batchResults[`${entity1}_${season1}`]?.data}
-            preloadedEntity2Data={batchResults[`${entity2}_${season1}`]?.data}
+            preloadedEntity1Data={(() => {
+              const data = batchResults[`${entity1}_${season1}`]?.data;
+              console.log(`🔍 BatchEntityLayout: Passing ${entity1} ${season1} data:`, { 
+                dataLength: data?.length, 
+                dataSample: data?.slice(0, 2) 
+              });
+              return data;
+            })()}
+            preloadedEntity2Data={(() => {
+              const data = batchResults[`${entity2}_${season1}`]?.data;
+              console.log(`🔍 BatchEntityLayout: Passing ${entity2} ${season1} data:`, { 
+                dataLength: data?.length, 
+                dataSample: data?.slice(0, 2) 
+              });
+              return data;
+            })()}
           />
           <EntityVsEntityComparison
             entity1={entity1}
             entity2={entity2}
             season={season2}
             viewMode={viewMode}
-            preloadedEntity1Data={batchResults[`${entity1}_${season2}`]?.data}
-            preloadedEntity2Data={batchResults[`${entity2}_${season2}`]?.data}
+            preloadedEntity1Data={(() => {
+              const data = batchResults[`${entity1}_${season2}`]?.data;
+              console.log(`🔍 BatchEntityLayout: Passing ${entity1} ${season2} data:`, { 
+                dataLength: data?.length, 
+                dataSample: data?.slice(0, 2) 
+              });
+              return data;
+            })()}
+            preloadedEntity2Data={(() => {
+              const data = batchResults[`${entity2}_${season2}`]?.data;
+              console.log(`🔍 BatchEntityLayout: Passing ${entity2} ${season2} data:`, { 
+                dataLength: data?.length, 
+                dataSample: data?.slice(0, 2) 
+              });
+              return data;
+            })()}
           />
         </div>
       </div>

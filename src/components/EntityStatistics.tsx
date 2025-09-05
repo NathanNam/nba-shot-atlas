@@ -57,6 +57,17 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   const { shotData, loading, error } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
     : hookResult;
+    
+  // Debug logging
+  console.log(`🔍 EntityStatistics [${cleanEntityName}]: Data source and details`, {
+    hasPreloadedData: preloadedData !== undefined,
+    preloadedLength: preloadedData?.length,
+    hookLength: hookResult.shotData?.length,
+    finalLength: shotData?.length,
+    finalData: shotData?.slice(0, 3), // First 3 records
+    loading,
+    error
+  });
   
   const calculatedStats = useMemo(() => {
     console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {
