@@ -30,7 +30,13 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useSingletonShotData(selectedSeason, entityId || '', viewMode);
+  
+  // Only call the hook when we have a valid entityId (after player loading is complete)
+  const { shotData, loading, error } = useSingletonShotData(
+    selectedSeason, 
+    entityId && !playersLoading ? entityId : '', // Only pass ID when ready
+    viewMode
+  );
   
   const calculatedStats = useMemo(() => {
   if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
