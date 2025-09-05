@@ -21,9 +21,36 @@ interface StatisticsPanelProps {
     favoriteSpot: string;
     favoriteSpotStats?: { made: number; total: number; percentage: number };
   };
+  size?: "default" | "compact";
 }
 
-export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
+export function StatisticsPanel({ entityName, stats, size = "default" }: StatisticsPanelProps) {
+  // Font size classes based on size prop
+  const getFontSizes = () => {
+    if (size === "compact") {
+      return {
+        title: "text-base sm:text-lg",
+        statValue: "text-lg sm:text-xl font-bold",
+        statLabel: "text-xs",
+        statDetail: "text-xs",
+        zoneTitle: "text-sm sm:text-base",
+        zoneValue: "text-sm sm:text-base",
+        zoneDetail: "text-xs"
+      };
+    }
+    
+    return {
+      title: "text-lg sm:text-xl",
+      statValue: "text-xl sm:text-2xl font-bold",
+      statLabel: "text-xs sm:text-sm",
+      statDetail: "text-xs",
+      zoneTitle: "text-sm sm:text-base",
+      zoneValue: "text-base sm:text-lg",
+      zoneDetail: "text-xs sm:text-sm"
+    };
+  };
+
+  const fontSizes = getFontSizes();
   const formatPercentage = (value: number) => `${(value * 100).toFixed(1)}%`;
   
   const formatZoneStats = (zoneStats?: { made: number; total: number; percentage: number }) => {
@@ -34,7 +61,7 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
   return (
     <Card className="p-4 sm:p-6 bg-gradient-stats border-border shadow-card">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
-        <h3 className="text-lg sm:text-xl font-semibold text-foreground">{entityName} Statistics</h3>
+        <h3 className={`${fontSizes.title} font-semibold text-foreground`}>{entityName} Statistics</h3>
         <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 self-start sm:self-auto">
           Season Analytics
         </Badge>
@@ -43,44 +70,44 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {/* Field Goal Percentage */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
-          <div className="text-xl sm:text-2xl font-bold text-primary">
+          <div className={`${fontSizes.statValue} text-primary`}>
             {formatPercentage(stats.fieldGoalPercentage)}
           </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">FG%</div>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className={`${fontSizes.statLabel} text-muted-foreground`}>FG%</div>
+          <div className={`${fontSizes.statDetail} text-muted-foreground mt-1`}>
             {stats.madeShots}/{stats.totalShots}
           </div>
         </div>
 
         {/* Two Point Percentage */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
-          <div className="text-xl sm:text-2xl font-bold text-nba-blue">
+          <div className={`${fontSizes.statValue} text-nba-blue`}>
             {formatPercentage(stats.twoPointPercentage)}
           </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">2PT%</div>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className={`${fontSizes.statLabel} text-muted-foreground`}>2PT%</div>
+          <div className={`${fontSizes.statDetail} text-muted-foreground mt-1`}>
             {stats.twoPointMade}/{stats.twoPointAttempted}
           </div>
         </div>
 
         {/* Three Point Percentage */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
-          <div className="text-xl sm:text-2xl font-bold text-accent">
+          <div className={`${fontSizes.statValue} text-accent`}>
             {formatPercentage(stats.threePointPercentage)}
           </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">3PT%</div>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className={`${fontSizes.statLabel} text-muted-foreground`}>3PT%</div>
+          <div className={`${fontSizes.statDetail} text-muted-foreground mt-1`}>
             {stats.threePointMade}/{stats.threePointAttempted}
           </div>
         </div>
 
         {/* Total Shots */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border col-span-2 sm:col-span-1">
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
+          <div className={`${fontSizes.statValue} text-foreground`}>
             {stats.totalShots.toLocaleString()}
           </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Total Shots</div>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className={`${fontSizes.statLabel} text-muted-foreground`}>Total Shots</div>
+          <div className={`${fontSizes.statDetail} text-muted-foreground mt-1`}>
             This Season
           </div>
         </div>
@@ -92,10 +119,10 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
         <div className="p-3 sm:p-4 rounded-lg bg-heat-hot/10 border border-heat-hot/20">
           <div className="flex items-center mb-2">
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-heat-hot mr-2 flex-shrink-0" />
-            <span className="font-medium text-heat-hot text-sm sm:text-base">Hottest Zone</span>
+            <span className={`font-medium text-heat-hot ${fontSizes.zoneTitle}`}>Hottest Zone</span>
           </div>
-          <div className="text-base sm:text-lg font-semibold text-foreground">{stats.hottestZone}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">
+          <div className={`${fontSizes.zoneValue} font-semibold text-foreground`}>{stats.hottestZone}</div>
+          <div className={`${fontSizes.zoneDetail} text-muted-foreground`}>
             {formatZoneStats(stats.hottestZoneStats) || "High efficiency"}
           </div>
         </div>
@@ -104,10 +131,10 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
         <div className="p-3 sm:p-4 rounded-lg bg-heat-cold/10 border border-heat-cold/20">
           <div className="flex items-center mb-2">
             <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-heat-cold mr-2 flex-shrink-0" />
-            <span className="font-medium text-heat-cold text-sm sm:text-base">Coldest Zone</span>
+            <span className={`font-medium text-heat-cold ${fontSizes.zoneTitle}`}>Coldest Zone</span>
           </div>
-          <div className="text-base sm:text-lg font-semibold text-foreground">{stats.coldestZone}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">
+          <div className={`${fontSizes.zoneValue} font-semibold text-foreground`}>{stats.coldestZone}</div>
+          <div className={`${fontSizes.zoneDetail} text-muted-foreground`}>
             {formatZoneStats(stats.coldestZoneStats) || "Needs work"}
           </div>
         </div>
@@ -116,10 +143,10 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
         <div className="p-3 sm:p-4 rounded-lg bg-accent/10 border border-accent/20">
           <div className="flex items-center mb-2">
             <Target className="h-4 w-4 sm:h-5 sm:w-5 text-accent mr-2 flex-shrink-0" />
-            <span className="font-medium text-accent text-sm sm:text-base">Favorite Spot</span>
+            <span className={`font-medium text-accent ${fontSizes.zoneTitle}`}>Favorite Spot</span>
           </div>
-          <div className="text-base sm:text-lg font-semibold text-foreground">{stats.favoriteSpot}</div>
-          <div className="text-xs sm:text-sm text-muted-foreground">
+          <div className={`${fontSizes.zoneValue} font-semibold text-foreground`}>{stats.favoriteSpot}</div>
+          <div className={`${fontSizes.zoneDetail} text-muted-foreground`}>
             {formatZoneStats(stats.favoriteSpotStats) || "Most attempts"}
           </div>
         </div>

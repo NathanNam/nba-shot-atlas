@@ -304,10 +304,12 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
         <StatisticsPanel 
           entityName={`${entityName} (${season1})`}
           stats={stats1}
+          size="compact"
         />
         <StatisticsPanel 
           entityName={`${entityName} (${season2})`}
           stats={stats2}
+          size="compact"
         />
       </div>
       
