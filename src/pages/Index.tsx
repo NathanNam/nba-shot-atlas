@@ -143,7 +143,22 @@ const Index = () => {
                     season2={selectedSeason2}
                     viewMode={viewMode}
                   />
+                ) : selectedEntities.length === 2 ? (
+                  // Compare two different entities in the same season
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <EntityShotChart
+                      entityName={selectedEntities[0]}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                    <EntityShotChart
+                      entityName={selectedEntities[1]}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  </div>
                 ) : (
+                  // Compare single entity across two seasons
                   selectedEntities.map((entity) => (
                     <ComparisonShotChart
                       key={entity}
@@ -186,7 +201,22 @@ const Index = () => {
                     season2={selectedSeason2}
                     viewMode={viewMode}
                   />
+                ) : selectedEntities.length === 2 ? (
+                  // Compare two different entities in the same season
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <EntityStatistics
+                      entityName={selectedEntities[0]}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                    <EntityStatistics
+                      entityName={selectedEntities[1]}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  </div>
                 ) : (
+                  // Compare single entity across two seasons
                   selectedEntities.map((entity) => (
                     <ComparisonStatistics
                       key={entity}
