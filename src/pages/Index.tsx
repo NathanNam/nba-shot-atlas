@@ -13,6 +13,7 @@ import { MultiEntityComparison } from "@/components/MultiEntityComparison";
 import { EntityVsEntityComparison } from "@/components/EntityVsEntityComparison";
 import { EntityVsEntityDualSeasonComparison } from "@/components/EntityVsEntityDualSeasonComparison";
 import { BatchEntityVsEntityDualSeasonComparison } from "@/components/BatchEntityVsEntityDualSeasonComparison";
+import { BatchEntityLayout } from "@/components/BatchEntityLayout";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -160,8 +161,8 @@ const Index = () => {
                         />
                       ))}
                     </div>
-                    {/* Entity vs Entity comparisons for each season - using batch fetching for parallel requests */}
-                    <BatchEntityVsEntityDualSeasonComparison
+                    {/* Entity vs Entity comparisons for each season - using batch fetching with proper layout */}
+                    <BatchEntityLayout
                       entity1={selectedEntities[0]}
                       entity2={selectedEntities[1]}
                       season1={selectedSeason}
