@@ -20,13 +20,120 @@ export class ParallelDataService {
       return await this.getLeagueDataParallel(season, progressCallback);
     }
     
-    // Use parallel fetching for player/team modes to handle large datasets
-    console.log(`🚀 ParallelDataService: Using parallel fetch for ${viewMode} data`);
+    // Use optimized fetching based on view mode
+    if (viewMode === 'team') {
+      console.log(`🚀 ParallelDataService: Using optimized team data fetch`);
+      return await this.getTeamDataOptimized(season, entityId!, progressCallback);
+    } else {
+      console.log(`🚀 ParallelDataService: Using cursor-based pagination for ${viewMode} data`);
+      return await this.getPlayerDataCursor(season, entityId!, progressCallback);
+    }
+  }
+
+  /**
+   * Optimized team data fetching with smaller batches and better timeout handling
+   */
+  private static async getTeamDataOptimized(
+    season: string,
+    teamId: string,
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const tableName = `shots_${season}`;
+    const batchSize = 500; // Smaller batch size for team data to avoid timeouts
+    const maxRetries = 2;
     
-    // Use cursor-based pagination for complete data retrieval
-    console.log(`🚀 ParallelDataService: Using cursor-based pagination for ${viewMode} data`);
+    console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
     
+    let allData: any[] = [];
+    let hasMore = true;
+    let offset = 0;
+    let batchCount = 0;
+    const maxBatches = 50; // Safety limit
+
+    while (hasMore && batchCount < maxBatches) {
+      let retryCount = 0;
+      let success = false;
+      
+      while (!success && retryCount < maxRetries) {
+        try {
+          const query = (supabase as any)
+            .from(tableName)
+            .select('*')
+            .eq('teamTricode', teamId)
+            .order('gameId', { ascending: true })
+            .order('actionNumber', { ascending: true })
+            .range(offset, offset + batchSize - 1);
+
+          const { data: batchData, error } = await query;
+          
+          if (error) {
+            throw new Error(`Team data query failed: ${error.message}`);
+          }
+
+          if (batchData && batchData.length > 0) {
+            allData.push(...batchData);
+            offset += batchSize;
+            batchCount++;
+            
+            console.log(`🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`);
+            
+            // Check if we got a full batch (indicates more data might be available)
+            hasMore = batchData.length === batchSize;
+            
+            if (progressCallback) {
+              progressCallback(allData.length, undefined);
+            }
+            
+            success = true;
+          } else {
+            hasMore = false;
+            success = true;
+          }
+        } catch (error: any) {
+          retryCount++;
+          console.warn(`⚠️ Team batch ${batchCount + 1} failed (attempt ${retryCount}/${maxRetries}):`, error.message);
+          
+          if (retryCount >= maxRetries) {
+            console.error(`❌ Failed to fetch team batch after ${maxRetries} attempts, stopping`);
+            hasMore = false;
+            success = true;
+          } else {
+            // Wait before retrying with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+      }
+    }
+
+    console.log(`🚀 ParallelDataService: Team fetch complete. Got ${allData.length} total records`);
+
+    // Transform data with strict type conversion for consistency
+    const shots: ShotData[] = allData.map(row => ({
+      personId: String(row.personId || ''),
+      teamTricode: String(row.teamTricode || ''),
+      xLegacy: Number(row.xLegacy) || 0,
+      yLegacy: Number(row.yLegacy) || 0, 
+      shotDistance: Number(row.shotDistance) || 0,
+      shotResult: String(row.shotResult || ''),
+      shotValue: Number(row.shotValue) || 2,
+      description: String(row.description || ''),
+      subType: String(row.subType || ''),
+    }));
+
+    return shots;
+  }
+
+  /**
+   * Player data fetching with cursor-based pagination
+   */
+  private static async getPlayerDataCursor(
+    season: string,
+    playerId: string,
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const tableName = `shots_${season}`;
     const batchSize = 1000;
+    
     let allData: any[] = [];
     let hasMore = true;
     let lastActionNumber: number | null = null;
@@ -41,17 +148,13 @@ export class ParallelDataService {
         .order('actionNumber', { ascending: true })
         .limit(batchSize);
 
-      // Apply entity filters
-      if (viewMode === 'player' && entityId) {
-        const numericEntityId = parseInt(entityId);
-        if (!isNaN(numericEntityId)) {
-          query = query.eq('personId', numericEntityId);
-        } else {
-          console.error(`🚀 ParallelDataService: Invalid player ID: ${entityId}`);
-          return [];
-        }
-      } else if (viewMode === 'team' && entityId) {
-        query = query.eq('teamTricode', entityId);
+      // Apply player filter
+      const numericEntityId = parseInt(playerId);
+      if (!isNaN(numericEntityId)) {
+        query = query.eq('personId', numericEntityId);
+      } else {
+        console.error(`🚀 ParallelDataService: Invalid player ID: ${playerId}`);
+        return [];
       }
 
       // Apply cursor pagination
@@ -88,7 +191,7 @@ export class ParallelDataService {
       }
     }
 
-    console.log(`🚀 ParallelDataService: Cursor pagination complete. Got ${allData.length} total records`);
+    console.log(`🚀 ParallelDataService: Player cursor pagination complete. Got ${allData.length} total records`);
 
     // Transform data with strict type conversion for consistency
     const shots: ShotData[] = allData.map(row => ({
@@ -103,7 +206,6 @@ export class ParallelDataService {
       subType: String(row.subType || ''),
     }));
 
-    // Data is already ordered by gameId, actionNumber from the query
     return shots;
   }
 
