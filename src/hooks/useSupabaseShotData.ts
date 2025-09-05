@@ -21,32 +21,32 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         return;
       }
 
-      // Check preloaded data first for instant loading of defaults
-      const defaultKeys = {
-        'player': entityId === '201939' && season === '2024-25' ? 'player_stephen_curry_2024-25' : null,
-        'team': entityId === 'GSW' && season === '2024-25' ? 'team_gsw_2024-25' : null,
-        'league': season === '2024-25' ? 'league_2024-25' : null
-      };
-      
-      const preloadedKey = defaultKeys[viewMode];
-      if (preloadedKey) {
-        const preloadedData = dataCache.getPreloaded(preloadedKey);
-        if (preloadedData) {
-          console.log(`🚀 useSupabaseShotData: Using preloaded data for ${preloadedKey}, length: ${preloadedData.data.length}`);
-          setShotData(preloadedData.data);
-          setLoading(false);
-          setError(null);
-          return;
-        }
-      }
-
-      // For league mode, force a fresh fetch to avoid old sampled data (except for preloaded)
-      if (viewMode === 'league' && !preloadedKey) {
-        console.log(`🚀 useSupabaseShotData: League mode - forcing fresh fetch to avoid old sampled data`);
+      // For league mode, always force a fresh fetch to get full dataset (no sampling)
+      if (viewMode === 'league') {
+        console.log(`🚀 useSupabaseShotData: League mode - forcing fresh fetch for full dataset`);
         // Clear any existing league cache to prevent old sampled data
         dataCache.clear();
-      } else if (!preloadedKey) {
-        // Check cache first for immediate response for non-league modes
+        dataCache.clearPreloaded();
+      } else {
+        // Check preloaded data first for instant loading of defaults (non-league only)
+        const defaultKeys = {
+          'player': entityId === '201939' && season === '2024-25' ? 'player_stephen_curry_2024-25' : null,
+          'team': entityId === 'GSW' && season === '2024-25' ? 'team_gsw_2024-25' : null
+        };
+        
+        const preloadedKey = defaultKeys[viewMode];
+        if (preloadedKey) {
+          const preloadedData = dataCache.getPreloaded(preloadedKey);
+          if (preloadedData) {
+            console.log(`🚀 useSupabaseShotData: Using preloaded data for ${preloadedKey}, length: ${preloadedData.data.length}`);
+            setShotData(preloadedData.data);
+            setLoading(false);
+            setError(null);
+            return;
+          }
+        }
+
+        // Check cache for other data
         const cachedData = dataCache.get(season, entityId, viewMode);
         if (cachedData) {
           console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);

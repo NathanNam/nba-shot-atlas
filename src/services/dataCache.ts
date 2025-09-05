@@ -94,12 +94,12 @@ class DataCacheService {
     return Array.from(this.preloadedData.values());
   }
 
-  // Check if specific default data is preloaded
+  // Check if specific default data is preloaded (excluding league)
   isDefaultDataReady(): boolean {
     const defaultKeys = [
       'player_stephen_curry_2024-25',
-      'team_gsw_2024-25',
-      'league_2024-25'
+      'team_gsw_2024-25'
+      // League data excluded from default check
     ];
     
     return defaultKeys.every(key => this.preloadedData.has(key));
