@@ -152,46 +152,38 @@ export function BatchEntityLayout({
 
   return (
     <div className="space-y-8">
-      {/* Statistics Grid */}
+      {/* Statistics Grid - Reorganized by season rows */}
       <div className="space-y-6">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Season 1 Statistics */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-center">{season1} Season</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <EntityStatistics 
-                entityName={`${entity1} (${season1})`}
-                selectedSeason={season1}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity1}_${season1}`]?.data}
-              />
-              <EntityStatistics 
-                entityName={`${entity2} (${season1})`}
-                selectedSeason={season1}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity2}_${season1}`]?.data}
-              />
-            </div>
-          </div>
+        {/* Row 3: Two stats charts for 2024-25 Season */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <EntityStatistics 
+            entityName={`${entity1} (${season1})`}
+            selectedSeason={season1}
+            viewMode={viewMode}
+            preloadedData={batchResults[`${entity1}_${season1}`]?.data}
+          />
+          <EntityStatistics 
+            entityName={`${entity2} (${season1})`}
+            selectedSeason={season1}
+            viewMode={viewMode}
+            preloadedData={batchResults[`${entity2}_${season1}`]?.data}
+          />
+        </div>
 
-          {/* Season 2 Statistics */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-center">{season2} Season</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <EntityStatistics 
-                entityName={`${entity1} (${season2})`}
-                selectedSeason={season2}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity1}_${season2}`]?.data}
-              />
-              <EntityStatistics 
-                entityName={`${entity2} (${season2})`}
-                selectedSeason={season2}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity2}_${season2}`]?.data}
-              />
-            </div>
-          </div>
+        {/* Row 4: Two stats charts for 2023-24 Season */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <EntityStatistics 
+            entityName={`${entity1} (${season2})`}
+            selectedSeason={season2}
+            viewMode={viewMode}
+            preloadedData={batchResults[`${entity1}_${season2}`]?.data}
+          />
+          <EntityStatistics 
+            entityName={`${entity2} (${season2})`}
+            selectedSeason={season2}
+            viewMode={viewMode}
+            preloadedData={batchResults[`${entity2}_${season2}`]?.data}
+          />
         </div>
       </div>
 
