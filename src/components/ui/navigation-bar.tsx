@@ -47,12 +47,6 @@ export function NavigationBar({
                 <h1 className="text-mobile-lg sm:text-xl font-bold text-foreground">NBA Shot Analytics</h1>
               </div>
             </div>
-            <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 text-mobile-xs sm:text-xs">
-              Live
-            </Badge>
-            <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 text-xs">
-              Live
-            </Badge>
           </div>
           
           {/* Mobile Controls Row */}
@@ -236,12 +230,6 @@ export function NavigationBar({
                 <span className="hidden md:inline">Team</span>
               </Button>
             </div>
-
-            {/* Live Badge */}
-            <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 animate-pulse-glow">
-              <div className="w-2 h-2 bg-accent rounded-full mr-2 animate-pulse"></div>
-              Live Data
-            </Badge>
           </div>
         </div>
       </div>
