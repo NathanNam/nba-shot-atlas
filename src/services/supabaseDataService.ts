@@ -32,7 +32,7 @@ const dbQueryDuration = meter.createHistogram('supabase_query_duration_ms', {
 
 export class SupabaseDataService {
   private static playerCache = new Map<string, Player[]>();
-  private static shotCache = new Map<string, ShotData[]>();
+  // Remove old shotCache to prevent conflicts with new cache system
 
   static async getPlayers(): Promise<Player[]> {
     const span = tracer.startSpan('supabase.get_players');
@@ -219,8 +219,7 @@ export class SupabaseDataService {
         shotValue: row.shotValue || 0,
       }));
 
-      // Cache the result in both old and new cache systems
-      this.shotCache.set(cacheKey, shots);
+      // Cache the result in new cache system only
       dataCache.set(season, entityId || '', viewMode, shots);
 
       span.setAttributes({
@@ -258,7 +257,8 @@ export class SupabaseDataService {
 
   static clearCache(): void {
     this.playerCache.clear();
-    this.shotCache.clear();
+    dataCache.clear();
+    dataCache.clearPreloaded();
     logger.emit({
       severityNumber: SeverityNumber.INFO,
       severityText: 'INFO',
