@@ -85,12 +85,19 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison in same season - use new component
-                  <MultiEntityComparison
-                    entities={selectedEntities}
-                    selectedSeason={selectedSeason}
-                    viewMode={viewMode}
-                  />
+                  // Multi-entity comparison across seasons - show all combinations
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    {selectedEntities.map((entity) => (
+                      <div key={entity} className="space-y-6">
+                        <ComparisonShotChart
+                          entityName={entity}
+                          season1={selectedSeason}
+                          season2={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
@@ -136,8 +143,18 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison handled by MultiEntityComparison component
-                  null // Already rendered in shot charts section
+                  // Multi-entity comparison across seasons - show statistics and progress for each
+                  <div className="space-y-6">
+                    {selectedEntities.map((entity) => (
+                      <ComparisonStatistics
+                        key={entity}
+                        entityName={entity}
+                        season1={selectedSeason}
+                        season2={selectedSeason2}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
