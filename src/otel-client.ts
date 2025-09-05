@@ -88,6 +88,7 @@ function createProviders() {
           headers: {
             ...authHeader,
             "x-observe-target-package": "Tracing",
+            "Content-Type": "application/x-protobuf",
           },
         })
       ),
@@ -104,6 +105,7 @@ function createProviders() {
           headers: {
             ...authHeader,
             "x-observe-target-package": "Host Explorer",
+            "Content-Type": "application/x-protobuf",
           },
         })
       ),
