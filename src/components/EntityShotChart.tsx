@@ -26,10 +26,19 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, entityId || '', viewMode);
+  
+  console.log(`🔍 EntityShotChart: Final entityId for "${entityName}":`, entityId, 'playersLoading:', playersLoading);
+  
+  // Only fetch shot data if we have a valid entityId and players are not loading
+  const shouldFetchData = !playersLoading && entityId !== undefined;
+  const { shotData, loading, error } = useSupabaseShotData(
+    selectedSeason, 
+    shouldFetchData ? entityId : '', 
+    viewMode
+  );
   
   // Show loading while players are loading or while shot data is loading
-  const isLoading = playersLoading || loading || !entityId;
+  const isLoading = playersLoading || loading || !shouldFetchData;
   
   if (error) {
     return (
