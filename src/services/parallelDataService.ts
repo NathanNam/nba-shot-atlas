@@ -23,44 +23,75 @@ export class ParallelDataService {
     // Use parallel fetching for player/team modes to handle large datasets
     console.log(`🚀 ParallelDataService: Using parallel fetch for ${viewMode} data`);
     
-    // Use deterministic single query for player/team data to ensure consistency
-    console.log(`🚀 ParallelDataService: Using deterministic single query for ${viewMode} data`);
+    // Use cursor-based pagination for complete data retrieval
+    console.log(`🚀 ParallelDataService: Using cursor-based pagination for ${viewMode} data`);
     
-    let query = (supabase as any)
-      .from(tableName)
-      .select('*')
-      .order('actionId', { ascending: true }); // Add consistent ordering
+    const batchSize = 1000;
+    let allData: any[] = [];
+    let hasMore = true;
+    let lastActionNumber: number | null = null;
+    let lastGameId: number | null = null;
+    let batchCount = 0;
 
-    // Apply filters
-    if (viewMode === 'player' && entityId) {
-      const numericEntityId = parseInt(entityId);
-      if (!isNaN(numericEntityId)) {
-        console.log(`🚀 ParallelDataService: Filtering by personId=${numericEntityId}`);
-        query = query.eq('personId', numericEntityId);
-      } else {
-        console.error(`🚀 ParallelDataService: Invalid player ID: ${entityId}`);
-        return [];
+    while (hasMore) {
+      let query = (supabase as any)
+        .from(tableName)
+        .select('*')
+        .order('gameId', { ascending: true })
+        .order('actionNumber', { ascending: true })
+        .limit(batchSize);
+
+      // Apply entity filters
+      if (viewMode === 'player' && entityId) {
+        const numericEntityId = parseInt(entityId);
+        if (!isNaN(numericEntityId)) {
+          query = query.eq('personId', numericEntityId);
+        } else {
+          console.error(`🚀 ParallelDataService: Invalid player ID: ${entityId}`);
+          return [];
+        }
+      } else if (viewMode === 'team' && entityId) {
+        query = query.eq('teamTricode', entityId);
       }
-    } else if (viewMode === 'team' && entityId) {
-      console.log(`🚀 ParallelDataService: Filtering by teamTricode=${entityId}`);
-      query = query.eq('teamTricode', entityId);
+
+      // Apply cursor pagination
+      if (lastGameId !== null && lastActionNumber !== null) {
+        query = query.or(`gameId.gt.${lastGameId},and(gameId.eq.${lastGameId},actionNumber.gt.${lastActionNumber})`);
+      }
+
+      const { data: batchData, error } = await query;
+      
+      if (error) {
+        console.error(`🚀 ParallelDataService: Cursor query error:`, error);
+        throw new Error(`Cursor query failed: ${error.message}`);
+      }
+
+      if (batchData && batchData.length > 0) {
+        allData.push(...batchData);
+        batchCount++;
+        
+        // Update cursor to last record
+        const lastRecord = batchData[batchData.length - 1];
+        lastGameId = lastRecord.gameId;
+        lastActionNumber = lastRecord.actionNumber;
+        
+        console.log(`🚀 ParallelDataService: Cursor batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`);
+        
+        // Check if we got a full batch (indicates more data might be available)
+        hasMore = batchData.length === batchSize;
+        
+        if (progressCallback) {
+          progressCallback(allData.length, undefined);
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error(`🚀 ParallelDataService: Query error:`, error);
-      throw new Error(`Query failed: ${error.message}`);
-    }
-
-    console.log(`🚀 ParallelDataService: Single query got ${data?.length || 0} records for ${viewMode}`);
-
-    if (progressCallback) {
-      progressCallback(data?.length || 0, data?.length || 0);
-    }
+    console.log(`🚀 ParallelDataService: Cursor pagination complete. Got ${allData.length} total records`);
 
     // Transform data with strict type conversion for consistency
-    const shots: ShotData[] = (data || []).map(row => ({
+    const shots: ShotData[] = allData.map(row => ({
       personId: String(row.personId || ''),
       teamTricode: String(row.teamTricode || ''),
       xLegacy: Number(row.xLegacy) || 0,
@@ -72,13 +103,7 @@ export class ParallelDataService {
       subType: String(row.subType || ''),
     }));
 
-    // Sort results by actionId for deterministic ordering
-    shots.sort((a, b) => {
-      const aId = Number(data?.find(row => row.personId === a.personId)?.actionId || 0);
-      const bId = Number(data?.find(row => row.personId === b.personId)?.actionId || 0);
-      return aId - bId;
-    });
-
+    // Data is already ordered by gameId, actionNumber from the query
     return shots;
   }
 
