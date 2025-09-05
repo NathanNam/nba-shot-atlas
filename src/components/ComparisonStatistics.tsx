@@ -299,6 +299,55 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
 
   return (
     <div className="space-y-6">
+      {/* Season Summaries */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{entityName} - {season1}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Games Analyzed:</span>
+                <div className="font-medium">{stats1.totalShots > 0 ? 'Active' : 'No Data'}</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Attempts:</span>
+                <div className="font-medium">{stats1.totalShots}</div>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overall FG: {(stats1.fieldGoalPercentage * 100).toFixed(1)}% • 
+              2PT: {(stats1.twoPointPercentage * 100).toFixed(1)}% • 
+              3PT: {(stats1.threePointPercentage * 100).toFixed(1)}%
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{entityName} - {season2}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Games Analyzed:</span>
+                <div className="font-medium">{stats2.totalShots > 0 ? 'Active' : 'No Data'}</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Attempts:</span>
+                <div className="font-medium">{stats2.totalShots}</div>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overall FG: {(stats2.fieldGoalPercentage * 100).toFixed(1)}% • 
+              2PT: {(stats2.twoPointPercentage * 100).toFixed(1)}% • 
+              3PT: {(stats2.threePointPercentage * 100).toFixed(1)}%
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Individual Season Statistics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StatisticsPanel 
