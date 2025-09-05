@@ -171,7 +171,7 @@ export function NavigationBar({
             {/* Season Comparison Toggle */}
             <div className="flex items-center space-x-2">
               <Label htmlFor="comparison-mode" className="text-sm font-medium text-foreground hidden lg:block">
-                Compare:
+                Comparison:
               </Label>
               <Switch
                 id="comparison-mode"
