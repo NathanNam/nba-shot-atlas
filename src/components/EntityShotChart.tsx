@@ -15,12 +15,16 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   const getEntityId = () => {
     if (viewMode === 'player') {
       if (playersLoading) {
-        // Return undefined while loading to prevent data fetching with incorrect ID
+        // For default player (Stephen Curry), return the known ID immediately
+        if (entityName === 'Stephen Curry') {
+          return '201939';
+        }
+        // For other players, return undefined while loading
         return undefined;
       }
       const player = players.find(p => p.name === entityName);
       console.log(`🔍 EntityShotChart: Looking for "${entityName}", found player:`, player);
-      return player?.id || entityName;
+      return player?.id || undefined; // Return undefined instead of entityName to prevent invalid IDs
     }
     return entityName; // For teams, use the name directly
   };
