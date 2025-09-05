@@ -144,8 +144,15 @@ export class SupabaseDataService {
 
       // Apply filters based on view mode - using new column names
       if (viewMode === 'player' && entityId) {
-        query = query.eq('personId', entityId);
+        console.log(`🔍 SupabaseDataService: Filtering by personId=${entityId} for player mode`);
+        // Ensure entityId is numeric for personId filter
+        const numericEntityId = parseInt(entityId);
+        if (isNaN(numericEntityId)) {
+          throw new Error(`Invalid player ID: "${entityId}" is not numeric. Player names should be converted to IDs before calling this method.`);
+        }
+        query = query.eq('personId', numericEntityId);
       } else if (viewMode === 'team' && entityId) {
+        console.log(`🔍 SupabaseDataService: Filtering by teamTricode=${entityId} for team mode`);
         query = query.eq('teamTricode', entityId);
       }
       // For league mode, no additional filter needed

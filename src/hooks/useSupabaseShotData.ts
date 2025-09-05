@@ -10,7 +10,11 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
 
   useEffect(() => {
     const loadShotData = async () => {
+      // Add detailed logging to track what entityId is being passed
+      console.log(`🔍 useSupabaseShotData: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
+      
       if (!entityId && viewMode !== 'league') {
+        console.log(`🔍 useSupabaseShotData: No entityId provided for ${viewMode} mode, skipping data fetch`);
         setShotData([]);
         return;
       }
