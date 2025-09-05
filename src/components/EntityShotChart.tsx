@@ -73,6 +73,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
     <ShotChart
       title={entityName}
       data={isLoading ? undefined : shotData}
+      progress={progress}
     />
   );
 }

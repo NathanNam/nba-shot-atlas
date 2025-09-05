@@ -9,11 +9,12 @@ interface ShotChartProps {
   data?: ShotData[];
   width?: number;
   height?: number;
+  progress?: { loaded: number; total?: number; isProcessing?: boolean } | null;
 }
 
 type ViewMode = "shots" | "heatmap";
 
-export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartProps) {
+export function ShotChart({ title, data, width = 500, height = 470, progress }: ShotChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("shots");
 
@@ -382,57 +383,82 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
         </div>
       </div>
       
-      {/* Responsive shot chart container */}
-      <div className="flex justify-center mb-4">
-        <div className="w-full max-w-lg sm:max-w-2xl">
-          <svg
-            ref={svgRef}
-            width="100%"
-            height="auto"
-            viewBox={`0 0 ${width} ${height}`}
-            className="border border-border rounded-lg shadow-court w-full h-auto touch-manipulation"
-            style={{ aspectRatio: `${width}/${height}` }}
-          />
+      {/* Loading state with progress */}
+      {(!data || data.length === 0) && progress ? (
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="animate-pulse text-muted-foreground">
+            {progress.isProcessing ? 'Processing data...' : 
+             progress.loaded ? `Loading: ${progress.loaded.toLocaleString()} shots loaded` :
+             'Loading shot data...'}
+          </div>
+          {progress.total && (
+            <div className="w-64 bg-secondary rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(progress.loaded / progress.total) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
-      </div>
-      
-      {/* Mobile-optimized legend */}
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 pt-4 border-t border-border">
-        {viewMode === "shots" ? (
-          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
-            <div className="flex items-center gap-2 justify-center">
-              <div 
-                className="w-4 h-4 rounded-full border border-green-500 flex-shrink-0" 
-                style={{ backgroundColor: "hsl(var(--heat-hot))" }}
+      ) : (!data || data.length === 0) ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-pulse text-muted-foreground">Loading shot data...</div>
+        </div>
+      ) : (
+        <>
+          {/* Responsive shot chart container */}
+          <div className="flex justify-center mb-4">
+            <div className="w-full max-w-lg sm:max-w-2xl">
+              <svg
+                ref={svgRef}
+                width="100%"
+                height="auto"
+                viewBox={`0 0 ${width} ${height}`}
+                className="border border-border rounded-lg shadow-court w-full h-auto touch-manipulation"
+                style={{ aspectRatio: `${width}/${height}` }}
               />
-              <span className="text-sm font-medium text-muted-foreground">Made Shot</span>
-            </div>
-            <div className="flex items-center gap-2 justify-center">
-              <div 
-                className="w-4 h-4 rounded-full border border-red-500 flex-shrink-0" 
-                style={{ backgroundColor: "hsl(var(--heat-cold))" }}
-              />
-              <span className="text-sm font-medium text-muted-foreground">Missed Shot</span>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
-            <div className="flex items-center gap-2 justify-center">
-              <div className="w-4 h-4 rounded-full bg-blue-600 flex-shrink-0"/>
-              <span className="text-sm font-medium text-muted-foreground">Above League Avg</span>
-            </div>
-            <div className="flex items-center gap-2 justify-center">
-              <div className="w-4 h-4 rounded-full bg-blue-300 flex-shrink-0"/>
-              <span className="text-sm font-medium text-muted-foreground">Below League Avg</span>
-            </div>
+          
+          {/* Mobile-optimized legend */}
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 pt-4 border-t border-border">
+            {viewMode === "shots" ? (
+              <div className="grid grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
+                <div className="flex items-center gap-2 justify-center">
+                  <div 
+                    className="w-4 h-4 rounded-full border border-green-500 flex-shrink-0" 
+                    style={{ backgroundColor: "hsl(var(--heat-hot))" }}
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">Made Shot</span>
+                </div>
+                <div className="flex items-center gap-2 justify-center">
+                  <div 
+                    className="w-4 h-4 rounded-full border border-red-500 flex-shrink-0" 
+                    style={{ backgroundColor: "hsl(var(--heat-cold))" }}
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">Missed Shot</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:gap-6">
+                <div className="flex items-center gap-2 justify-center">
+                  <div className="w-4 h-4 rounded-full bg-blue-600 flex-shrink-0"/>
+                  <span className="text-sm font-medium text-muted-foreground">Above League Avg</span>
+                </div>
+                <div className="flex items-center gap-2 justify-center">
+                  <div className="w-4 h-4 rounded-full bg-blue-300 flex-shrink-0"/>
+                  <span className="text-sm font-medium text-muted-foreground">Below League Avg</span>
+                </div>
+              </div>
+            )}
+            {data && data.length > 0 && (
+              <div className="text-xs text-muted-foreground ml-4">
+                {data.length} total shots
+              </div>
+            )}
           </div>
-        )}
-        {data && data.length > 0 && (
-          <div className="text-xs text-muted-foreground ml-4">
-            {data.length} total shots
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </Card>
   );
 }

@@ -177,10 +177,6 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
   useEffect(() => {
     console.log(`🔐 useSingletonShotData: Subscribing to ${season}_${entityId}_${viewMode}`);
     
-    // FORCE CLEAR ALL CACHE to test new pagination logic
-    console.log(`🔐 useSingletonShotData: FORCE clearing ALL cache to test new pagination`);
-    manager.current.clearCache();
-    
     const unsubscribe = manager.current.subscribe(
       season, 
       entityId, 

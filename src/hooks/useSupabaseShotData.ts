@@ -48,14 +48,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
           },
         });
 
-        const progressCallback = viewMode === 'league' ? 
-          (loaded: number, total?: number) => {
-            setProgress({ 
-              loaded, 
-              total, 
-              isProcessing: total ? loaded >= total * 0.8 : false // Mark as processing when near completion
-            });
-          } : undefined;
+        const progressCallback = (loaded: number, total?: number) => {
+          setProgress({ 
+            loaded, 
+            total, 
+            isProcessing: total ? loaded >= total * 0.8 : false // Mark as processing when near completion
+          });
+        };
         
         const data = await SupabaseDataService.getShotData(season, entityId, viewMode, progressCallback);
         
