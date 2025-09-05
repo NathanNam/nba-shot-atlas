@@ -34,9 +34,16 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
           'team': entityId === 'GSW' && season === '2024-25' ? 'team_gsw_2024-25' : null
         };
         
+        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: entityId="${entityId}", season="${season}", viewMode="${viewMode}"`);
+        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: defaultKeys=`, defaultKeys);
+        
         const preloadedKey = defaultKeys[viewMode];
+        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: preloadedKey="${preloadedKey}"`);
+        
         if (preloadedKey) {
           const preloadedData = dataCache.getPreloaded(preloadedKey);
+          console.log(`🔍 useSupabaseShotData PRELOAD CHECK: preloadedData=`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
+          
           if (preloadedData) {
             console.log(`🚀 useSupabaseShotData: Using preloaded data for ${preloadedKey}, length: ${preloadedData.data.length}`);
             setShotData(preloadedData.data);
