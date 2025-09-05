@@ -173,33 +173,27 @@ const Index = () => {
                   <div className="space-y-6">
                     {/* Individual player statistics for each season */}
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason}-${viewMode}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason2}-${viewMode}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason2}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                    {/* Season comparison */}
-                    {selectedEntities.map((entity) => (
-                      <ComparisonStatistics
-                        key={entity}
-                        entityName={entity}
-                        season1={selectedSeason}
-                        season2={selectedSeason2}
+                      <EntityStatistics
+                        key={`${selectedEntities[0]}-${selectedSeason}-${viewMode}`}
+                        entityName={selectedEntities[0]}
+                        selectedSeason={selectedSeason}
                         viewMode={viewMode}
                       />
-                    ))}
+                      <EntityStatistics
+                        key={`${selectedEntities[0]}-${selectedSeason2}-${viewMode}`}
+                        entityName={selectedEntities[0]}
+                        selectedSeason={selectedSeason2}
+                        viewMode={viewMode}
+                      />
+                    </div>
+                    {/* Season comparison */}
+                    <ComparisonStatistics
+                      key={selectedEntities[0]}
+                      entityName={selectedEntities[0]}
+                      season1={selectedSeason}
+                      season2={selectedSeason2}
+                      viewMode={viewMode}
+                    />
                   </div>
                 )
               ) : (
