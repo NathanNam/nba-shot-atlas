@@ -136,40 +136,14 @@ const Index = () => {
               {isComparisonMode ? (
                 // Comparison Mode Statistics
                 selectedEntities.length > 1 ? (
-                  // Two players + comparison on: Show individual stats for each player in each season + player vs player comparisons
-                  <div className="space-y-6">
-                    {/* Individual player statistics for each season */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {/* Current season stats */}
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason}-${viewMode}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {/* Comparison season stats */}
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason2}-${viewMode}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason2}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                    {/* Entity vs Entity comparisons for each season - using batch fetching with proper layout */}
-                    <BatchEntityLayout
-                      entity1={selectedEntities[0]}
-                      entity2={selectedEntities[1]}
-                      season1={selectedSeason}
-                      season2={selectedSeason2}
-                      viewMode={viewMode}
-                    />
-                  </div>
+                  // Two entities + comparison on: Use batch fetching for all 4 combinations
+                  <BatchEntityLayout
+                    entity1={selectedEntities[0]}
+                    entity2={selectedEntities[1]}
+                    season1={selectedSeason}
+                    season2={selectedSeason2}
+                    viewMode={viewMode}
+                  />
                 ) : (
                   // Single entity across seasons: Show individual stats for each season + season comparison
                   <div className="space-y-6">
