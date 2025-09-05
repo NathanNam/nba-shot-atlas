@@ -85,18 +85,30 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison across seasons - show all combinations
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {selectedEntities.map((entity) => (
-                      <div key={entity} className="space-y-6">
-                        <ComparisonShotChart
+                  // Multi-entity comparison across seasons - show 2x2 grid layout
+                  <div className="space-y-6">
+                    {/* First row - Current season for all entities */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityShotChart
+                          key={`${entity}-${selectedSeason}`}
                           entityName={entity}
-                          season1={selectedSeason}
-                          season2={selectedSeason2}
+                          selectedSeason={selectedSeason}
                           viewMode={viewMode}
                         />
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    {/* Second row - Comparison season for all entities */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityShotChart
+                          key={`${entity}-${selectedSeason2}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   // Single entity across seasons
