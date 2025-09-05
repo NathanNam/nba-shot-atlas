@@ -1,1 +1,10 @@
 project_id = "icfqngdeohzzjvzcmawo"
+
+[functions.get-league-stats]
+verify_jwt = false
+
+[functions.get-otel-config]
+verify_jwt = false
+
+[functions.populate-league-stats]
+verify_jwt = false

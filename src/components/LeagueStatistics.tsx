@@ -37,20 +37,20 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
         if (precomputedStats) {
           console.log('✅ LeagueStatistics: Found pre-computed stats:', precomputedStats);
           
-          // Transform to expected format
+          // Transform to expected format with safety checks
           const transformedStats = {
-            fieldGoalPercentage: Number(precomputedStats.field_goal_percentage),
-            twoPointPercentage: Number(precomputedStats.two_point_percentage),
-            twoPointMade: precomputedStats.two_point_made,
-            twoPointAttempted: precomputedStats.two_point_attempted,
-            threePointPercentage: Number(precomputedStats.three_point_percentage),
-            threePointMade: precomputedStats.three_point_made,
-            threePointAttempted: precomputedStats.three_point_attempted,
-            totalShots: precomputedStats.total_shots,
-            madeShots: precomputedStats.made_shots,
-            hottestZone: precomputedStats.hottest_zone,
-            coldestZone: precomputedStats.coldest_zone,
-            favoriteSpot: precomputedStats.favorite_spot
+            fieldGoalPercentage: Number(precomputedStats.field_goal_percentage) || 0,
+            twoPointPercentage: Number(precomputedStats.two_point_percentage) || 0,
+            twoPointMade: Number(precomputedStats.two_point_made) || 0,
+            twoPointAttempted: Number(precomputedStats.two_point_attempted) || 0,
+            threePointPercentage: Number(precomputedStats.three_point_percentage) || 0,
+            threePointMade: Number(precomputedStats.three_point_made) || 0,
+            threePointAttempted: Number(precomputedStats.three_point_attempted) || 0,
+            totalShots: Number(precomputedStats.total_shots) || 0,
+            madeShots: Number(precomputedStats.made_shots) || 0,
+            hottestZone: precomputedStats.hottest_zone || "N/A",
+            coldestZone: precomputedStats.coldest_zone || "N/A",
+            favoriteSpot: precomputedStats.favorite_spot || "N/A"
           };
           
           setStats(transformedStats);
@@ -79,18 +79,18 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
           
           if (newStats) {
             const transformedStats = {
-              fieldGoalPercentage: Number(newStats.field_goal_percentage),
-              twoPointPercentage: Number(newStats.two_point_percentage),
-              twoPointMade: newStats.two_point_made,
-              twoPointAttempted: newStats.two_point_attempted,
-              threePointPercentage: Number(newStats.three_point_percentage),
-              threePointMade: newStats.three_point_made,
-              threePointAttempted: newStats.three_point_attempted,
-              totalShots: newStats.total_shots,
-              madeShots: newStats.made_shots,
-              hottestZone: newStats.hottest_zone,
-              coldestZone: newStats.coldest_zone,
-              favoriteSpot: newStats.favorite_spot
+              fieldGoalPercentage: Number(newStats.field_goal_percentage) || 0,
+              twoPointPercentage: Number(newStats.two_point_percentage) || 0,
+              twoPointMade: Number(newStats.two_point_made) || 0,
+              twoPointAttempted: Number(newStats.two_point_attempted) || 0,
+              threePointPercentage: Number(newStats.three_point_percentage) || 0,
+              threePointMade: Number(newStats.three_point_made) || 0,
+              threePointAttempted: Number(newStats.three_point_attempted) || 0,
+              totalShots: Number(newStats.total_shots) || 0,
+              madeShots: Number(newStats.made_shots) || 0,
+              hottestZone: newStats.hottest_zone || "N/A",
+              coldestZone: newStats.coldest_zone || "N/A",
+              favoriteSpot: newStats.favorite_spot || "N/A"
             };
             
             setStats(transformedStats);
