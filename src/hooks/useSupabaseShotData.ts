@@ -21,14 +21,21 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         return;
       }
 
-      // Check cache first for immediate response
-      const cachedData = dataCache.get(season, entityId, viewMode);
-      if (cachedData) {
-        console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
-        setShotData(cachedData);
-        setLoading(false);
-        setError(null);
-        return;
+      // For league mode, force a fresh fetch to avoid old sampled data
+      if (viewMode === 'league') {
+        console.log(`🚀 useSupabaseShotData: League mode - forcing fresh fetch to avoid old sampled data`);
+        // Clear any existing league cache to prevent old sampled data
+        dataCache.clear();
+      } else {
+        // Check cache first for immediate response for non-league modes
+        const cachedData = dataCache.get(season, entityId, viewMode);
+        if (cachedData) {
+          console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
+          setShotData(cachedData);
+          setLoading(false);
+          setError(null);
+          return;
+        }
       }
 
       const span = tracer.startSpan('use_supabase_shot_data.load', {
