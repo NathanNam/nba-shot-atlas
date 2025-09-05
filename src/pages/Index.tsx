@@ -155,17 +155,42 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison across seasons - show statistics and progress for each
+                  // Multi-entity comparison across seasons - show 2x2 grid for statistics
                   <div className="space-y-6">
-                    {selectedEntities.map((entity) => (
-                      <ComparisonStatistics
-                        key={entity}
-                        entityName={entity}
-                        season1={selectedSeason}
-                        season2={selectedSeason2}
-                        viewMode={viewMode}
-                      />
-                    ))}
+                    {/* First row - Current season statistics for all entities */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    {/* Second row - Comparison season statistics for all entities */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason2}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    {/* Third section - Progress cards for each entity */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <ComparisonStatistics
+                          key={`${entity}-progress`}
+                          entityName={entity}
+                          season1={selectedSeason}
+                          season2={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   // Single entity across seasons
