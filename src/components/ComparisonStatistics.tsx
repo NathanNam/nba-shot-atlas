@@ -28,7 +28,10 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   
   const entityId1 = getEntityId(season1);
   const entityId2 = getEntityId(season2, true);
-  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1, viewMode);
+  
+  console.log(`🔍 ComparisonStatistics: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}"`);
+  
+  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1, entityId2, viewMode);
 
   // Helper function to analyze shooting zones (same as EntityStatistics)
   const analyzeZones = (shotData: any[]) => {

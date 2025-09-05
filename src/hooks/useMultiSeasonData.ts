@@ -19,11 +19,12 @@ export interface MultiSeasonData {
 export function useMultiSeasonData(
   season1: string,
   season2: string | null,
-  entityId: string,
+  entityId1: string,
+  entityId2: string,
   viewMode: 'player' | 'team' | 'league'
 ) {
-  const season1Data = useSupabaseShotData(season1, entityId, viewMode);
-  const season2Data = useSupabaseShotData(season2 || '', entityId, viewMode);
+  const season1Data = useSupabaseShotData(season1, entityId1, viewMode);
+  const season2Data = useSupabaseShotData(season2 || '', entityId2, viewMode);
 
   const [multiSeasonData, setMultiSeasonData] = useState<MultiSeasonData>({
     season1: {
