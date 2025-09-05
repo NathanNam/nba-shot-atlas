@@ -10,6 +10,8 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ loaded: number; total?: number } | null>(null);
 
+  console.log(`🚀 useSupabaseShotData HOOK: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
+
   useEffect(() => {
     const loadShotData = async () => {
       // Add detailed logging to track what entityId is being passed
