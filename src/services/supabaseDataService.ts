@@ -18,7 +18,6 @@ export interface ShotData {
 export interface Player {
   id: string;
   name: string;
-  team: string;
 }
 
 // Metrics
@@ -75,7 +74,6 @@ export class SupabaseDataService {
       const players: Player[] = data.map(row => ({
         id: row.id,
         name: row.name,
-        team: row.team || '',
       }));
 
       // Cache the result

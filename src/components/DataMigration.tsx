@@ -247,7 +247,7 @@ export function DataMigration() {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Expected format: id, name, team
+                  Expected format: id, name
                 </p>
               </div>
               

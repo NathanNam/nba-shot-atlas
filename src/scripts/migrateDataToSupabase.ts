@@ -16,7 +16,6 @@ interface CSVShotData {
 interface CSVPlayerData {
   id: string;
   name: string;
-  team: string;
 }
 
 export class DataMigrator {
@@ -36,7 +35,6 @@ export class DataMigrator {
         return {
           id: values[0],
           name: values[1],
-          team: values[2] || '',
         };
       });
     } catch (error) {
@@ -332,20 +330,15 @@ export class DataMigrator {
                   values[headerMap['person_id']] || 
                   values[headerMap['id']] || 
                   values[headerMap['player_id']] || '';
-                  
+                    
         const name = values[headerMap['playerfullname']] || 
                     values[headerMap['player_full_name']] || 
                     values[headerMap['name']] || 
                     values[headerMap['display_name']] || '';
-                    
-        const team = values[headerMap['team']] || 
-                    values[headerMap['team_tricode']] || 
-                    values[headerMap['teamtricode']] || '';
 
         return {
           id: id.replace(/"/g, '').trim(),
           name: name.replace(/"/g, '').trim(),
-          team: team.replace(/"/g, '').trim(),
         };
       }).filter(player => player.id && player.name);
 
