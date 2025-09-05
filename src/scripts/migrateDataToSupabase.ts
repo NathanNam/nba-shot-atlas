@@ -313,14 +313,39 @@ export class DataMigrator {
     try {
       // Parse CSV text
       const lines = csvText.trim().split('\n');
-      const headers = lines[0].split(',');
+      const headers = lines[0].toLowerCase().split(',');
+      
+      // Create header mapping for flexible parsing
+      const headerMap: { [key: string]: number } = {};
+      headers.forEach((header, index) => {
+        const cleanHeader = header.replace(/"/g, '').trim();
+        headerMap[cleanHeader] = index;
+      });
+
+      console.log('Player CSV Headers found:', Object.keys(headerMap));
       
       const players = lines.slice(1).map(line => {
         const values = line.split(',');
+        
+        // Support multiple possible column names
+        const id = values[headerMap['personid']] || 
+                  values[headerMap['person_id']] || 
+                  values[headerMap['id']] || 
+                  values[headerMap['player_id']] || '';
+                  
+        const name = values[headerMap['playerfullname']] || 
+                    values[headerMap['player_full_name']] || 
+                    values[headerMap['name']] || 
+                    values[headerMap['display_name']] || '';
+                    
+        const team = values[headerMap['team']] || 
+                    values[headerMap['team_tricode']] || 
+                    values[headerMap['teamtricode']] || '';
+
         return {
-          id: values[0],
-          name: values[1],
-          team: values[2] || '',
+          id: id.replace(/"/g, '').trim(),
+          name: name.replace(/"/g, '').trim(),
+          team: team.replace(/"/g, '').trim(),
         };
       }).filter(player => player.id && player.name);
 
