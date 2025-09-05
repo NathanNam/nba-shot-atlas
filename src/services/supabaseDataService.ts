@@ -52,32 +52,26 @@ export class SupabaseDataService {
 
       dbQueryCounter.add(1, { table: 'players', operation: 'select' });
 
-      const { data, error } = await (supabase as any)
-        .from('players')
-        .select('"personId", "playerFullName"')
-        .order('"playerFullName"');
-
-      console.log('🔍 SupabaseDataService.getPlayers: Raw response data:', data);
-      console.log('🔍 SupabaseDataService.getPlayers: Raw response error:', error);
-
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        logger.emit({
-          severityNumber: SeverityNumber.ERROR,
-          severityText: 'ERROR',
-          body: 'Error fetching players from Supabase',
-          attributes: { error: error.message },
-        });
-        throw new Error(`Failed to fetch players: ${error.message}`);
+      // Use direct fetch since TypeScript types don't match our schema
+      const response = await fetch(`https://icfqngdeohzzjvzcmawo.supabase.co/rest/v1/players`, {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch players: ${response.status} ${response.statusText}`);
       }
-
-      const players: Player[] = data.map(row => ({
+      
+      const rawData = await response.json();
+      console.log('🔍 SupabaseDataService.getPlayers: Direct fetch data:', rawData);
+      
+      const players: Player[] = rawData.map((row: any) => ({
         personId: row.personId?.toString() || '',
         playerFullName: row.playerFullName || '',
-      })).filter(player => player.personId && player.playerFullName);
+      })).filter((player: Player) => player.personId && player.playerFullName);
 
       // Cache the result
       this.playerCache.set(cacheKey, players);
