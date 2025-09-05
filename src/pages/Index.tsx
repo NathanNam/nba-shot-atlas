@@ -10,8 +10,8 @@ import { VersionMarker } from "@/components/ui/version-marker";
 import { ComparisonShotChart } from "@/components/ComparisonShotChart";
 import { ComparisonStatistics } from "@/components/ComparisonStatistics";
 import { MultiEntityComparison } from "@/components/MultiEntityComparison";
-import { PlayerVsPlayerComparison } from "@/components/PlayerVsPlayerComparison";
-import { PlayerVsPlayerDualSeasonComparison } from "@/components/PlayerVsPlayerDualSeasonComparison";
+import { EntityVsEntityComparison } from "@/components/EntityVsEntityComparison";
+import { EntityVsEntityDualSeasonComparison } from "@/components/EntityVsEntityDualSeasonComparison";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -159,10 +159,10 @@ const Index = () => {
                         />
                       ))}
                     </div>
-                    {/* Player vs Player comparisons for each season */}
-                    <PlayerVsPlayerDualSeasonComparison
-                      player1={selectedEntities[0]}
-                      player2={selectedEntities[1]}
+                    {/* Entity vs Entity comparisons for each season */}
+                    <EntityVsEntityDualSeasonComparison
+                      entity1={selectedEntities[0]}
+                      entity2={selectedEntities[1]}
                       season1={selectedSeason}
                       season2={selectedSeason2}
                       viewMode={viewMode}
@@ -212,10 +212,10 @@ const Index = () => {
                         />
                       ))}
                     </div>
-                    {/* Player vs Player comparison */}
-                    <PlayerVsPlayerComparison
-                      player1={selectedEntities[0]}
-                      player2={selectedEntities[1]}
+                    {/* Entity vs Entity comparison */}
+                    <EntityVsEntityComparison
+                      entity1={selectedEntities[0]}
+                      entity2={selectedEntities[1]}
                       season={selectedSeason}
                       viewMode={viewMode}
                     />

@@ -4,14 +4,14 @@ import { TrendingUp, TrendingDown, Minus, Target, MapPin } from "lucide-react";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 
-interface PlayerVsPlayerComparisonProps {
-  player1: string;
-  player2: string;
+interface EntityVsEntityComparisonProps {
+  entity1: string;
+  entity2: string;
   season: string;
   viewMode: "player" | "team";
 }
 
-export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }: PlayerVsPlayerComparisonProps) {
+export function EntityVsEntityComparison({ entity1, entity2, season, viewMode }: EntityVsEntityComparisonProps) {
   const { players: playersData, loading: playersLoading } = useAvailablePlayers(season);
 
   // Get entity IDs
@@ -24,11 +24,11 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
     return player ? player.id.toString() : entityName;
   };
 
-  const player1Id = getEntityId(player1);
-  const player2Id = getEntityId(player2);
+  const entity1Id = getEntityId(entity1);
+  const entity2Id = getEntityId(entity2);
 
-  const player1Data = useSupabaseShotData(season, player1Id, viewMode);
-  const player2Data = useSupabaseShotData(season, player2Id, viewMode);
+  const entity1Data = useSupabaseShotData(season, entity1Id, viewMode);
+  const entity2Data = useSupabaseShotData(season, entity2Id, viewMode);
 
   // Zone analysis helper
   const analyzeZones = (shotData: any[]) => {
@@ -110,7 +110,7 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
     };
   };
 
-  if (playersLoading || player1Data.loading || player2Data.loading) {
+  if (playersLoading || entity1Data.loading || entity2Data.loading) {
     return (
       <Card className="p-6 bg-card border-border shadow-card">
         <p className="text-muted-foreground text-center">Loading comparison data...</p>
@@ -118,7 +118,7 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
     );
   }
 
-  if (player1Data.error || player2Data.error) {
+  if (entity1Data.error || entity2Data.error) {
     return (
       <Card className="p-6 bg-card border-border shadow-card">
         <p className="text-destructive text-center">Error loading data</p>
@@ -126,8 +126,8 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
     );
   }
 
-  const player1Stats = calculateStats(player1Data.shotData);
-  const player2Stats = calculateStats(player2Data.shotData);
+  const entity1Stats = calculateStats(entity1Data.shotData);
+  const entity2Stats = calculateStats(entity2Data.shotData);
 
   const getComparisonIcon = (value1: number, value2: number) => {
     if (value1 > value2) return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -148,7 +148,7 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            {player1} vs {player2} ({season})
+            {entity1} vs {entity2} ({season})
           </CardTitle>
           <CardDescription>Head-to-Head Statistical Comparison</CardDescription>
         </CardHeader>
@@ -158,16 +158,16 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">Field Goal %</div>
               <div className="flex items-center justify-center gap-2">
-                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.fgPercent, player2Stats.fgPercent)}`}>
-                  {player1Stats.fgPercent}%
+                <span className={`text-lg font-bold ${getComparisonColor(entity1Stats.fgPercent, entity2Stats.fgPercent)}`}>
+                  {entity1Stats.fgPercent}%
                 </span>
-                {getComparisonIcon(player1Stats.fgPercent, player2Stats.fgPercent)}
-                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.fgPercent, player1Stats.fgPercent)}`}>
-                  {player2Stats.fgPercent}%
+                {getComparisonIcon(entity1Stats.fgPercent, entity2Stats.fgPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(entity2Stats.fgPercent, entity1Stats.fgPercent)}`}>
+                  {entity2Stats.fgPercent}%
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {player1} vs {player2}
+                {entity1} vs {entity2}
               </div>
             </div>
 
@@ -175,16 +175,16 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">2-Point %</div>
               <div className="flex items-center justify-center gap-2">
-                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.twoPtPercent, player2Stats.twoPtPercent)}`}>
-                  {player1Stats.twoPtPercent}%
+                <span className={`text-lg font-bold ${getComparisonColor(entity1Stats.twoPtPercent, entity2Stats.twoPtPercent)}`}>
+                  {entity1Stats.twoPtPercent}%
                 </span>
-                {getComparisonIcon(player1Stats.twoPtPercent, player2Stats.twoPtPercent)}
-                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.twoPtPercent, player1Stats.twoPtPercent)}`}>
-                  {player2Stats.twoPtPercent}%
+                {getComparisonIcon(entity1Stats.twoPtPercent, entity2Stats.twoPtPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(entity2Stats.twoPtPercent, entity1Stats.twoPtPercent)}`}>
+                  {entity2Stats.twoPtPercent}%
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {player1} vs {player2}
+                {entity1} vs {entity2}
               </div>
             </div>
 
@@ -192,16 +192,16 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">3-Point %</div>
               <div className="flex items-center justify-center gap-2">
-                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.threePtPercent, player2Stats.threePtPercent)}`}>
-                  {player1Stats.threePtPercent}%
+                <span className={`text-lg font-bold ${getComparisonColor(entity1Stats.threePtPercent, entity2Stats.threePtPercent)}`}>
+                  {entity1Stats.threePtPercent}%
                 </span>
-                {getComparisonIcon(player1Stats.threePtPercent, player2Stats.threePtPercent)}
-                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.threePtPercent, player1Stats.threePtPercent)}`}>
-                  {player2Stats.threePtPercent}%
+                {getComparisonIcon(entity1Stats.threePtPercent, entity2Stats.threePtPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(entity2Stats.threePtPercent, entity1Stats.threePtPercent)}`}>
+                  {entity2Stats.threePtPercent}%
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {player1} vs {player2}
+                {entity1} vs {entity2}
               </div>
             </div>
 
@@ -209,16 +209,16 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">Total Shots</div>
               <div className="flex items-center justify-center gap-2">
-                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.totalShots, player2Stats.totalShots)}`}>
-                  {player1Stats.totalShots}
+                <span className={`text-lg font-bold ${getComparisonColor(entity1Stats.totalShots, entity2Stats.totalShots)}`}>
+                  {entity1Stats.totalShots}
                 </span>
-                {getComparisonIcon(player1Stats.totalShots, player2Stats.totalShots)}
-                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.totalShots, player1Stats.totalShots)}`}>
-                  {player2Stats.totalShots}
+                {getComparisonIcon(entity1Stats.totalShots, entity2Stats.totalShots)}
+                <span className={`text-lg font-bold ${getComparisonColor(entity2Stats.totalShots, entity1Stats.totalShots)}`}>
+                  {entity2Stats.totalShots}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {player1} vs {player2}
+                {entity1} vs {entity2}
               </div>
             </div>
           </div>
