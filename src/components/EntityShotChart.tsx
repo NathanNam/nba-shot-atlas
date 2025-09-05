@@ -36,7 +36,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   // Always pass the correct entityId to the hook, let the hook handle loading logic
   const { shotData, loading, error } = useSupabaseShotData(
     selectedSeason, 
-    entityId || '', 
+    entityId || '201939', // Use Stephen Curry's ID as fallback for default case
     viewMode
   );
   
