@@ -33,27 +33,33 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         // Don't clear all cache - just skip cache check for league
       } else {
         // Check preloaded data first for instant loading of defaults (non-league only)
-        const defaultKeys = {
-          'player': entityId === '201939' && season === '2024-25' ? 'player_stephen_curry_2024-25' : null,
-          'team': entityId === 'GSW' && season === '2024-25' ? 'team_gsw_2024-25' : null
-        };
+        console.log(`🔍 useSupabaseShotData [${instanceId}] PRELOAD CHECK: entityId="${entityId}", season="${season}", viewMode="${viewMode}"`);
         
-        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: entityId="${entityId}", season="${season}", viewMode="${viewMode}"`);
-        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: defaultKeys=`, defaultKeys);
-        
-        const preloadedKey = defaultKeys[viewMode];
-        console.log(`🔍 useSupabaseShotData PRELOAD CHECK: preloadedKey="${preloadedKey}"`);
-        
-        if (preloadedKey) {
-          const preloadedData = dataCache.getPreloaded(preloadedKey);
-          console.log(`🔍 useSupabaseShotData PRELOAD CHECK: preloadedData=`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
+        // Simple check for Stephen Curry in 2024-25 season
+        if (entityId === '201939' && season === '2024-25' && viewMode === 'player') {
+          const preloadedData = dataCache.getPreloaded('player_stephen_curry_2024-25');
+          console.log(`🔍 useSupabaseShotData [${instanceId}] Stephen Curry preload:`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
           
-          if (preloadedData) {
-            console.log(`🚀 useSupabaseShotData: Using preloaded data for ${preloadedKey}, length: ${preloadedData.data.length}`);
+          if (preloadedData && preloadedData.data.length > 0) {
+            console.log(`🚀 useSupabaseShotData [${instanceId}]: Using Stephen Curry preloaded data, length: ${preloadedData.data.length}`);
             setShotData(preloadedData.data);
             setLoading(false);
             setError(null);
-            console.log(`🚀 useSupabaseShotData: State updated - loading=false, shotData.length=${preloadedData.data.length}`);
+            console.log(`🚀 useSupabaseShotData [${instanceId}]: Stephen Curry state updated - loading=false, shotData.length=${preloadedData.data.length}`);
+            return;
+          }
+        }
+        
+        // Check for GSW team preload
+        if (entityId === 'GSW' && season === '2024-25' && viewMode === 'team') {
+          const preloadedData = dataCache.getPreloaded('team_gsw_2024-25');
+          console.log(`🔍 useSupabaseShotData [${instanceId}] GSW team preload:`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
+          
+          if (preloadedData && preloadedData.data.length > 0) {
+            console.log(`🚀 useSupabaseShotData [${instanceId}]: Using GSW preloaded data, length: ${preloadedData.data.length}`);
+            setShotData(preloadedData.data);
+            setLoading(false);
+            setError(null);
             return;
           }
         }
@@ -61,7 +67,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         // Check cache for other data
         const cachedData = dataCache.get(season, entityId, viewMode);
         if (cachedData) {
-          console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
+          console.log(`🚀 useSupabaseShotData [${instanceId}]: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
           setShotData(cachedData);
           setLoading(false);
           setError(null);
