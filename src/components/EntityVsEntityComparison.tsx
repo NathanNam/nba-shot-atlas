@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Target, MapPin } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Target } from "lucide-react";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 
@@ -14,20 +14,17 @@ interface EntityVsEntityComparisonProps {
 }
 
 export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, preloadedEntity1Data, preloadedEntity2Data }: EntityVsEntityComparisonProps) {
-  const { players: playersData, loading: playersLoading } = useAvailablePlayers(season);
+  const { players: playersData, loading: playersLoading } =
+    viewMode === "player" ? useAvailablePlayers(season) : { players: [], loading: false };
 
-  // Get entity IDs
-  const getEntityId = (entityName: string) => {
-    if (viewMode === 'team') {
-      return entityName;
-    }
-    
-    const player = playersData?.find(p => p.name === entityName);
-    return player ? player.id.toString() : entityName;
-  };
-
-  const entity1Id = getEntityId(entity1);
-  const entity2Id = getEntityId(entity2);
+  const entity1Id =
+    viewMode === "player"
+      ? playersData.find(p => p.name === entity1)?.id?.toString() ?? entity1
+      : entity1;
+  const entity2Id =
+    viewMode === "player"
+      ? playersData.find(p => p.name === entity2)?.id?.toString() ?? entity2
+      : entity2;
 
   // Always call the hooks (rules of hooks), but use preloaded data if available
   const hookEntity1Data = useSupabaseShotData(season, entity1Id, viewMode);
