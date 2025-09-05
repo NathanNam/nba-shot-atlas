@@ -51,6 +51,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
             setShotData(preloadedData.data);
             setLoading(false);
             setError(null);
+            console.log(`🚀 useSupabaseShotData: State updated - loading=false, shotData.length=${preloadedData.data.length}`);
             return;
           }
         }
@@ -75,6 +76,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
       });
 
       try {
+        console.log(`🚀 useSupabaseShotData: Continuing to fresh fetch (preloaded data not used)`);
         setLoading(true);
         setError(null);
 
