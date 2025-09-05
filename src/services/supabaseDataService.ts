@@ -271,8 +271,10 @@ class SupabaseDataService {
       }
 
       // Extract unique team tricodes
-      const allTeamTriCodes = (data || []).map((row: any) => row.teamTricode).filter((code): code is string => Boolean(code));
-      const teams = [...new Set(allTeamTriCodes)];
+      const allTeamTriCodes = (data || [])
+        .map((row: any) => row.teamTricode)
+        .filter((code): code is string => Boolean(code) && typeof code === 'string');
+      const teams = [...new Set(allTeamTriCodes)] as string[];
       
       span.setAttributes({ success: true, teams_count: teams.length });
 
@@ -280,7 +282,7 @@ class SupabaseDataService {
       dbQueryDuration.record(duration, { table: 'shots', operation: 'select_distinct' });
 
       console.log(`🔍 SupabaseDataService: Fetched ${teams.length} unique teams`);
-      return teams.sort();
+      return teams;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

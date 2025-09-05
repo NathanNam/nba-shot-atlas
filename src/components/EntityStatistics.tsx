@@ -24,7 +24,15 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       }
       const player = players.find(p => p.name === cleanEntityName);
       console.log(`🔍 EntityStatistics: Looking for "${cleanEntityName}", found player:`, player);
-      return player?.id || cleanEntityName;
+      
+      if (player) {
+        const numericId = String(player.id);
+        console.log(`🔍 EntityStatistics: Returning player ID: ${numericId} for player: ${cleanEntityName}`);
+        return numericId;
+      }
+      
+      console.warn(`🔍 EntityStatistics: Player "${cleanEntityName}" not found in players list`);
+      return undefined;
     }
     return cleanEntityName; // For teams, use the name directly
   }, [viewMode, playersLoading, players, cleanEntityName]);
