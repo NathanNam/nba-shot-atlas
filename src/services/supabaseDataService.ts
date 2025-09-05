@@ -111,10 +111,8 @@ class SupabaseDataService {
         throw new Error('League statistics should use server-side calculation via Edge Function');
       }
       
-      // FORCE CLEAR ALL CACHE LAYERS FOR TESTING (for player/team modes only)
-      console.log(`🔍 SupabaseDataService: FORCE clearing dataCache for ${viewMode} mode`);
-      dataCache.clear();
-      dataCache.clearPreloaded();
+      // Use cache for consistent data retrieval
+      console.log(`🔍 SupabaseDataService: Using cache-enabled data retrieval for ${viewMode} mode`);
 
       // Use optimized parallel fetching for better performance
       const shots = await ParallelDataService.getDataParallel(

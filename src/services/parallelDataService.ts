@@ -60,7 +60,9 @@ export class ParallelDataService {
     const allData: any[] = [];
     let processedBatches = 0;
 
-    // Process batches in chunks to limit concurrent requests
+    // Process batches in chunks to limit concurrent requests - maintain order
+    const orderedResults: any[] = new Array(totalBatches);
+    
     for (let chunkStart = 0; chunkStart < totalBatches; chunkStart += maxConcurrent) {
       const chunkEnd = Math.min(chunkStart + maxConcurrent, totalBatches);
       const batchPromises = [];
@@ -96,20 +98,28 @@ export class ParallelDataService {
       // Wait for this chunk to complete
       const chunkResults = await Promise.all(batchPromises);
       
-      // Process results
+      // Process results and maintain order
       for (const result of chunkResults) {
         if (result.error) {
           console.error(`Error in batch ${result.batchIndex}:`, result.error);
         } else {
-          allData.push(...result.data);
+          // Store results in order to maintain consistency
+          orderedResults[result.batchIndex] = result.data;
           processedBatches++;
           
-          // Report progress
-          if (progressCallback) {
-            progressCallback(allData.length, totalCount);
-          }
-          
-          console.log(`🚀 ParallelDataService: Completed batch ${result.batchIndex + 1}/${totalBatches}, total records: ${allData.length}`);
+          console.log(`🚀 ParallelDataService: Completed batch ${result.batchIndex + 1}/${totalBatches}, got ${result.data.length} records`);
+        }
+      }
+    }
+
+    // Combine ordered results to ensure consistent data ordering
+    for (const batchData of orderedResults) {
+      if (batchData && batchData.length > 0) {
+        allData.push(...batchData);
+        
+        // Report progress
+        if (progressCallback) {
+          progressCallback(allData.length, totalCount);
         }
       }
     }
