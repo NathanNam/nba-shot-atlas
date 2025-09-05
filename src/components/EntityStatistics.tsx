@@ -37,8 +37,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
     return cleanEntityName; // For teams, use the name directly
   }, [viewMode, playersLoading, players, cleanEntityName]);
   
-  // Create a stable key to prevent unnecessary re-subscriptions
+  // Create a stable key to prevent unnecessary re-subscriptions  
   const stableEntityId = entityId && !playersLoading ? String(entityId) : '';
+  
+  console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
   
   // Only call the hook when we have a valid entityId (after player loading is complete)
   const { shotData, loading, error } = useSingletonShotData(
@@ -52,8 +54,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       shotDataLength: shotData?.length,
       playersLoading,
       entityId,
+      stableEntityId,
       selectedSeason,
-      dataHash: shotData ? JSON.stringify(shotData.slice(0, 3)) : 'no-data'
+      loading,
+      error,
+      dataPreview: shotData?.slice(0, 2)
     });
     
     if (!shotData || shotData.length === 0 || playersLoading || !entityId) {

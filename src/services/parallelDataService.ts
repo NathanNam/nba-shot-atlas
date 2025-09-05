@@ -13,16 +13,25 @@ export class ParallelDataService {
   ): Promise<ShotData[]> {
     const tableName = `shots_${season}`;
     
-    // First, get total count
+    console.log(`🚀 ParallelDataService: Starting fetch for ${viewMode} - ${entityId || 'all'} (season: ${season})`);
+    
+    // For player/team data, don't get total count first - just fetch directly
+    if (viewMode === 'player' || viewMode === 'team') {
+      console.log(`🚀 ParallelDataService: Using direct fetch for ${viewMode} data`);
+      return this.getDirectData(season, entityId, viewMode, progressCallback);
+    }
+    
+    // First, get total count for league mode only
     let totalCount = 0;
     try {
       const { count } = await (supabase as any)
         .from(tableName)
         .select('*', { count: 'estimated', head: true });
       totalCount = count || 0;
-      console.log(`🚀 ParallelDataService: Estimated ${totalCount} total records`);
+      console.log(`🚀 ParallelDataService: Estimated ${totalCount} total records for league`);
     } catch (error) {
       console.log('Could not get count estimate:', error);
+      totalCount = 200000; // Fallback estimate
     }
 
     // Use parallel fetching for all datasets - no sampling
@@ -51,15 +60,7 @@ export class ParallelDataService {
           .select('*')
           .range(offset, offset + batchSize - 1);
 
-        // Apply filters
-        if (viewMode === 'player' && entityId) {
-          const numericEntityId = parseInt(entityId);
-          if (!isNaN(numericEntityId)) {
-            query = query.eq('personId', numericEntityId);
-          }
-        } else if (viewMode === 'team' && entityId) {
-          query = query.eq('teamTricode', entityId);
-        }
+         // No additional filters needed for league mode since we're fetching all data
 
         batchPromises.push(
           query.then((result: any) => ({
@@ -95,6 +96,67 @@ export class ParallelDataService {
 
     // Transform data
     const shots: ShotData[] = allData.map(row => ({
+      personId: row.personId?.toString() || '',
+      teamTricode: row.teamTricode || '',
+      xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
+      yLegacy: parseFloat(row.yLegacy?.toString() || '0'),
+      shotDistance: parseFloat(row.shotDistance?.toString() || '0'),
+      shotResult: row.shotResult || '',
+      shotValue: parseInt(row.shotValue?.toString() || '2'),
+      description: row.description || '',
+      subType: row.subType || '',
+    }));
+
+    return shots;
+  }
+
+  /**
+   * Direct data fetching for player/team modes (smaller datasets)
+   */
+  private static async getDirectData(
+    season: string,
+    entityId?: string,
+    viewMode: 'player' | 'team' | 'league' = 'league',
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const tableName = `shots_${season}`;
+    
+    console.log(`🚀 ParallelDataService: Direct fetch for ${viewMode} - ${entityId}`);
+    
+    let query = (supabase as any)
+      .from(tableName)
+      .select('*');
+
+    // Apply filters
+    if (viewMode === 'player' && entityId) {
+      const numericEntityId = parseInt(entityId);
+      if (!isNaN(numericEntityId)) {
+        console.log(`🚀 ParallelDataService: Filtering by personId=${numericEntityId}`);
+        query = query.eq('personId', numericEntityId);
+      } else {
+        console.error(`🚀 ParallelDataService: Invalid player ID: ${entityId}`);
+        return [];
+      }
+    } else if (viewMode === 'team' && entityId) {
+      console.log(`🚀 ParallelDataService: Filtering by teamTricode=${entityId}`);
+      query = query.eq('teamTricode', entityId);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`🚀 ParallelDataService: Direct fetch error:`, error);
+      throw new Error(`Direct fetch failed: ${error.message}`);
+    }
+
+    console.log(`🚀 ParallelDataService: Direct fetch got ${data?.length || 0} records for ${viewMode}`);
+
+    if (progressCallback) {
+      progressCallback(data?.length || 0, data?.length || 0);
+    }
+
+    // Transform data
+    const shots: ShotData[] = (data || []).map(row => ({
       personId: row.personId?.toString() || '',
       teamTricode: row.teamTricode || '',
       xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
