@@ -52,30 +52,20 @@ Deno.serve(async (req) => {
     
     console.log(`🔍 Edge Function: Computing league stats for ${tableName}`)
 
-    // Step 1: Get shot statistics aggregated by result and value
-    const { data: shotStats, error: shotError } = await supabase
+    // Fetch all shot data for the season
+    const { data: allShots, error: shotsError } = await supabase
       .from(tableName)
-      .select(`
-        shotResult,
-        shotValue,
-        count(*)
-      `, { count: 'exact' })
-      .group('shotResult, shotValue')
+      .select('shotResult, shotValue, xLegacy, yLegacy, shotDistance')
 
-    if (shotError) {
-      throw new Error(`Shot stats error: ${shotError.message}`)
+    if (shotsError) {
+      throw new Error(`Error fetching shots: ${shotsError.message}`)
     }
 
-    // Step 2: Get zone statistics using raw coordinates
-    const { data: coordinateData, error: coordError } = await supabase
-      .from(tableName)
-      .select('xLegacy, yLegacy, shotResult')
-
-    if (coordError) {
-      throw new Error(`Coordinate data error: ${coordError.message}`)
+    if (!allShots || allShots.length === 0) {
+      throw new Error(`No shot data found for season ${season}`)
     }
 
-    console.log(`🔍 Edge Function: Processing ${coordinateData.length} shots for zone analysis`)
+    console.log(`🔍 Edge Function: Processing ${allShots.length} shots for analysis`)
 
     // Process shot statistics
     let totalShots = 0
@@ -85,26 +75,25 @@ Deno.serve(async (req) => {
     let threePointMade = 0
     let threePointAttempted = 0
 
-    shotStats.forEach((row: any) => {
-      const count = parseInt(row.count) || 0
-      const shotValue = parseInt(row.shotValue) || 2
-      const isMade = row.shotResult === 'Made' || row.shotResult === 'MADE' || row.shotResult === '1'
+    allShots.forEach((shot: any) => {
+      const shotValue = parseInt(shot.shotValue) || 2
+      const isMade = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1'
       
-      totalShots += count
+      totalShots += 1
       
       if (isMade) {
-        madeShots += count
+        madeShots += 1
       }
       
       if (shotValue === 2) {
-        twoPointAttempted += count
+        twoPointAttempted += 1
         if (isMade) {
-          twoPointMade += count
+          twoPointMade += 1
         }
       } else if (shotValue === 3) {
-        threePointAttempted += count
+        threePointAttempted += 1
         if (isMade) {
-          threePointMade += count
+          threePointMade += 1
         }
       }
     })
@@ -112,7 +101,7 @@ Deno.serve(async (req) => {
     // Process zone statistics
     const zoneMap = new Map<string, { made: number; total: number }>()
     
-    coordinateData.forEach((shot: any) => {
+    allShots.forEach((shot: any) => {
       const zone = getZoneFromCoordinates(
         parseFloat(shot.xLegacy) || 0, 
         parseFloat(shot.yLegacy) || 0
