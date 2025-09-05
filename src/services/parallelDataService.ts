@@ -15,23 +15,32 @@ export class ParallelDataService {
     
     console.log(`🚀 ParallelDataService: Starting fetch for ${viewMode} - ${entityId || 'all'} (season: ${season})`);
     
-    // For player/team data, don't get total count first - just fetch directly
-    if (viewMode === 'player' || viewMode === 'team') {
-      console.log(`🚀 ParallelDataService: Using direct fetch for ${viewMode} data`);
-      return this.getDirectData(season, entityId, viewMode, progressCallback);
-    }
+    // Use parallel fetching for all view modes to handle large datasets
+    console.log(`🚀 ParallelDataService: Using parallel fetch for ${viewMode} data`);
     
-    // First, get total count for league mode only
+    // First, get total count with filters applied
     let totalCount = 0;
     try {
-      const { count } = await (supabase as any)
+      let countQuery = (supabase as any)
         .from(tableName)
         .select('*', { count: 'estimated', head: true });
+        
+      // Apply filters for count estimation
+      if (viewMode === 'player' && entityId) {
+        const numericEntityId = parseInt(entityId);
+        if (!isNaN(numericEntityId)) {
+          countQuery = countQuery.eq('personId', numericEntityId);
+        }
+      } else if (viewMode === 'team' && entityId) {
+        countQuery = countQuery.eq('teamTricode', entityId);
+      }
+      
+      const { count } = await countQuery;
       totalCount = count || 0;
-      console.log(`🚀 ParallelDataService: Estimated ${totalCount} total records for league`);
+      console.log(`🚀 ParallelDataService: Estimated ${totalCount} total records for ${viewMode} - ${entityId || 'all'}`);
     } catch (error) {
       console.log('Could not get count estimate:', error);
-      totalCount = 200000; // Fallback estimate
+      totalCount = viewMode === 'league' ? 200000 : 10000; // Different fallback estimates
     }
 
     // Use parallel fetching for all datasets - no sampling
@@ -60,7 +69,15 @@ export class ParallelDataService {
           .select('*')
           .range(offset, offset + batchSize - 1);
 
-         // No additional filters needed for league mode since we're fetching all data
+        // Apply filters for player/team modes
+        if (viewMode === 'player' && entityId) {
+          const numericEntityId = parseInt(entityId);
+          if (!isNaN(numericEntityId)) {
+            query = query.eq('personId', numericEntityId);
+          }
+        } else if (viewMode === 'team' && entityId) {
+          query = query.eq('teamTricode', entityId);
+        }
 
         batchPromises.push(
           query.then((result: any) => ({
