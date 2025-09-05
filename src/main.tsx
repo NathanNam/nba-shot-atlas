@@ -8,7 +8,14 @@ import "./index.css";
 import "./utils/forceCacheClear";
 
 // Initialize OpenTelemetry
-import "./otel-client";
+import { initOtel } from "./otel-client";
+
+// Initialize OTEL asynchronously
+initOtel().then(() => {
+  console.log('✅ OpenTelemetry initialized successfully');
+}).catch(error => {
+  console.error('❌ Failed to initialize OpenTelemetry:', error);
+});
 
 // Preloading disabled for now to troubleshoot caching issues
 // setTimeout(() => {
