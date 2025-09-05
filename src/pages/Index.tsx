@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
-  const [viewMode, setViewMode] = useState<"player" | "team" | "league">("player");
+  const [viewMode, setViewMode] = useState<"player" | "team">("player");
   const [isComparisonMode, setIsComparisonMode] = useState(false);
   const [selectedSeason2, setSelectedSeason2] = useState("2023-24");
   
@@ -22,15 +22,12 @@ const Index = () => {
   // Cache selections for each view mode
   const [playerSelections, setPlayerSelections] = useState<string[]>(["Stephen Curry"]);
   const [teamSelections, setTeamSelections] = useState<string[]>(["GSW"]);
-  const [leagueSelections] = useState<string[]>([]); // League doesn't have selections
   
   // Get current selections based on view mode
-  const selectedEntities = viewMode === "player" ? playerSelections : 
-                          viewMode === "team" ? teamSelections : 
-                          leagueSelections;
+  const selectedEntities = viewMode === "player" ? playerSelections : teamSelections;
   
   // Handle view mode changes
-  const handleViewModeChange = (newViewMode: "player" | "team" | "league") => {
+  const handleViewModeChange = (newViewMode: "player" | "team") => {
     setViewMode(newViewMode);
   };
   
@@ -77,14 +74,7 @@ const Index = () => {
             <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
                 // Comparison Mode - Handle multiple entities or seasons
-                viewMode === "league" ? (
-                  <ComparisonShotChart
-                    entityName="NBA League"
-                    season1={selectedSeason}
-                    season2={selectedSeason2}
-                    viewMode={viewMode}
-                  />
-                ) : selectedEntities.length > 1 ? (
+                selectedEntities.length > 1 ? (
                   // Multi-entity comparison across seasons - show 2x2 grid layout
                   <div className="space-y-6">
                     {/* First row - Current season for all entities */}
@@ -125,20 +115,14 @@ const Index = () => {
               ) : (
                 // Single Season Mode (original functionality)
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  {viewMode === "league" ? (
-                    <div className="xl:col-span-2">
-                      <LeagueShotChart selectedSeason={selectedSeason} />
-                    </div>
-                  ) : (
-                    selectedEntities.map((entity) => (
-                      <EntityShotChart
-                        key={`${entity}-${selectedSeason}-${viewMode}`}
-                        entityName={entity}
-                        selectedSeason={selectedSeason}
-                        viewMode={viewMode}
-                      />
-                    ))
-                  )}
+                  {selectedEntities.map((entity) => (
+                    <EntityShotChart
+                      key={`${entity}-${selectedSeason}-${viewMode}`}
+                      entityName={entity}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -147,14 +131,7 @@ const Index = () => {
             <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
                 // Comparison Mode Statistics - Handle multiple entities or seasons
-                viewMode === "league" ? (
-                  <ComparisonStatistics
-                    entityName="NBA League"
-                    season1={selectedSeason}
-                    season2={selectedSeason2}
-                    viewMode={viewMode}
-                  />
-                ) : selectedEntities.length > 1 ? (
+                selectedEntities.length > 1 ? (
                   // Multi-entity comparison across seasons - show 2x2 grid for statistics
                   <div className="space-y-6">
                     {/* First row - Current season statistics for all entities */}
@@ -194,18 +171,14 @@ const Index = () => {
                 )
               ) : (
                 // Single Season Mode Statistics (original functionality)
-                viewMode === "league" ? (
-                  <LeagueStatistics selectedSeason={selectedSeason} />
-                ) : (
-                  selectedEntities.map((entity) => (
-                    <EntityStatistics
-                      key={`${entity}-${selectedSeason}-${viewMode}`}
-                      entityName={entity}
-                      selectedSeason={selectedSeason}
-                      viewMode={viewMode}
-                    />
-                  ))
-                )
+                selectedEntities.map((entity) => (
+                  <EntityStatistics
+                    key={`${entity}-${selectedSeason}-${viewMode}`}
+                    entityName={entity}
+                    selectedSeason={selectedSeason}
+                    viewMode={viewMode}
+                  />
+                ))
               )}
             </div>
           </div>

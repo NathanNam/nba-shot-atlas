@@ -9,8 +9,8 @@ import { BarChart3, Users, Trophy, TrendingUp } from "lucide-react";
 interface NavigationBarProps {
   selectedSeason: string;
   onSeasonChange: (season: string) => void;
-  viewMode: "player" | "team" | "league";
-  onViewModeChange: (mode: "player" | "team" | "league") => void;
+  viewMode: "player" | "team";
+  onViewModeChange: (mode: "player" | "team") => void;
   isComparisonMode: boolean;
   onComparisonModeChange: (enabled: boolean) => void;
   selectedSeason2?: string;
@@ -133,19 +133,6 @@ export function NavigationBar({
                   <Trophy className="h-3 w-3 mr-1" />
                   Team
                 </Button>
-                <Button
-                  variant={viewMode === "league" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => onViewModeChange("league")}
-                  className={`px-3 py-1 text-xs transition-all duration-200 ${
-                    viewMode === "league" 
-                      ? "bg-primary text-primary-foreground shadow-md" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                  }`}
-                >
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  League
-                </Button>
               </div>
             </div>
           </div>
@@ -246,19 +233,6 @@ export function NavigationBar({
               >
                 <Trophy className="h-4 w-4 mr-1" />
                 <span className="hidden md:inline">Team</span>
-              </Button>
-              <Button
-                variant={viewMode === "league" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onViewModeChange("league")}
-                className={`transition-all duration-200 ${
-                  viewMode === "league" 
-                    ? "bg-primary text-primary-foreground shadow-md" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
-              >
-                <TrendingUp className="h-4 w-4 mr-1" />
-                <span className="hidden md:inline">League</span>
               </Button>
             </div>
 
