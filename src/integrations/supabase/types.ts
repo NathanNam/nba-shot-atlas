@@ -16,77 +16,1242 @@ export type Database = {
     Tables: {
       players: {
         Row: {
-          created_at: string | null
-          id: string
-          name: string
-          updated_at: string | null
+          personId: number | null
+          playerFullName: string | null
         }
         Insert: {
-          created_at?: string | null
-          id: string
-          name: string
-          updated_at?: string | null
+          personId?: number | null
+          playerFullName?: string | null
         }
         Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          updated_at?: string | null
+          personId?: number | null
+          playerFullName?: string | null
         }
         Relationships: []
       }
-      shots: {
+      "shots_2013-14": {
         Row: {
-          created_at: string | null
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
           description: string | null
-          id: string
-          person_id: string
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
           season: string
-          shot_distance: number
-          shot_result: string
-          shot_value: number
-          sub_type: string | null
-          team_tricode: string
-          x_legacy: number
-          y_legacy: number
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
         }
         Insert: {
-          created_at?: string | null
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
           description?: string | null
-          id?: string
-          person_id: string
-          season: string
-          shot_distance: number
-          shot_result: string
-          shot_value: number
-          sub_type?: string | null
-          team_tricode: string
-          x_legacy: number
-          y_legacy: number
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
         }
         Update: {
-          created_at?: string | null
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
           description?: string | null
-          id?: string
-          person_id?: string
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
           season?: string
-          shot_distance?: number
-          shot_result?: string
-          shot_value?: number
-          sub_type?: string | null
-          team_tricode?: string
-          x_legacy?: number
-          y_legacy?: number
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "shots_person_id_fkey"
-            columns: ["person_id"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      "shots_2014-15": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          saeson: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          saeson?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          saeson?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2015-16": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string | null
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2016-17": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string | null
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: number | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: number | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string | null
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: number | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2017-18": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: number | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: number | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: number | null
+        }
+        Relationships: []
+      }
+      "shots_2018-19": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2019-20": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: number | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: number | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: number | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2020-21": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2021-22": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2022-23": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2023-24": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
+      }
+      "shots_2024-25": {
+        Row: {
+          ABS_TIME: number | null
+          actionId: number | null
+          actionNumber: number | null
+          actionType: string | null
+          clock: string | null
+          contest_label: string | null
+          contest_reasons: string | null
+          contest_score: string | null
+          description: string | null
+          gameId: number | null
+          isFieldGoal: number | null
+          location: string | null
+          period: number | null
+          personId: number | null
+          playerName: string | null
+          playerNameI: string | null
+          pointsTotal: string | null
+          scoreAway: string | null
+          scoreHome: string | null
+          season: string
+          SHOT_CLOCK_APPROX: string | null
+          SHOT_CLOCK_SOURCE: string | null
+          shotDistance: string | null
+          shotResult: string | null
+          shotValue: number | null
+          subType: string | null
+          teamId: number | null
+          teamTricode: string | null
+          videoAvailable: string | null
+          xLegacy: string | null
+          yLegacy: string | null
+        }
+        Insert: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Update: {
+          ABS_TIME?: number | null
+          actionId?: number | null
+          actionNumber?: number | null
+          actionType?: string | null
+          clock?: string | null
+          contest_label?: string | null
+          contest_reasons?: string | null
+          contest_score?: string | null
+          description?: string | null
+          gameId?: number | null
+          isFieldGoal?: number | null
+          location?: string | null
+          period?: number | null
+          personId?: number | null
+          playerName?: string | null
+          playerNameI?: string | null
+          pointsTotal?: string | null
+          scoreAway?: string | null
+          scoreHome?: string | null
+          season?: string
+          SHOT_CLOCK_APPROX?: string | null
+          SHOT_CLOCK_SOURCE?: string | null
+          shotDistance?: string | null
+          shotResult?: string | null
+          shotValue?: number | null
+          subType?: string | null
+          teamId?: number | null
+          teamTricode?: string | null
+          videoAvailable?: string | null
+          xLegacy?: string | null
+          yLegacy?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
