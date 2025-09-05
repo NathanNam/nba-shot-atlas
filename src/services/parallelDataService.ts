@@ -222,46 +222,70 @@ export class ParallelDataService {
     season: string,
     progressCallback?: (loaded: number, total?: number) => void
   ): Promise<ShotData[]> {
-    const batchSize = 5000;
+    const batchSize = 1000; // Smaller batch size to avoid timeouts
     let allData: ShotData[] = [];
     let hasMoreData = true;
     let currentGameId: string | null = null;
     let currentActionNumber: number | null = null;
     let totalLoaded = 0;
     let batchCount = 0;
+    let maxRetries = 3;
 
-    console.log(`🚀 Starting sequential league data fetch for ${season}`);
+    console.log(`🚀 Starting sequential league data fetch for ${season} with batch size ${batchSize}`);
 
-    while (hasMoreData) {
+    while (hasMoreData && batchCount < 100) { // Safety limit to prevent infinite loops
       batchCount++;
-      const result = await this.fetchLeagueBatch(season, batchSize, currentGameId, currentActionNumber);
+      let retryCount = 0;
+      let success = false;
       
-      if (result.data.length > 0) {
-        // Transform the data to ShotData format
-        const transformedData = result.data.map(shot => ({
-          personId: String(shot.personId || ''),
-          teamTricode: String(shot.teamTricode || ''),
-          xLegacy: Number(shot.xLegacy) || 0,
-          yLegacy: Number(shot.yLegacy) || 0, 
-          shotDistance: Number(shot.shotDistance) || 0,
-          shotResult: String(shot.shotResult || ''),
-          shotValue: Number(shot.shotValue) || 2,
-          description: String(shot.description || ''),
-          subType: String(shot.subType || ''),
-        }));
-        allData = allData.concat(transformedData);
-        totalLoaded += result.data.length;
-        
-        // Update cursor for next batch
-        currentGameId = result.lastGameId;
-        currentActionNumber = result.lastActionNumber;
-        
-        progressCallback?.(totalLoaded);
-        console.log(`📊 Batch ${batchCount}: Loaded ${result.data.length} shots (total: ${totalLoaded} league shots)`);
+      while (!success && retryCount < maxRetries) {
+        try {
+          const result = await this.fetchLeagueBatch(season, batchSize, currentGameId, currentActionNumber);
+          
+          if (result.data.length > 0) {
+            // Transform the data to ShotData format
+            const transformedData = result.data.map(shot => ({
+              personId: String(shot.personId || ''),
+              teamTricode: String(shot.teamTricode || ''),
+              xLegacy: Number(shot.xLegacy) || 0,
+              yLegacy: Number(shot.yLegacy) || 0, 
+              shotDistance: Number(shot.shotDistance) || 0,
+              shotResult: String(shot.shotResult || ''),
+              shotValue: Number(shot.shotValue) || 2,
+              description: String(shot.description || ''),
+              subType: String(shot.subType || ''),
+            }));
+            allData = allData.concat(transformedData);
+            totalLoaded += result.data.length;
+            
+            // Update cursor for next batch
+            currentGameId = result.lastGameId;
+            currentActionNumber = result.lastActionNumber;
+            
+            progressCallback?.(totalLoaded);
+            console.log(`📊 Batch ${batchCount}: Loaded ${result.data.length} shots (total: ${totalLoaded} league shots)`);
+            
+            // Continue if we got a full batch (indicates more data available)
+            hasMoreData = result.hasMore && result.data.length === batchSize;
+            success = true;
+          } else {
+            hasMoreData = false;
+            success = true;
+          }
+        } catch (error: any) {
+          retryCount++;
+          console.warn(`⚠️ Batch ${batchCount} failed (attempt ${retryCount}/${maxRetries}):`, error.message);
+          
+          if (retryCount >= maxRetries) {
+            console.error(`❌ Failed to fetch batch ${batchCount} after ${maxRetries} attempts, stopping`);
+            hasMoreData = false;
+            success = true; // Stop trying
+          } else {
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
       }
-      
-      // Continue if we got a full batch (indicates more data available)
-      hasMoreData = result.hasMore && result.data.length === batchSize;
     }
 
     console.log(`✅ League fetch complete: ${allData.length} shots loaded in ${batchCount} batches`);
