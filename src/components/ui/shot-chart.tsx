@@ -188,10 +188,10 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           shotCircle.setAttribute("opacity", "0.7");
           shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
           
-          shotCircle.setAttribute("data-shot-key", `${shot.personId}-${index}`);
-          shotCircle.setAttribute("data-player", shot.personId);
+          shotCircle.setAttribute("data-shot-key", `${shot.personId || 'unknown'}-${index}`);
+          shotCircle.setAttribute("data-player", shot.personId?.toString() || 'unknown');
           shotCircle.setAttribute("data-shot-type", shot.subType || '');
-          shotCircle.setAttribute("data-distance", shot.shotDistance.toString());
+          shotCircle.setAttribute("data-distance", shot.shotDistance?.toString() || '0');
           shotCircle.setAttribute("data-description", shot.description || '');
           
           svg.appendChild(shotCircle);
