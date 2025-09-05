@@ -1,17 +1,44 @@
-// CRITICAL: Initialize OpenTelemetry FIRST before any other imports
-import { initOtel } from './otel-client'
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "next-themes";
+import { DataPreloader } from "@/services/dataPreloader";
+import App from "./App";
+import "./index.css";
 
-// Import data preloader to start cold start optimization
-import './services/dataPreloader'
+// Initialize OpenTelemetry
+import "./otel-client";
 
-// Initialize OpenTelemetry asynchronously
-initOtel().then(() => {
-  console.log("OpenTelemetry initialized successfully with Supabase config");
+const queryClient = new QueryClient();
+
+// Start preloading default data immediately
+DataPreloader.preloadDefaultData().then(() => {
+  console.log('🚀 Default data preloading completed');
 }).catch(error => {
-  console.error("Failed to initialize OpenTelemetry:", error);
+  console.error('🚀 Error preloading default data:', error);
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <App />
+            <Toaster />
+            <Sonner />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
+  </StrictMode>,
+);

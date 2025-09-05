@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
+import { dataCache } from '@/services/dataCache';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
@@ -16,6 +17,16 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
       if (!entityId && viewMode !== 'league') {
         console.log(`🔍 useSupabaseShotData: No entityId provided for ${viewMode} mode, skipping data fetch`);
         setShotData([]);
+        return;
+      }
+
+      // Check cache first for immediate response
+      const cachedData = dataCache.get(season, entityId, viewMode);
+      if (cachedData) {
+        console.log(`🚀 useSupabaseShotData: Using cached data for ${season}_${viewMode}_${entityId}`);
+        setShotData(cachedData);
+        setLoading(false);
+        setError(null);
         return;
       }
 

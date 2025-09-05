@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
+import { dataCache } from './dataCache';
 
 export interface ShotData {
   personId: string;
@@ -115,23 +116,22 @@ export class SupabaseDataService {
     const startTime = Date.now();
 
     try {
+      // Check cache first
+      const cachedData = dataCache.get(season, entityId || '', viewMode);
+      if (cachedData) {
+        span.setAttributes({ 
+          cache_hit: true,
+          shot_count: cachedData.length 
+        });
+        return cachedData;
+      }
+
       const cacheKey = `${season}_${viewMode}_${entityId || 'all'}`;
       
       // Clear cache for debugging - remove this once we fix the issue
-      console.log(`🔍 SupabaseDataService: Clearing cache for debugging`);
-      this.shotCache.clear();
+      console.log(`🔍 SupabaseDataService: Cache miss for ${cacheKey}, fetching from database`);
       
-      // Check cache first
-      if (this.shotCache.has(cacheKey)) {
-        logger.emit({
-          severityNumber: SeverityNumber.DEBUG,
-          severityText: 'DEBUG',
-          body: 'Shot data cache hit',
-          attributes: { cache_key: cacheKey },
-        });
-        span.setAttributes({ cache_hit: true });
-        return this.shotCache.get(cacheKey)!;
-      }
+      span.setAttributes({ cache_hit: false });
 
       dbQueryCounter.add(1, { table: 'shots', operation: 'select' });
 
@@ -197,8 +197,9 @@ export class SupabaseDataService {
         shotValue: row.shotValue || 0,
       }));
 
-      // Cache the result
+      // Cache the result in both old and new cache systems
       this.shotCache.set(cacheKey, shots);
+      dataCache.set(season, entityId || '', viewMode, shots);
 
       span.setAttributes({
         cache_hit: false,
