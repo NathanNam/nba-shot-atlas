@@ -19,7 +19,7 @@ export function useAvailablePlayers(season: string) {
         const playerOptions: PlayerOption[] = supabasePlayers.map(player => ({
           id: player.personId,
           name: player.playerFullName
-        }));
+        })).filter(player => player.id && player.name);
         
         const sortedPlayers = playerOptions.sort((a, b) => a.name.localeCompare(b.name));
         setPlayers(sortedPlayers);

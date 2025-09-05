@@ -74,7 +74,7 @@ export class SupabaseDataService {
       const players: Player[] = data.map(row => ({
         personId: row.personId?.toString() || '',
         playerFullName: row.playerFullName || '',
-      }));
+      })).filter(player => player.personId && player.playerFullName);
 
       // Cache the result
       this.playerCache.set(cacheKey, players);
