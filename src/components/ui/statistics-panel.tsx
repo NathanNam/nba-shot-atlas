@@ -125,27 +125,6 @@ export function StatisticsPanel({ entityName, stats }: StatisticsPanelProps) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 sm:mt-6 pt-4 border-t border-border">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:items-center lg:justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-heat-hot mr-1.5 flex-shrink-0"></div>
-            <span className="text-muted-foreground">Hot (60%+)</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-heat-warm mr-1.5 flex-shrink-0"></div>
-            <span className="text-muted-foreground">Warm (45-59%)</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-heat-neutral mr-1.5 flex-shrink-0"></div>
-            <span className="text-muted-foreground">Average (35-44%)</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-heat-cold mr-1.5 flex-shrink-0"></div>
-            <span className="text-muted-foreground">Cold (&lt;35%)</span>
-          </div>
-        </div>
-      </div>
     </Card>
   );
 }
