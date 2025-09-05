@@ -17,6 +17,12 @@ export function ShotChart({ title, data, width = 500, height = 470 }: ShotChartP
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("shots");
 
+  console.log(`🔍 ShotChart DEBUG - ${title}:`, {
+    dataLength: data?.length || 0,
+    hasData: !!data,
+    title
+  });
+
   useEffect(() => {
     if (!svgRef.current) return;
 

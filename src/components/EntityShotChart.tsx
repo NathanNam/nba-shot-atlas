@@ -37,6 +37,15 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
     viewMode
   );
   
+  console.log(`🔍 EntityShotChart DEBUG - ${entityName}:`, {
+    entityId,
+    shouldFetchData,
+    shotDataLength: shotData.length,
+    loading,
+    error,
+    playersLoading
+  });
+  
   // Show loading while players are loading or while shot data is loading
   const isLoading = playersLoading || loading || !shouldFetchData;
   
@@ -48,6 +57,11 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
       </div>
     );
   }
+  
+  console.log(`🔍 EntityShotChart RENDER - ${entityName}:`, {
+    isLoading,
+    shotDataWillBePassedToChart: !isLoading ? shotData.length : 'LOADING'
+  });
   
   return (
     <ShotChart
