@@ -9,6 +9,7 @@ import { LeagueStatistics } from "@/components/LeagueStatistics";
 import { VersionMarker } from "@/components/ui/version-marker";
 import { ComparisonShotChart } from "@/components/ComparisonShotChart";
 import { ComparisonStatistics } from "@/components/ComparisonStatistics";
+import { MultiEntityComparison } from "@/components/MultiEntityComparison";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -84,17 +85,12 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison in same season
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {selectedEntities.map((entity) => (
-                      <EntityShotChart
-                        key={entity}
-                        entityName={entity}
-                        selectedSeason={selectedSeason}
-                        viewMode={viewMode}
-                      />
-                    ))}
-                  </div>
+                  // Multi-entity comparison in same season - use new component
+                  <MultiEntityComparison
+                    entities={selectedEntities}
+                    selectedSeason={selectedSeason}
+                    viewMode={viewMode}
+                  />
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
@@ -140,17 +136,8 @@ const Index = () => {
                     viewMode={viewMode}
                   />
                 ) : selectedEntities.length > 1 ? (
-                  // Multi-entity comparison in same season
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {selectedEntities.map((entity) => (
-                      <EntityStatistics
-                        key={entity}
-                        entityName={entity}
-                        selectedSeason={selectedSeason}
-                        viewMode={viewMode}
-                      />
-                    ))}
-                  </div>
+                  // Multi-entity comparison handled by MultiEntityComparison component
+                  null // Already rendered in shot charts section
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
