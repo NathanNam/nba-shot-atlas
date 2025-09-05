@@ -14,13 +14,21 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, season1, season2, viewMode }: ComparisonStatisticsProps) {
-  const { players: players1 } = useAvailablePlayers(season1);
-  const { players: players2 } = useAvailablePlayers(season2);
+  const { players: players1, loading: loading1 } = useAvailablePlayers(season1);
+  const { players: players2, loading: loading2 } = useAvailablePlayers(season2);
   
   const getEntityId = (season: string, isSecondSeason = false) => {
     if (viewMode === 'player') {
       const players = isSecondSeason ? players2 : players1;
+      const loading = isSecondSeason ? loading2 : loading1;
+      
+      if (loading || !players.length) {
+        console.log(`🔍 ComparisonStatistics: Players still loading for ${season}, returning undefined`);
+        return undefined;
+      }
+      
       const player = players.find(p => p.name === entityName);
+      console.log(`🔍 ComparisonStatistics: Found player for "${entityName}" in ${season}:`, player);
       return player?.id || entityName;
     }
     return entityName;
@@ -29,9 +37,33 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   const entityId1 = getEntityId(season1);
   const entityId2 = getEntityId(season2, true);
   
-  console.log(`🔍 ComparisonStatistics: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}"`);
+  console.log(`🔍 ComparisonStatistics: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}", loading1=${loading1}, loading2=${loading2}`);
   
-  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1, entityId2, viewMode);
+  // Don't fetch data until we have valid entity IDs
+  if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistics Comparison</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Season Trends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
 
   // Helper function to analyze shooting zones (same as EntityStatistics)
   const analyzeZones = (shotData: any[]) => {
