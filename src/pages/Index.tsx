@@ -134,36 +134,98 @@ const Index = () => {
               {isComparisonMode ? (
                 // Comparison Mode Statistics
                 selectedEntities.length > 1 ? (
-                  // Two players + comparison on: Player A vs B in both seasons
-                  <PlayerVsPlayerDualSeasonComparison
-                    player1={selectedEntities[0]}
-                    player2={selectedEntities[1]}
-                    season1={selectedSeason}
-                    season2={selectedSeason2}
-                    viewMode={viewMode}
-                  />
-                ) : (
-                  // Single entity across seasons: Stephen Curry Season Comparison: 2023-24 → 2024-25
-                  selectedEntities.map((entity) => (
-                    <ComparisonStatistics
-                      key={entity}
-                      entityName={entity}
+                  // Two players + comparison on: Show individual stats for each player in each season + player vs player comparisons
+                  <div className="space-y-6">
+                    {/* Individual player statistics for each season */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {/* Current season stats */}
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason}-${viewMode}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {/* Comparison season stats */}
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason2}-${viewMode}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    {/* Player vs Player comparisons for each season */}
+                    <PlayerVsPlayerDualSeasonComparison
+                      player1={selectedEntities[0]}
+                      player2={selectedEntities[1]}
                       season1={selectedSeason}
                       season2={selectedSeason2}
                       viewMode={viewMode}
                     />
-                  ))
+                  </div>
+                ) : (
+                  // Single entity across seasons: Show individual stats for each season + season comparison
+                  <div className="space-y-6">
+                    {/* Individual player statistics for each season */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason}-${viewMode}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason2}-${viewMode}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    {/* Season comparison */}
+                    {selectedEntities.map((entity) => (
+                      <ComparisonStatistics
+                        key={entity}
+                        entityName={entity}
+                        season1={selectedSeason}
+                        season2={selectedSeason2}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
                 )
               ) : (
                 // Non-comparison mode
                 selectedEntities.length > 1 ? (
-                  // Two players + comparison off: Player A vs B in same season
-                  <PlayerVsPlayerComparison
-                    player1={selectedEntities[0]}
-                    player2={selectedEntities[1]}
-                    season={selectedSeason}
-                    viewMode={viewMode}
-                  />
+                  // Two players + comparison off: Show individual stats for each player + player vs player comparison
+                  <div className="space-y-6">
+                    {/* Individual player statistics */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <EntityStatistics
+                          key={`${entity}-${selectedSeason}-${viewMode}`}
+                          entityName={entity}
+                          selectedSeason={selectedSeason}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
+                    {/* Player vs Player comparison */}
+                    <PlayerVsPlayerComparison
+                      player1={selectedEntities[0]}
+                      player2={selectedEntities[1]}
+                      season={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  </div>
                 ) : (
                   // Single Season Mode Statistics (original functionality)
                   selectedEntities.map((entity) => (
