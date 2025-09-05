@@ -107,9 +107,6 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
             {stats.totalShots.toLocaleString()}
           </div>
           <div className={`${fontSizes.statLabel} text-muted-foreground`}>Total Shots</div>
-          <div className={`${fontSizes.statDetail} text-muted-foreground mt-1`}>
-            This Season
-          </div>
         </div>
       </div>
 
