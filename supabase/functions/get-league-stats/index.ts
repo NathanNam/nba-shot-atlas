@@ -52,67 +52,85 @@ Deno.serve(async (req) => {
     
     console.log(`🔍 Edge Function: Computing league stats for ${tableName}`)
 
-    // Fetch all shot data for the season
-    const { data: allShots, error: shotsError } = await supabase
-      .from(tableName)
-      .select('shotResult, shotValue, xLegacy, yLegacy, shotDistance')
+    // Use more efficient aggregation queries to avoid timeouts
+    const batchSize = 50000
+    let totalProcessed = 0
+    let hasMore = true
+    let offset = 0
 
-    if (shotsError) {
-      throw new Error(`Error fetching shots: ${shotsError.message}`)
-    }
-
-    if (!allShots || allShots.length === 0) {
-      throw new Error(`No shot data found for season ${season}`)
-    }
-
-    console.log(`🔍 Edge Function: Processing ${allShots.length} shots for analysis`)
-
-    // Process shot statistics
+    // Initialize counters
     let totalShots = 0
     let madeShots = 0
     let twoPointMade = 0
     let twoPointAttempted = 0
     let threePointMade = 0
     let threePointAttempted = 0
-
-    allShots.forEach((shot: any) => {
-      const shotValue = parseInt(shot.shotValue) || 2
-      const isMade = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1'
-      
-      totalShots += 1
-      
-      if (isMade) {
-        madeShots += 1
-      }
-      
-      if (shotValue === 2) {
-        twoPointAttempted += 1
-        if (isMade) {
-          twoPointMade += 1
-        }
-      } else if (shotValue === 3) {
-        threePointAttempted += 1
-        if (isMade) {
-          threePointMade += 1
-        }
-      }
-    })
-
-    // Process zone statistics
     const zoneMap = new Map<string, { made: number; total: number }>()
-    
-    allShots.forEach((shot: any) => {
-      const zone = getZoneFromCoordinates(
-        parseFloat(shot.xLegacy) || 0, 
-        parseFloat(shot.yLegacy) || 0
-      )
-      const current = zoneMap.get(zone) || { made: 0, total: 0 }
-      current.total++
-      if (shot.shotResult === 'Made') {
-        current.made++
+
+    // Process data in batches to avoid timeout
+    while (hasMore) {
+      console.log(`🔍 Processing batch starting at offset ${offset}`)
+      
+      const { data: batchData, error: batchError } = await supabase
+        .from(tableName)
+        .select('shotResult, shotValue, xLegacy, yLegacy')
+        .range(offset, offset + batchSize - 1)
+
+      if (batchError) {
+        throw new Error(`Error fetching batch: ${batchError.message}`)
       }
-      zoneMap.set(zone, current)
-    })
+
+      if (!batchData || batchData.length === 0) {
+        hasMore = false
+        break
+      }
+
+      // Process this batch
+      batchData.forEach((shot: any) => {
+        const shotValue = parseInt(shot.shotValue) || 2
+        const isMade = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1'
+        
+        totalShots += 1
+        
+        if (isMade) {
+          madeShots += 1
+        }
+        
+        if (shotValue === 2) {
+          twoPointAttempted += 1
+          if (isMade) {
+            twoPointMade += 1
+          }
+        } else if (shotValue === 3) {
+          threePointAttempted += 1
+          if (isMade) {
+            threePointMade += 1
+          }
+        }
+
+        // Process zones
+        const zone = getZoneFromCoordinates(
+          parseFloat(shot.xLegacy) || 0, 
+          parseFloat(shot.yLegacy) || 0
+        )
+        const current = zoneMap.get(zone) || { made: 0, total: 0 }
+        current.total++
+        if (shot.shotResult === 'Made') {
+          current.made++
+        }
+        zoneMap.set(zone, current)
+      })
+
+      totalProcessed += batchData.length
+      offset += batchSize
+      
+      // If we got less than the batch size, we're done
+      if (batchData.length < batchSize) {
+        hasMore = false
+      }
+      
+      console.log(`🔍 Processed ${totalProcessed} shots so far`)
+    }
 
     // Convert zone map to stats array
     const zoneStats: ZoneStats[] = Array.from(zoneMap.entries())
