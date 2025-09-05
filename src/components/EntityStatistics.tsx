@@ -7,9 +7,10 @@ interface EntityStatisticsProps {
   entityName: string;
   selectedSeason: string;
   viewMode: "player" | "team" | "league";
+  preloadedData?: any[]; // Optional preloaded shot data
 }
 
-export function EntityStatistics({ entityName, selectedSeason, viewMode }: EntityStatisticsProps) {
+export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
   // Only fetch players for player mode to improve performance
   const { players, loading: playersLoading } = useAvailablePlayers(viewMode === 'player' ? selectedSeason : '');
   
@@ -45,12 +46,14 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
   
-  // Only call the hook when we have a valid entityId (after player loading is complete)
-  const { shotData, loading, error } = useSingletonShotData(
-    selectedSeason, 
-    stableEntityId,
-    viewMode
-  );
+  // Use preloaded data if available, otherwise fetch via hook
+  const { shotData, loading, error } = preloadedData !== undefined 
+    ? { shotData: preloadedData, loading: false, error: null }
+    : useSingletonShotData(
+        selectedSeason, 
+        stableEntityId,
+        viewMode
+      );
   
   const calculatedStats = useMemo(() => {
     console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {

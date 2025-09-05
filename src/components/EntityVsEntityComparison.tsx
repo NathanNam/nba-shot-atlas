@@ -9,9 +9,11 @@ interface EntityVsEntityComparisonProps {
   entity2: string;
   season: string;
   viewMode: "player" | "team";
+  preloadedEntity1Data?: any[]; // Optional preloaded data for entity1
+  preloadedEntity2Data?: any[]; // Optional preloaded data for entity2
 }
 
-export function EntityVsEntityComparison({ entity1, entity2, season, viewMode }: EntityVsEntityComparisonProps) {
+export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, preloadedEntity1Data, preloadedEntity2Data }: EntityVsEntityComparisonProps) {
   const { players: playersData, loading: playersLoading } = useAvailablePlayers(season);
 
   // Get entity IDs
@@ -27,8 +29,14 @@ export function EntityVsEntityComparison({ entity1, entity2, season, viewMode }:
   const entity1Id = getEntityId(entity1);
   const entity2Id = getEntityId(entity2);
 
-  const entity1Data = useSupabaseShotData(season, entity1Id, viewMode);
-  const entity2Data = useSupabaseShotData(season, entity2Id, viewMode);
+  // Use preloaded data if available, otherwise fetch via hook
+  const entity1Data = preloadedEntity1Data !== undefined 
+    ? { shotData: preloadedEntity1Data, loading: false, error: null }
+    : useSupabaseShotData(season, entity1Id, viewMode);
+  
+  const entity2Data = preloadedEntity2Data !== undefined 
+    ? { shotData: preloadedEntity2Data, loading: false, error: null }
+    : useSupabaseShotData(season, entity2Id, viewMode);
 
   // Zone analysis helper
   const analyzeZones = (shotData: any[]) => {

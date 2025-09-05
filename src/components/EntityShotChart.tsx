@@ -6,9 +6,10 @@ interface EntityShotChartProps {
   entityName: string;
   selectedSeason: string;
   viewMode: "player" | "team" | "league";
+  preloadedData?: any[]; // Optional preloaded shot data
 }
 
-export function EntityShotChart({ entityName, selectedSeason, viewMode }: EntityShotChartProps) {
+export function EntityShotChart({ entityName, selectedSeason, viewMode, preloadedData }: EntityShotChartProps) {
   // Only fetch players for player mode to improve performance
   const { players, loading: playersLoading } = useAvailablePlayers(viewMode === 'player' ? selectedSeason : '');
   
@@ -37,12 +38,14 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   
   console.log(`🔍 EntityShotChart: Final entityId for "${cleanEntityName}" (display: "${entityName}"):`, entityId, 'playersLoading:', playersLoading);
   
-  // Always pass the correct entityId to the hook, let the hook handle loading logic
-  const { shotData, loading, error } = useSingletonShotData(
-    selectedSeason, 
-    entityId || '201939', // Use Stephen Curry's ID as fallback for default case
-    viewMode
-  );
+  // Use preloaded data if available, otherwise fetch via hook
+  const { shotData, loading, error } = preloadedData !== undefined 
+    ? { shotData: preloadedData, loading: false, error: null }
+    : useSingletonShotData(
+        selectedSeason, 
+        entityId || '201939', // Use Stephen Curry's ID as fallback for default case
+        viewMode
+      );
   
   console.log(`🔍 EntityShotChart DEBUG - ${entityName}:`, {
     entityId,
