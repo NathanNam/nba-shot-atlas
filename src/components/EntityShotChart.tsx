@@ -1,5 +1,5 @@
 import { ShotChart } from "@/components/ui/shot-chart";
-import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
+import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
 interface EntityShotChartProps {
@@ -38,7 +38,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   console.log(`🔍 EntityShotChart: Final entityId for "${cleanEntityName}" (display: "${entityName}"):`, entityId, 'playersLoading:', playersLoading);
   
   // Always pass the correct entityId to the hook, let the hook handle loading logic
-  const { shotData, loading, error, progress } = useSupabaseShotData(
+  const { shotData, loading, error } = useSingletonShotData(
     selectedSeason, 
     entityId || '201939', // Use Stephen Curry's ID as fallback for default case
     viewMode
@@ -73,7 +73,6 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
     <ShotChart
       title={entityName}
       data={isLoading ? undefined : shotData}
-      progress={progress}
     />
   );
 }
