@@ -1,5 +1,4 @@
 import { ShotChart } from "@/components/ui/shot-chart";
-import { ProgressiveLoader } from "@/components/ProgressiveLoader";
 import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
@@ -52,20 +51,8 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
     playersLoading
   });
   
-  // Show progressive loader for league mode or regular loading for others
+  // Show loading while players are loading or while shot data is loading  
   const isLoading = playersLoading || loading || !entityId;
-  
-  // Special handling for league mode with progressive loading
-  if (viewMode === 'league' && progress && progress.total) {
-    return (
-      <ProgressiveLoader 
-        loaded={progress.loaded}
-        total={progress.total}
-        isProcessing={progress.isProcessing}
-        title={`${entityName} Shot Chart`}
-      />
-    );
-  }
   
   if (error) {
     return (

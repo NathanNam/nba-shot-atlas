@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ShotData } from './supabaseDataService';
-import { WorkerDataService, ProcessingProgress } from './workerDataService';
 
 export class ParallelDataService {
   /**
@@ -16,9 +15,9 @@ export class ParallelDataService {
     
     console.log(`🚀 ParallelDataService: Starting fetch for ${viewMode} - ${entityId || 'all'} (season: ${season})`);
     
-    // For league mode, use non-blocking progressive loading
+    // For league mode, statistics should be calculated server-side via Edge Function
     if (viewMode === 'league') {
-      return this.getLeagueDataProgressive(season, progressCallback);
+      throw new Error('League mode should use server-side calculation. Use LeagueStatsService instead.');
     }
     
     // Use parallel fetching for player/team modes to handle large datasets
@@ -131,107 +130,6 @@ export class ParallelDataService {
     }));
 
     return shots;
-  }
-
-  /**
-   * Progressive league data loading with Web Workers
-   */
-  private static async getLeagueDataProgressive(
-    season: string,
-    progressCallback?: (loaded: number, total?: number) => void
-  ): Promise<ShotData[]> {
-    const tableName = `shots_${season}`;
-    
-    console.log(`🚀 ParallelDataService: Starting progressive league data fetch`);
-    
-    return new Promise(async (resolve, reject) => {
-      try {
-        // First, get total count
-        const { count } = await (supabase as any)
-          .from(tableName)
-          .select('*', { count: 'estimated', head: true });
-        
-        const totalCount = count || 200000;
-        console.log(`🚀 ParallelDataService: Estimated ${totalCount} total league records`);
-        
-        // Fetch all raw data using smaller batches to prevent timeouts
-        const batchSize = 500; // Smaller batches for better responsiveness
-        const maxConcurrent = 4; // Reduced concurrency
-        const totalBatches = Math.ceil(totalCount / batchSize);
-        
-        console.log(`🚀 ParallelDataService: Will fetch ${totalBatches} batches of ${batchSize} records each`);
-
-        const allRawData: any[] = [];
-        let processedBatches = 0;
-
-        // Process batches in smaller chunks
-        for (let chunkStart = 0; chunkStart < totalBatches; chunkStart += maxConcurrent) {
-          const chunkEnd = Math.min(chunkStart + maxConcurrent, totalBatches);
-          const batchPromises = [];
-
-          for (let batchIndex = chunkStart; batchIndex < chunkEnd; batchIndex++) {
-            const offset = batchIndex * batchSize;
-            
-            const query = (supabase as any)
-              .from(tableName)
-              .select('*')
-              .range(offset, offset + batchSize - 1);
-
-            batchPromises.push(
-              query.then((result: any) => ({
-                batchIndex,
-                data: result.data || [],
-                error: result.error
-              }))
-            );
-          }
-
-          // Wait for this chunk to complete
-          const chunkResults = await Promise.all(batchPromises);
-          
-          for (const result of chunkResults) {
-            if (result.error) {
-              console.error(`Error in batch ${result.batchIndex}:`, result.error);
-            } else {
-              allRawData.push(...result.data);
-              processedBatches++;
-              
-              // Report fetch progress (not processing progress)
-              if (progressCallback) {
-                progressCallback(allRawData.length, totalCount);
-              }
-              
-              console.log(`🚀 ParallelDataService: Fetched batch ${result.batchIndex + 1}/${totalBatches}, total raw records: ${allRawData.length}`);
-            }
-          }
-          
-          // Small delay between chunks to prevent overwhelming
-          if (chunkEnd < totalBatches) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
-        }
-
-        console.log(`🚀 ParallelDataService: Raw data fetch complete. Got ${allRawData.length} records. Starting Web Worker processing...`);
-
-        // Now process the data using Web Workers
-        WorkerDataService.processLeagueDataProgressive(
-          allRawData,
-          (progress: ProcessingProgress) => {
-            if (progressCallback) {
-              progressCallback(progress.loaded, progress.total);
-            }
-          },
-          (processedShots: ShotData[]) => {
-            console.log(`🚀 ParallelDataService: Progressive processing complete. Final count: ${processedShots.length}`);
-            resolve(processedShots);
-          }
-        );
-
-      } catch (error) {
-        console.error('🚀 ParallelDataService: Progressive fetch error:', error);
-        reject(error);
-      }
-    });
   }
 
   /**

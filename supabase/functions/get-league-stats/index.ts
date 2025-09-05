@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface ZoneStats {
+  zone: string;
+  made: number;
+  attempted: number;
+  percentage: number;
+}
+
 interface LeagueStats {
   totalShots: number;
   madeShots: number;
@@ -15,6 +22,10 @@ interface LeagueStats {
   threePointMade: number;
   threePointAttempted: number;
   threePointPercentage: number;
+  zoneStats: ZoneStats[];
+  hottestZone: string;
+  coldestZone: string;
+  favoriteSpot: string;
 }
 
 Deno.serve(async (req) => {
@@ -41,8 +52,8 @@ Deno.serve(async (req) => {
     
     console.log(`🔍 Edge Function: Computing league stats for ${tableName}`)
 
-    // Use SQL aggregation for maximum performance
-    const { data, error } = await supabase
+    // Step 1: Get shot statistics aggregated by result and value
+    const { data: shotStats, error: shotError } = await supabase
       .from(tableName)
       .select(`
         shotResult,
@@ -51,11 +62,22 @@ Deno.serve(async (req) => {
       `, { count: 'exact' })
       .group('shotResult, shotValue')
 
-    if (error) {
-      throw new Error(`Database error: ${error.message}`)
+    if (shotError) {
+      throw new Error(`Shot stats error: ${shotError.message}`)
     }
 
-    // Aggregate the results
+    // Step 2: Get zone statistics using raw coordinates
+    const { data: coordinateData, error: coordError } = await supabase
+      .from(tableName)
+      .select('xLegacy, yLegacy, shotResult')
+
+    if (coordError) {
+      throw new Error(`Coordinate data error: ${coordError.message}`)
+    }
+
+    console.log(`🔍 Edge Function: Processing ${coordinateData.length} shots for zone analysis`)
+
+    // Process shot statistics
     let totalShots = 0
     let madeShots = 0
     let twoPointMade = 0
@@ -63,7 +85,7 @@ Deno.serve(async (req) => {
     let threePointMade = 0
     let threePointAttempted = 0
 
-    data.forEach((row: any) => {
+    shotStats.forEach((row: any) => {
       const count = parseInt(row.count) || 0
       const shotValue = parseInt(row.shotValue) || 2
       const isMade = row.shotResult === 'Made' || row.shotResult === 'MADE' || row.shotResult === '1'
@@ -87,6 +109,41 @@ Deno.serve(async (req) => {
       }
     })
 
+    // Process zone statistics
+    const zoneMap = new Map<string, { made: number; total: number }>()
+    
+    coordinateData.forEach((shot: any) => {
+      const zone = getZoneFromCoordinates(
+        parseFloat(shot.xLegacy) || 0, 
+        parseFloat(shot.yLegacy) || 0
+      )
+      const current = zoneMap.get(zone) || { made: 0, total: 0 }
+      current.total++
+      if (shot.shotResult === 'Made') {
+        current.made++
+      }
+      zoneMap.set(zone, current)
+    })
+
+    // Convert zone map to stats array
+    const zoneStats: ZoneStats[] = Array.from(zoneMap.entries())
+      .map(([zone, stats]) => ({
+        zone,
+        made: stats.made,
+        attempted: stats.total,
+        percentage: stats.total > 0 ? stats.made / stats.total : 0
+      }))
+      .filter(z => z.attempted >= 100) // Only zones with meaningful sample size
+      .sort((a, b) => b.percentage - a.percentage)
+
+    // Find hottest and coldest zones
+    const hottestZone = zoneStats[0]
+    const coldestZone = zoneStats[zoneStats.length - 1]
+    
+    // Find most popular shooting zone
+    const favoriteZone = Array.from(zoneMap.entries())
+      .sort((a, b) => b[1].total - a[1].total)[0]
+
     const stats: LeagueStats = {
       totalShots,
       madeShots,
@@ -97,6 +154,10 @@ Deno.serve(async (req) => {
       threePointMade,
       threePointAttempted,
       threePointPercentage: threePointAttempted > 0 ? threePointMade / threePointAttempted : 0,
+      zoneStats,
+      hottestZone: hottestZone ? `${hottestZone.zone} (${(hottestZone.percentage * 100).toFixed(1)}%)` : "N/A",
+      coldestZone: coldestZone ? `${coldestZone.zone} (${(coldestZone.percentage * 100).toFixed(1)}%)` : "N/A",
+      favoriteSpot: favoriteZone ? `${favoriteZone[0]} (${favoriteZone[1].total} shots)` : "N/A"
     }
 
     console.log(`🔍 Edge Function: Computed stats:`, stats)
@@ -123,3 +184,26 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+// Zone calculation function (same as client-side)
+function getZoneFromCoordinates(x: number, y: number): string {
+  const distance = Math.sqrt(x * x + y * y);
+  
+  if (distance <= 40) {
+    return "Restricted Area";
+  } else if (distance <= 80) {
+    return "Paint";
+  } else if (distance <= 140) {
+    return "Mid Range";
+  } else if (y > 140) {
+    if (x < -80) {
+      return "Left Corner 3";
+    } else if (x > 80) {
+      return "Right Corner 3";
+    } else {
+      return "Above the Break 3";
+    }
+  } else {
+    return "Long 2";
+  }
+}

@@ -103,15 +103,18 @@ class SupabaseDataService {
     try {
       console.log(`🔍 SupabaseDataService: Starting optimized fetch for ${season}_${viewMode}_${entityId || 'all'}`);
       
-      // FORCE CLEAR ALL CACHE LAYERS FOR TESTING
+      // For league mode, redirect to server-side statistics calculation
       if (viewMode === 'league') {
-        console.log(`🔍 SupabaseDataService: FORCE clearing dataCache for league mode`);
-        dataCache.clear();
-        dataCache.clearPreloaded();
+        console.log(`🔍 SupabaseDataService: League mode detected - this should use LeagueStatsService instead`);
+        // This method should not be called for league statistics anymore
+        // League statistics should use the Edge Function via LeagueStatsService
+        throw new Error('League statistics should use server-side calculation via Edge Function');
       }
       
-      span.setAttributes({ cache_hit: false });
-      dbQueryCounter.add(1, { table: 'shots', operation: 'select' });
+      // FORCE CLEAR ALL CACHE LAYERS FOR TESTING (for player/team modes only)
+      console.log(`🔍 SupabaseDataService: FORCE clearing dataCache for ${viewMode} mode`);
+      dataCache.clear();
+      dataCache.clearPreloaded();
 
       // Use optimized parallel fetching for better performance
       const shots = await ParallelDataService.getDataParallel(

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
-import { WorkerDataService } from '@/services/workerDataService';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
@@ -111,13 +110,6 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
     };
 
     loadShotData();
-    
-    // Cleanup function
-    return () => {
-      if (viewMode === 'league') {
-        WorkerDataService.terminate();
-      }
-    };
   }, [season, entityId, viewMode]);
 
   return { shotData, loading, error, progress };
