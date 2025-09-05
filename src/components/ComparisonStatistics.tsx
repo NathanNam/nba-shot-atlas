@@ -8,12 +8,13 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface ComparisonStatisticsProps {
   entityName: string;
+  entityName2?: string; // For comparing two different players
   season1: string;
   season2: string;
   viewMode: "player" | "team" | "league";
 }
 
-export function ComparisonStatistics({ entityName, season1, season2, viewMode }: ComparisonStatisticsProps) {
+export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
   const { players: players1, loading: loading1 } = useAvailablePlayers(season1);
   const { players: players2, loading: loading2 } = useAvailablePlayers(season2);
   
@@ -363,48 +364,136 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       </div>
       
       {/* Comparison Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {entityName} Season Comparison: {earlierSeason} → {laterSeason}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">FG%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
-                {getTrendIcon(fgDiff)}
-                <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
+      {entityName2 && entityName2 !== entityName ? (
+        // Two different players comparison - show separate cards
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {entityName} Season Comparison: {earlierSeason} → {laterSeason}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">FG%</div>
+                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
+                    {getTrendIcon(fgDiff)}
+                    <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">2PT%</div>
+                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
+                    {getTrendIcon(twoPtDiff)}
+                    <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">3PT%</div>
+                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
+                    {getTrendIcon(threePtDiff)}
+                    <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">Total Shots</div>
+                  <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
+                    {getTrendIcon(shotsDiff)}
+                    <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {entityName2} Season Comparison: {earlierSeason} → {laterSeason}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">FG%</div>
+                  <div className="text-muted-foreground">
+                    <span>Coming soon</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">2PT%</div>
+                  <div className="text-muted-foreground">
+                    <span>Coming soon</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">3PT%</div>
+                  <div className="text-muted-foreground">
+                    <span>Coming soon</span>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <div className="text-sm text-muted-foreground">Total Shots</div>
+                  <div className="text-muted-foreground">
+                    <span>Coming soon</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        // Same player comparison - show single card
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {entityName} Season Comparison: {earlierSeason} → {laterSeason}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">FG%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
+                  {getTrendIcon(fgDiff)}
+                  <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">2PT%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
+                  {getTrendIcon(twoPtDiff)}
+                  <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">3PT%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
+                  {getTrendIcon(threePtDiff)}
+                  <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">Total Shots</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
+                  {getTrendIcon(shotsDiff)}
+                  <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
+                </div>
               </div>
             </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">2PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
-                {getTrendIcon(twoPtDiff)}
-                <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">3PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
-                {getTrendIcon(threePtDiff)}
-                <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">Total Shots</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
-                {getTrendIcon(shotsDiff)}
-                <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
