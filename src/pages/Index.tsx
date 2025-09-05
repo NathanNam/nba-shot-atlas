@@ -79,29 +79,35 @@ const Index = () => {
               {isComparisonMode ? (
                 // Comparison Mode - Handle multiple entities or seasons
                 selectedEntities.length > 1 ? (
-                  // Multi-entity comparison across seasons - show 2x2 grid layout
-                  <div className="space-y-6">
-                    {/* First row - Current season for all entities */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <EntityShotChart
-                          key={`${entity}-${selectedSeason}`}
-                          entityName={`${entity} (${selectedSeason})`}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                        />
-                      ))}
+                  // Two entities + comparison mode: Use batch fetching for all 4 combinations (shot charts only)
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    {/* Season 1 Charts */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-center">{selectedSeason} Season</h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {selectedEntities.map((entity) => (
+                          <EntityShotChart
+                            key={`${entity}-${selectedSeason}`}
+                            entityName={`${entity} (${selectedSeason})`}
+                            selectedSeason={selectedSeason}
+                            viewMode={viewMode}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    {/* Second row - Comparison season for all entities */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <EntityShotChart
-                          key={`${entity}-${selectedSeason2}`}
-                          entityName={`${entity} (${selectedSeason2})`}
-                          selectedSeason={selectedSeason2}
-                          viewMode={viewMode}
-                        />
-                      ))}
+                    {/* Season 2 Charts */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-center">{selectedSeason2} Season</h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {selectedEntities.map((entity) => (
+                          <EntityShotChart
+                            key={`${entity}-${selectedSeason2}`}
+                            entityName={`${entity} (${selectedSeason2})`}
+                            selectedSeason={selectedSeason2}
+                            viewMode={viewMode}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (

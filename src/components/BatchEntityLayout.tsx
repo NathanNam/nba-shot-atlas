@@ -70,6 +70,18 @@ export function BatchEntityLayout({
   }, [entity1Id, entity2Id, season1, season2, viewMode, playersLoading]);
 
   const batchResults = useBatchShotData(batchRequests);
+  
+  // Debug logging
+  console.log('🔍 BatchEntityLayout: Batch results', {
+    batchRequests: batchRequests.map(r => r.key),
+    resultKeys: Object.keys(batchResults),
+    resultData: Object.entries(batchResults).map(([key, value]) => ({
+      key,
+      dataLength: value?.data?.length || 0,
+      loading: value?.loading,
+      error: value?.error
+    }))
+  });
 
   // Show loading state
   const isLoading = Object.values(batchResults).some(result => result?.loading);
@@ -140,53 +152,8 @@ export function BatchEntityLayout({
 
   return (
     <div className="space-y-8">
-      {/* Shot Charts Grid */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-center">Shot Charts</h2>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Season 1 Charts */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-center">{season1} Season</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <EntityShotChart 
-                entityName={`${entity1} (${season1})`}
-                selectedSeason={season1}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity1}_${season1}`]?.data}
-              />
-              <EntityShotChart 
-                entityName={`${entity2} (${season1})`}
-                selectedSeason={season1}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity2}_${season1}`]?.data}
-              />
-            </div>
-          </div>
-
-          {/* Season 2 Charts */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-center">{season2} Season</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <EntityShotChart 
-                entityName={`${entity1} (${season2})`}
-                selectedSeason={season2}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity1}_${season2}`]?.data}
-              />
-              <EntityShotChart 
-                entityName={`${entity2} (${season2})`}
-                selectedSeason={season2}
-                viewMode={viewMode}
-                preloadedData={batchResults[`${entity2}_${season2}`]?.data}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Statistics Grid */}
       <div className="space-y-6">
-        <h2 className="text-xl font-bold text-center">Statistics</h2>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Season 1 Statistics */}
           <div className="space-y-4">

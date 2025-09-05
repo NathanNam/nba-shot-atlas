@@ -49,6 +49,15 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   const { shotData, loading, error } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
     : hookResult;
+    
+  // Debug logging
+  console.log(`🔍 EntityShotChart [${cleanEntityName}]: Using ${preloadedData !== undefined ? 'preloaded' : 'hook'} data`, {
+    preloadedLength: preloadedData?.length,
+    hookLength: hookResult.shotData?.length,
+    finalLength: shotData?.length,
+    loading,
+    error
+  });
   
   console.log(`🔍 EntityShotChart DEBUG - ${entityName}:`, {
     entityId,
