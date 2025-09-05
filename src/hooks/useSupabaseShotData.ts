@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
+import { WorkerDataService } from '@/services/workerDataService';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
@@ -7,7 +8,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
   const [shotData, setShotData] = useState<ShotData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ loaded: number; total?: number } | null>(null);
+  const [progress, setProgress] = useState<{ loaded: number; total?: number; isProcessing?: boolean } | null>(null);
 
   // Generate unique instance ID for debugging
   const instanceId = `${viewMode}_${entityId}_${Math.random().toString(36).substr(2, 9)}`;
@@ -49,7 +50,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         });
 
         const progressCallback = viewMode === 'league' ? 
-          (loaded: number, total?: number) => setProgress({ loaded, total }) : undefined;
+          (loaded: number, total?: number) => {
+            setProgress({ 
+              loaded, 
+              total, 
+              isProcessing: total ? loaded >= total * 0.8 : false // Mark as processing when near completion
+            });
+          } : undefined;
         
         const data = await SupabaseDataService.getShotData(season, entityId, viewMode, progressCallback);
         
@@ -104,6 +111,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
     };
 
     loadShotData();
+    
+    // Cleanup function
+    return () => {
+      if (viewMode === 'league') {
+        WorkerDataService.terminate();
+      }
+    };
   }, [season, entityId, viewMode]);
 
   return { shotData, loading, error, progress };

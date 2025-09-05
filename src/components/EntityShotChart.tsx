@@ -1,4 +1,5 @@
 import { ShotChart } from "@/components/ui/shot-chart";
+import { ProgressiveLoader } from "@/components/ProgressiveLoader";
 import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
@@ -37,7 +38,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   console.log(`🔍 EntityShotChart: Final entityId for "${cleanEntityName}" (display: "${entityName}"):`, entityId, 'playersLoading:', playersLoading);
   
   // Always pass the correct entityId to the hook, let the hook handle loading logic
-  const { shotData, loading, error } = useSupabaseShotData(
+  const { shotData, loading, error, progress } = useSupabaseShotData(
     selectedSeason, 
     entityId || '201939', // Use Stephen Curry's ID as fallback for default case
     viewMode
@@ -51,8 +52,20 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
     playersLoading
   });
   
-  // Show loading while players are loading or while shot data is loading  
+  // Show progressive loader for league mode or regular loading for others
   const isLoading = playersLoading || loading || !entityId;
+  
+  // Special handling for league mode with progressive loading
+  if (viewMode === 'league' && progress && progress.total) {
+    return (
+      <ProgressiveLoader 
+        loaded={progress.loaded}
+        total={progress.total}
+        isProcessing={progress.isProcessing}
+        title={`${entityName} Shot Chart`}
+      />
+    );
+  }
   
   if (error) {
     return (
