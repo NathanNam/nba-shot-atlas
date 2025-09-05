@@ -16,8 +16,8 @@ export interface ShotData {
 }
 
 export interface Player {
-  id: string;
-  name: string;
+  personId: string;
+  playerFullName: string;
 }
 
 // Metrics
@@ -52,10 +52,10 @@ export class SupabaseDataService {
 
       dbQueryCounter.add(1, { table: 'players', operation: 'select' });
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('players')
         .select('*')
-        .order('name');
+        .order('playerFullName');
 
       if (error) {
         span.setStatus({
@@ -72,8 +72,8 @@ export class SupabaseDataService {
       }
 
       const players: Player[] = data.map(row => ({
-        id: row.id,
-        name: row.name,
+        personId: row.personId?.toString() || '',
+        playerFullName: row.playerFullName || '',
       }));
 
       // Cache the result
@@ -134,16 +134,18 @@ export class SupabaseDataService {
 
       dbQueryCounter.add(1, { table: 'shots', operation: 'select' });
 
-      let query = supabase
-        .from('shots')
-        .select('*')
-        .eq('season', season);
+      // Determine the correct table name based on season
+      const tableName = `shots_${season}`;
+      
+      let query = (supabase as any)
+        .from(tableName)
+        .select('*');
 
-      // Apply filters based on view mode
+      // Apply filters based on view mode - using new column names
       if (viewMode === 'player' && entityId) {
-        query = query.eq('person_id', entityId);
+        query = query.eq('personId', entityId);
       } else if (viewMode === 'team' && entityId) {
-        query = query.eq('team_tricode', entityId);
+        query = query.eq('teamTricode', entityId);
       }
       // For league mode, no additional filter needed
 
@@ -169,15 +171,15 @@ export class SupabaseDataService {
       }
 
       const shots: ShotData[] = data.map(row => ({
-        personId: row.person_id,
-        teamTricode: row.team_tricode,
-        xLegacy: parseFloat(row.x_legacy.toString()),
-        yLegacy: parseFloat(row.y_legacy.toString()),
-        shotResult: row.shot_result,
-        shotDistance: parseFloat(row.shot_distance.toString()),
+        personId: row.personId?.toString() || '',
+        teamTricode: row.teamTricode || '',
+        xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
+        yLegacy: parseFloat(row.yLegacy?.toString() || '0'),
+        shotResult: row.shotResult || '',
+        shotDistance: parseFloat(row.shotDistance?.toString() || '0'),
         description: row.description || '',
-        subType: row.sub_type || '',
-        shotValue: row.shot_value,
+        subType: row.subType || '',
+        shotValue: row.shotValue || 0,
       }));
 
       // Cache the result
@@ -234,15 +236,12 @@ export class SupabaseDataService {
     try {
       dbQueryCounter.add(1, { table: 'shots', operation: 'select_distinct' });
 
-      let query = supabase
-        .from('shots')
-        .select('team_tricode');
-
-      if (season) {
-        query = query.eq('season', season);
-      }
-
-      const { data, error } = await query;
+      // Use the appropriate season table or default to 2024-25
+      const tableName = season ? `shots_${season}` : 'shots_2024-25';
+      
+      const { data, error } = await (supabase as any)
+        .from(tableName)
+        .select('teamTricode');
 
       if (error) {
         span.setStatus({
@@ -252,7 +251,7 @@ export class SupabaseDataService {
         throw new Error(`Failed to fetch teams: ${error.message}`);
       }
 
-      const uniqueTeams = [...new Set(data.map(row => row.team_tricode))].sort();
+      const uniqueTeams = [...new Set(data.map((row: any) => row.teamTricode))].filter(Boolean).sort() as string[];
 
       span.setAttributes({
         team_count: uniqueTeams.length,
@@ -282,25 +281,18 @@ export class SupabaseDataService {
     try {
       dbQueryCounter.add(1, { table: 'shots', operation: 'select_distinct' });
 
-      const { data, error } = await supabase
-        .from('shots')
-        .select('season');
-
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        throw new Error(`Failed to fetch seasons: ${error.message}`);
-      }
-
-      const uniqueSeasons = [...new Set(data.map(row => row.season))].sort();
+      // Return the known seasons based on uploaded tables
+      const availableSeasons = [
+        '2013-14', '2014-15', '2015-16', '2016-17', '2017-18',
+        '2018-19', '2019-20', '2020-21', '2021-22', '2022-23',
+        '2023-24', '2024-25'
+      ];
 
       span.setAttributes({
-        season_count: uniqueSeasons.length,
+        season_count: availableSeasons.length,
       });
 
-      return uniqueSeasons;
+      return availableSeasons;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       span.setStatus({

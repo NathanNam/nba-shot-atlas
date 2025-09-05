@@ -1,4 +1,4 @@
-import { useShotData } from "@/hooks/useShotData";
+import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +8,7 @@ interface LeagueStatisticsProps {
 }
 
 export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
-  const { shotData, loading, error } = useShotData(selectedSeason, "", "league");
+  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, "", "league");
   
   console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error);
 

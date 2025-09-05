@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useShotData } from './useShotData';
+import { useSupabaseShotData } from './useSupabaseShotData';
 
 export interface MultiSeasonData {
   season1: {
@@ -22,8 +22,8 @@ export function useMultiSeasonData(
   entityId: string,
   viewMode: 'player' | 'team' | 'league'
 ) {
-  const season1Data = useShotData(season1, entityId, viewMode);
-  const season2Data = useShotData(season2 || '', entityId, viewMode);
+  const season1Data = useSupabaseShotData(season1, entityId, viewMode);
+  const season2Data = useSupabaseShotData(season2 || '', entityId, viewMode);
 
   const [multiSeasonData, setMultiSeasonData] = useState<MultiSeasonData>({
     season1: {

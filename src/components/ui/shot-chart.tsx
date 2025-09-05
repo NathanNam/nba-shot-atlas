@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ShotData } from "@/hooks/useShotData";
+import { ShotData } from "@/services/supabaseDataService";
 
 interface ShotChartProps {
   title: string;

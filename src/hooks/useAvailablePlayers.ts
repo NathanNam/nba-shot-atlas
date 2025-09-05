@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SupabaseDataService } from '@/services/supabaseDataService';
 
 interface PlayerOption {
   id: string;
@@ -13,43 +14,12 @@ export function useAvailablePlayers(season: string) {
     const loadPlayers = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/data/nba_players_2013_2025.csv');
-        if (!response.ok) {
-          // Fallback to hardcoded players if CSV not found
-          setPlayers([
-            { id: "2544", name: "LeBron James" },
-            { id: "201939", name: "Stephen Curry" },
-            { id: "201142", name: "Kevin Durant" },
-            { id: "203507", name: "Giannis Antetokounmpo" },
-            { id: "1629029", name: "Luka Dončić" },
-            { id: "1628369", name: "Jayson Tatum" }
-          ]);
-          setLoading(false);
-          return;
-        }
+        const supabasePlayers = await SupabaseDataService.getPlayers();
         
-        const csvText = await response.text();
-        const lines = csvText.trim().split('\n');
-        if (lines.length < 2) {
-          setPlayers([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Skip header line and parse all players
-        const playerOptions: PlayerOption[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-          
-          const [playerId, playerFullName] = line.split(',');
-          if (playerId && playerFullName) {
-            playerOptions.push({
-              id: playerId,
-              name: playerFullName
-            });
-          }
-        }
+        const playerOptions: PlayerOption[] = supabasePlayers.map(player => ({
+          id: player.personId,
+          name: player.playerFullName
+        }));
         
         const sortedPlayers = playerOptions.sort((a, b) => a.name.localeCompare(b.name));
         setPlayers(sortedPlayers);

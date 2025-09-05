@@ -1,5 +1,5 @@
 import { ShotChart } from "@/components/ui/shot-chart";
-import { useShotData } from "@/hooks/useShotData";
+import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 
 interface EntityShotChartProps {
@@ -26,7 +26,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode }: Entity
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useShotData(selectedSeason, entityId || '', viewMode);
+  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, entityId || '', viewMode);
   
   // Show loading while players are loading or while shot data is loading
   const isLoading = playersLoading || loading || !entityId;

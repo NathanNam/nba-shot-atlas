@@ -1,5 +1,5 @@
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
-import { useShotData } from "@/hooks/useShotData";
+import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { useMemo } from "react";
 
@@ -27,7 +27,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
   };
   
   const entityId = getEntityId();
-  const { shotData, loading, error } = useShotData(selectedSeason, entityId || '', viewMode);
+  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, entityId || '', viewMode);
   
   const calculatedStats = useMemo(() => {
   if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
