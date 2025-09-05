@@ -55,7 +55,10 @@ export class SupabaseDataService {
       const { data, error } = await (supabase as any)
         .from('players')
         .select('*')
-        .order('playerFullName');
+        .order('"playerFullName"');
+
+      console.log('🔍 SupabaseDataService.getPlayers: Raw response data:', data);
+      console.log('🔍 SupabaseDataService.getPlayers: Raw response error:', error);
 
       if (error) {
         span.setStatus({

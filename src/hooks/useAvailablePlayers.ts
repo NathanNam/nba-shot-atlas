@@ -14,14 +14,19 @@ export function useAvailablePlayers(season: string) {
     const loadPlayers = async () => {
       setLoading(true);
       try {
+        console.log('🔍 useAvailablePlayers: Starting to load players from Supabase...');
         const supabasePlayers = await SupabaseDataService.getPlayers();
+        console.log('🔍 useAvailablePlayers: Raw Supabase players:', supabasePlayers);
         
         const playerOptions: PlayerOption[] = supabasePlayers.map(player => ({
           id: player.personId,
           name: player.playerFullName
         })).filter(player => player.id && player.name);
         
+        console.log('🔍 useAvailablePlayers: Mapped player options:', playerOptions);
+        
         const sortedPlayers = playerOptions.sort((a, b) => a.name.localeCompare(b.name));
+        console.log('🔍 useAvailablePlayers: Final sorted players:', sortedPlayers);
         setPlayers(sortedPlayers);
         setLoading(false);
         
