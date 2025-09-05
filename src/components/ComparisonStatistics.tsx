@@ -315,7 +315,7 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            Season Comparison: {earlierSeason} vs {laterSeason}
+            {entityName} Season Comparison: {earlierSeason} vs {laterSeason}
             <Badge variant="secondary" className="text-xs">
               {earlierSeason} → {laterSeason}
             </Badge>
