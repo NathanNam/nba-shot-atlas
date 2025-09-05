@@ -310,53 +310,6 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
           stats={stats2}
         />
       </div>
-      
-      {/* Comparison Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            Season Comparison: {earlierSeason} vs {laterSeason}
-            <Badge variant="secondary" className="text-xs">
-              {earlierSeason} → {laterSeason}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">FG%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
-                {getTrendIcon(fgDiff)}
-                <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">2PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
-                {getTrendIcon(twoPtDiff)}
-                <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">3PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
-                {getTrendIcon(threePtDiff)}
-                <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">Total Shots</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
-                {getTrendIcon(shotsDiff)}
-                <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
