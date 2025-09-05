@@ -369,7 +369,7 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
     <Card className="p-3 sm:p-6 bg-card border-border shadow-card">
       {/* Mobile-optimized header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h3 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h3>
+        <h3 className="text-fluid-heading text-foreground">{title}</h3>
         <div className="flex items-center justify-between sm:justify-end">
           <div className="flex items-center space-x-2">
             <Label htmlFor="view-mode" className="text-sm font-medium">Heat Map</Label>

@@ -44,7 +44,7 @@ export function NavigationBar({
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-mobile-lg sm:text-xl font-bold text-foreground">NBA Shot Analytics</h1>
+                <h1 className="text-fluid-title text-foreground">NBA Shot Analytics</h1>
               </div>
             </div>
           </div>
@@ -142,7 +142,7 @@ export function NavigationBar({
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">NBA Shot Analytics</h1>
+                <h1 className="text-fluid-title text-foreground">NBA Shot Analytics</h1>
                 <p className="text-xs text-muted-foreground">Advanced Basketball Analytics</p>
               </div>
             </div>

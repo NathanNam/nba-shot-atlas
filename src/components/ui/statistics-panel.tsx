@@ -29,24 +29,24 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
   const getFontSizes = () => {
     if (size === "compact") {
       return {
-        title: "text-mobile-lg sm:text-lg",
-        statValue: "text-mobile-xl sm:text-xl font-semibold",
-        statLabel: "text-mobile-xs sm:text-xs",
-        statDetail: "text-mobile-xs",
-        zoneTitle: "text-mobile-sm sm:text-sm",
-        zoneValue: "text-mobile-sm sm:text-base",
-        zoneDetail: "text-mobile-xs"
+        title: "text-responsive-lg",
+        statValue: "text-responsive-xl font-semibold",
+        statLabel: "text-responsive-xs",
+        statDetail: "text-responsive-xs",
+        zoneTitle: "text-responsive-sm",
+        zoneValue: "text-fluid-body",
+        zoneDetail: "text-responsive-xs"
       };
     }
     
     return {
-      title: "text-mobile-title",
-      statValue: "text-mobile-xl sm:text-2xl font-bold",
-      statLabel: "text-mobile-xs sm:text-sm",
-      statDetail: "text-mobile-xs",
-      zoneTitle: "text-mobile-sm sm:text-base",
-      zoneValue: "text-mobile-base sm:text-lg",
-      zoneDetail: "text-mobile-subtitle"
+      title: "text-fluid-title",
+      statValue: "text-responsive-2xl font-bold",
+      statLabel: "text-responsive-sm",
+      statDetail: "text-responsive-xs",
+      zoneTitle: "text-fluid-body",
+      zoneValue: "text-fluid-heading",
+      zoneDetail: "text-fluid-caption"
     };
   };
 

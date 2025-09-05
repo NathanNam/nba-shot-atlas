@@ -178,13 +178,13 @@ export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, p
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Field Goal % */}
             <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">Field Goal %</div>
+              <div className="text-responsive-sm text-muted-foreground">Field Goal %</div>
               <div className="flex items-center justify-center gap-2">
-                <span className={`text-lg font-bold ${getComparisonColor(entity1Stats.fgPercent, entity2Stats.fgPercent)}`}>
+                <span className={`text-responsive-lg font-bold ${getComparisonColor(entity1Stats.fgPercent, entity2Stats.fgPercent)}`}>
                   {entity1Stats.fgPercent}%
                 </span>
                 {getComparisonIcon(entity1Stats.fgPercent, entity2Stats.fgPercent)}
-                <span className={`text-lg font-bold ${getComparisonColor(entity2Stats.fgPercent, entity1Stats.fgPercent)}`}>
+                <span className={`text-responsive-lg font-bold ${getComparisonColor(entity2Stats.fgPercent, entity1Stats.fgPercent)}`}>
                   {entity2Stats.fgPercent}%
                 </span>
               </div>

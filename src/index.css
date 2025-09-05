@@ -124,25 +124,58 @@ All colors MUST be HSL for proper theming
   }
 
   /* Mobile-first responsive text utilities */
-  .text-mobile-responsive {
-    @apply text-mobile-base sm:text-base;
+  .text-responsive-xs {
+    @apply text-mobile-xs sm:text-xs;
   }
 
-  .text-mobile-title {
-    @apply text-mobile-lg sm:text-xl font-semibold;
+  .text-responsive-sm {
+    @apply text-mobile-sm sm:text-sm lg:text-base;
   }
 
-  .text-mobile-subtitle {
-    @apply text-mobile-sm sm:text-sm;
+  .text-responsive-base {
+    @apply text-mobile-base sm:text-base lg:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-mobile-lg sm:text-lg lg:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-mobile-xl sm:text-xl lg:text-2xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-mobile-2xl sm:text-2xl lg:text-3xl;
+  }
+
+  /* Fluid typography classes */
+  .text-fluid-title {
+    @apply text-fluid-xl font-semibold;
+  }
+
+  .text-fluid-heading {
+    @apply text-fluid-lg font-medium;
+  }
+
+  .text-fluid-body {
+    @apply text-fluid-base;
+  }
+
+  .text-fluid-caption {
+    @apply text-fluid-sm;
   }
 
   /* Mobile spacing utilities */
   .mobile-padding {
-    @apply p-4 sm:p-6;
+    @apply p-3 sm:p-4 lg:p-6;
   }
 
   .mobile-gap {
-    @apply gap-3 sm:gap-4 lg:gap-6;
+    @apply gap-2 sm:gap-3 lg:gap-4;
+  }
+
+  .mobile-margin {
+    @apply m-2 sm:m-3 lg:m-4;
   }
 
   /* NBA Typography */

@@ -45,7 +45,7 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
     return (
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card className="p-6 bg-card border-border shadow-card">
-          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+          <h3 className="text-fluid-heading text-foreground mb-4 text-center">
             {entityName} ({season1})
           </h3>
           <div className="flex items-center justify-center h-64">
@@ -53,7 +53,7 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
           </div>
         </Card>
         <Card className="p-6 bg-card border-border shadow-card">
-          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+          <h3 className="text-fluid-heading text-foreground mb-4 text-center">
             {entityName} ({season2})
           </h3>
           <div className="flex items-center justify-center h-64">
@@ -67,7 +67,7 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
     return (
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card className="p-6 bg-card border-border shadow-card">
-          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+          <h3 className="text-fluid-heading text-foreground mb-4 text-center">
             {entityName} ({season1})
           </h3>
           <p className="text-destructive text-center">
@@ -75,7 +75,7 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
           </p>
         </Card>
         <Card className="p-6 bg-card border-border shadow-card">
-          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+          <h3 className="text-fluid-heading text-foreground mb-4 text-center">
             {entityName} ({season2})
           </h3>
           <p className="text-destructive text-center">

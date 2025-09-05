@@ -30,12 +30,19 @@ export default {
 				'xl': ['1.25rem', { lineHeight: '1.75rem' }],
 				'2xl': ['1.5rem', { lineHeight: '2rem' }],
 				'3xl': ['1.875rem', { lineHeight: '2.25rem' }],
-				// Mobile-optimized sizes
-				'mobile-xs': ['0.75rem', { lineHeight: '1.125rem' }],
-				'mobile-sm': ['0.8125rem', { lineHeight: '1.25rem' }],
-				'mobile-base': ['0.9375rem', { lineHeight: '1.5rem' }],
-				'mobile-lg': ['1.0625rem', { lineHeight: '1.625rem' }],
-				'mobile-xl': ['1.1875rem', { lineHeight: '1.75rem' }],
+				// Mobile-first responsive sizes (clamp for fluid scaling)
+				'mobile-xs': ['clamp(0.75rem, 2vw, 0.8125rem)', { lineHeight: '1.125rem' }],
+				'mobile-sm': ['clamp(0.8125rem, 2.2vw, 0.875rem)', { lineHeight: '1.25rem' }],
+				'mobile-base': ['clamp(0.9375rem, 2.5vw, 1rem)', { lineHeight: '1.5rem' }],
+				'mobile-lg': ['clamp(1.0625rem, 3vw, 1.125rem)', { lineHeight: '1.625rem' }],
+				'mobile-xl': ['clamp(1.1875rem, 3.5vw, 1.25rem)', { lineHeight: '1.75rem' }],
+				'mobile-2xl': ['clamp(1.25rem, 4vw, 1.5rem)', { lineHeight: '2rem' }],
+				// Responsive sizes that scale better across devices
+				'fluid-sm': ['clamp(0.875rem, 2.5vw, 1rem)', { lineHeight: '1.5rem' }],
+				'fluid-base': ['clamp(1rem, 3vw, 1.125rem)', { lineHeight: '1.75rem' }],
+				'fluid-lg': ['clamp(1.125rem, 3.5vw, 1.25rem)', { lineHeight: '1.75rem' }],
+				'fluid-xl': ['clamp(1.25rem, 4vw, 1.5rem)', { lineHeight: '2rem' }],
+				'fluid-2xl': ['clamp(1.5rem, 5vw, 1.875rem)', { lineHeight: '2.25rem' }],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

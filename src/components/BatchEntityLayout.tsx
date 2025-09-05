@@ -108,7 +108,7 @@ export function BatchEntityLayout({
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Season 1 Loading */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{season1} Season</h3>
+            <h3 className="text-fluid-heading">{season1} Season</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="h-64 bg-muted animate-pulse rounded-lg flex items-center justify-center">
                 Loading {entity1} shot chart...
@@ -129,7 +129,7 @@ export function BatchEntityLayout({
           
           {/* Season 2 Loading */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{season2} Season</h3>
+            <h3 className="text-fluid-heading">{season2} Season</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="h-64 bg-muted animate-pulse rounded-lg flex items-center justify-center">
                 Loading {entity1} shot chart...
@@ -159,7 +159,7 @@ export function BatchEntityLayout({
     
     return (
       <div className="text-center p-8">
-        <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Data</h3>
+        <h3 className="text-fluid-heading text-red-600 mb-2">Error Loading Data</h3>
         <p className="text-muted-foreground">{errorMessages.join(', ')}</p>
       </div>
     );
@@ -204,7 +204,7 @@ export function BatchEntityLayout({
 
       {/* Head-to-Head Comparisons - Debug data passed */}
       <div className="space-y-6">
-        <h2 className="text-xl font-bold text-center">Head-to-Head Comparisons</h2>
+        <h2 className="text-fluid-title text-center">Head-to-Head Comparisons</h2>
         <div className="space-y-8">
           <EntityVsEntityComparison
             entity1={entity1}
