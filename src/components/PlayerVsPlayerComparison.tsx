@@ -1,0 +1,292 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, Minus, Target, MapPin } from "lucide-react";
+import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
+
+interface PlayerVsPlayerComparisonProps {
+  player1: string;
+  player2: string;
+  season: string;
+  viewMode: "player" | "team";
+}
+
+export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }: PlayerVsPlayerComparisonProps) {
+  const { players: playersData, loading: playersLoading } = useAvailablePlayers(season);
+
+  // Get entity IDs
+  const getEntityId = (entityName: string) => {
+    if (viewMode === 'team') {
+      return entityName;
+    }
+    
+    const player = playersData?.find(p => p.name === entityName);
+    return player ? player.id.toString() : entityName;
+  };
+
+  const player1Id = getEntityId(player1);
+  const player2Id = getEntityId(player2);
+
+  const player1Data = useSupabaseShotData(season, player1Id, viewMode);
+  const player2Data = useSupabaseShotData(season, player2Id, viewMode);
+
+  // Zone analysis helper
+  const analyzeZones = (shotData: any[]) => {
+    const zones = {
+      "Restricted Area": { made: 0, total: 0 },
+      "Paint": { made: 0, total: 0 },
+      "Mid Range": { made: 0, total: 0 },
+      "Left Corner 3": { made: 0, total: 0 },
+      "Right Corner 3": { made: 0, total: 0 },
+      "Above Break 3": { made: 0, total: 0 },
+    };
+
+    shotData.forEach(shot => {
+      const distance = shot.shot_distance || 0;
+      const x = shot.loc_x || 0;
+      const y = shot.loc_y || 0;
+
+      let zone = "Mid Range";
+      
+      if (distance <= 4) {
+        zone = "Restricted Area";
+      } else if (distance <= 10 && y <= 80) {
+        zone = "Paint";
+      } else if (shot.shot_type === "3PT Field Goal") {
+        if ((x <= -220 && y <= 90) || (x >= 220 && y <= 90)) {
+          zone = x <= -220 ? "Left Corner 3" : "Right Corner 3";
+        } else {
+          zone = "Above Break 3";
+        }
+      }
+
+      zones[zone as keyof typeof zones].total++;
+      if (shot.shot_made_flag === 1) {
+        zones[zone as keyof typeof zones].made++;
+      }
+    });
+
+    const zoneStats = Object.entries(zones).map(([name, stats]) => ({
+      name,
+      percentage: stats.total > 0 ? (stats.made / stats.total) * 100 : 0,
+      made: stats.made,
+      total: stats.total
+    })).filter(zone => zone.total > 0);
+
+    const hottest = zoneStats.reduce((prev, curr) => 
+      (prev.percentage > curr.percentage) ? prev : curr, zoneStats[0] || { name: "N/A", percentage: 0, made: 0, total: 0 });
+    
+    const coldest = zoneStats.reduce((prev, curr) => 
+      (prev.percentage < curr.percentage) ? prev : curr, zoneStats[0] || { name: "N/A", percentage: 0, made: 0, total: 0 });
+    
+    const favorite = zoneStats.reduce((prev, curr) => 
+      (prev.total > curr.total) ? prev : curr, zoneStats[0] || { name: "N/A", percentage: 0, made: 0, total: 0 });
+
+    return { hottest, coldest, favorite };
+  };
+
+  const calculateStats = (data: any[]) => {
+    const totalShots = data.length;
+    const madeShots = data.filter(shot => shot.shot_made_flag === 1).length;
+    const twoPointers = data.filter(shot => shot.shot_type === "2PT Field Goal");
+    const threePointers = data.filter(shot => shot.shot_type === "3PT Field Goal");
+    
+    const twoPointMade = twoPointers.filter(shot => shot.shot_made_flag === 1).length;
+    const threePointMade = threePointers.filter(shot => shot.shot_made_flag === 1).length;
+    
+    const fgPercent = totalShots > 0 ? (madeShots / totalShots) * 100 : 0;
+    const twoPtPercent = twoPointers.length > 0 ? (twoPointMade / twoPointers.length) * 100 : 0;
+    const threePtPercent = threePointers.length > 0 ? (threePointMade / threePointers.length) * 100 : 0;
+    
+    const zones = analyzeZones(data);
+    
+    return {
+      fgPercent: Math.round(fgPercent * 10) / 10,
+      twoPtPercent: Math.round(twoPtPercent * 10) / 10,
+      threePtPercent: Math.round(threePtPercent * 10) / 10,
+      totalShots,
+      madeShots,
+      zones
+    };
+  };
+
+  if (playersLoading || player1Data.loading || player2Data.loading) {
+    return (
+      <Card className="p-6 bg-card border-border shadow-card">
+        <p className="text-muted-foreground text-center">Loading comparison data...</p>
+      </Card>
+    );
+  }
+
+  if (player1Data.error || player2Data.error) {
+    return (
+      <Card className="p-6 bg-card border-border shadow-card">
+        <p className="text-destructive text-center">Error loading data</p>
+      </Card>
+    );
+  }
+
+  const player1Stats = calculateStats(player1Data.shotData);
+  const player2Stats = calculateStats(player2Data.shotData);
+
+  const getComparisonIcon = (value1: number, value2: number) => {
+    if (value1 > value2) return <TrendingUp className="h-4 w-4 text-green-500" />;
+    if (value1 < value2) return <TrendingDown className="h-4 w-4 text-red-500" />;
+    return <Minus className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const getComparisonColor = (value1: number, value2: number) => {
+    if (value1 > value2) return "text-green-500";
+    if (value1 < value2) return "text-red-500";
+    return "text-muted-foreground";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Head-to-Head Comparison */}
+      <Card className="bg-card border-border shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            {player1} vs {player2} ({season})
+          </CardTitle>
+          <CardDescription>Head-to-Head Statistical Comparison</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Field Goal % */}
+            <div className="text-center space-y-2">
+              <div className="text-sm text-muted-foreground">Field Goal %</div>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.fgPercent, player2Stats.fgPercent)}`}>
+                  {player1Stats.fgPercent}%
+                </span>
+                {getComparisonIcon(player1Stats.fgPercent, player2Stats.fgPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.fgPercent, player1Stats.fgPercent)}`}>
+                  {player2Stats.fgPercent}%
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {player1} vs {player2}
+              </div>
+            </div>
+
+            {/* 2PT % */}
+            <div className="text-center space-y-2">
+              <div className="text-sm text-muted-foreground">2-Point %</div>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.twoPtPercent, player2Stats.twoPtPercent)}`}>
+                  {player1Stats.twoPtPercent}%
+                </span>
+                {getComparisonIcon(player1Stats.twoPtPercent, player2Stats.twoPtPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.twoPtPercent, player1Stats.twoPtPercent)}`}>
+                  {player2Stats.twoPtPercent}%
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {player1} vs {player2}
+              </div>
+            </div>
+
+            {/* 3PT % */}
+            <div className="text-center space-y-2">
+              <div className="text-sm text-muted-foreground">3-Point %</div>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.threePtPercent, player2Stats.threePtPercent)}`}>
+                  {player1Stats.threePtPercent}%
+                </span>
+                {getComparisonIcon(player1Stats.threePtPercent, player2Stats.threePtPercent)}
+                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.threePtPercent, player1Stats.threePtPercent)}`}>
+                  {player2Stats.threePtPercent}%
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {player1} vs {player2}
+              </div>
+            </div>
+
+            {/* Total Shots */}
+            <div className="text-center space-y-2">
+              <div className="text-sm text-muted-foreground">Total Shots</div>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`text-lg font-bold ${getComparisonColor(player1Stats.totalShots, player2Stats.totalShots)}`}>
+                  {player1Stats.totalShots}
+                </span>
+                {getComparisonIcon(player1Stats.totalShots, player2Stats.totalShots)}
+                <span className={`text-lg font-bold ${getComparisonColor(player2Stats.totalShots, player1Stats.totalShots)}`}>
+                  {player2Stats.totalShots}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {player1} vs {player2}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zone Analysis Comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[
+          { name: player1, stats: player1Stats },
+          { name: player2, stats: player2Stats }
+        ].map(({ name, stats }) => (
+          <Card key={name} className="bg-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                {name} Zone Analysis
+              </CardTitle>
+              <CardDescription>Court zone performance breakdown</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-3">
+                {/* Hottest Zone */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-medium">Hottest Zone</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-green-600">{stats.zones.hottest.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {Math.round(stats.zones.hottest.percentage * 10) / 10}% ({stats.zones.hottest.made}/{stats.zones.hottest.total})
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favorite Spot */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="text-sm font-medium">Favorite Spot</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-blue-600">{stats.zones.favorite.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {stats.zones.favorite.total} shots ({Math.round(stats.zones.favorite.percentage * 10) / 10}%)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coldest Zone */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span className="text-sm font-medium">Coldest Zone</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-red-600">{stats.zones.coldest.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {Math.round(stats.zones.coldest.percentage * 10) / 10}% ({stats.zones.coldest.made}/{stats.zones.coldest.total})
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

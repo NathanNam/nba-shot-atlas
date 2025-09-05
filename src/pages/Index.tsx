@@ -10,6 +10,8 @@ import { VersionMarker } from "@/components/ui/version-marker";
 import { ComparisonShotChart } from "@/components/ComparisonShotChart";
 import { ComparisonStatistics } from "@/components/ComparisonStatistics";
 import { MultiEntityComparison } from "@/components/MultiEntityComparison";
+import { PlayerVsPlayerComparison } from "@/components/PlayerVsPlayerComparison";
+import { PlayerVsPlayerDualSeasonComparison } from "@/components/PlayerVsPlayerDualSeasonComparison";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -130,35 +132,18 @@ const Index = () => {
             {/* Statistics Panels */}
             <div className="space-y-4 sm:space-y-6">
               {isComparisonMode ? (
-                // Comparison Mode Statistics - Handle multiple entities or seasons
+                // Comparison Mode Statistics
                 selectedEntities.length > 1 ? (
-                  // Multi-entity comparison across seasons - show 2x2 grid for statistics
-                  <div className="space-y-6">
-                    {/* First row - Current season statistics for all entities */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                    {/* Second row - Comparison season statistics for all entities */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <EntityStatistics
-                          key={`${entity}-${selectedSeason2}`}
-                          entityName={entity}
-                          selectedSeason={selectedSeason2}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  // Two players + comparison on: Player A vs B in both seasons
+                  <PlayerVsPlayerDualSeasonComparison
+                    player1={selectedEntities[0]}
+                    player2={selectedEntities[1]}
+                    season1={selectedSeason}
+                    season2={selectedSeason2}
+                    viewMode={viewMode}
+                  />
                 ) : (
-                  // Single entity across seasons
+                  // Single entity across seasons: Stephen Curry Season Comparison: 2023-24 → 2024-25
                   selectedEntities.map((entity) => (
                     <ComparisonStatistics
                       key={entity}
@@ -170,15 +155,26 @@ const Index = () => {
                   ))
                 )
               ) : (
-                // Single Season Mode Statistics (original functionality)
-                selectedEntities.map((entity) => (
-                  <EntityStatistics
-                    key={`${entity}-${selectedSeason}-${viewMode}`}
-                    entityName={entity}
-                    selectedSeason={selectedSeason}
+                // Non-comparison mode
+                selectedEntities.length > 1 ? (
+                  // Two players + comparison off: Player A vs B in same season
+                  <PlayerVsPlayerComparison
+                    player1={selectedEntities[0]}
+                    player2={selectedEntities[1]}
+                    season={selectedSeason}
                     viewMode={viewMode}
                   />
-                ))
+                ) : (
+                  // Single Season Mode Statistics (original functionality)
+                  selectedEntities.map((entity) => (
+                    <EntityStatistics
+                      key={`${entity}-${selectedSeason}-${viewMode}`}
+                      entityName={entity}
+                      selectedSeason={selectedSeason}
+                      viewMode={viewMode}
+                    />
+                  ))
+                )
               )}
             </div>
           </div>
