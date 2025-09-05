@@ -140,8 +140,7 @@ export class SupabaseDataService {
       
       let query = (supabase as any)
         .from(tableName)
-        .select('*')
-        .limit(10000); // Increase limit to allow more shots per player/team
+        .select('*');
 
       // Apply filters based on view mode - using new column names
       if (viewMode === 'player' && entityId) {
@@ -151,29 +150,32 @@ export class SupabaseDataService {
       }
       // For league mode, no additional filter needed
 
-      console.log(`🔍 SupabaseDataService: Executing query for ${tableName}, viewMode: ${viewMode}, entityId: ${entityId}`);
-      
-      const { data, error } = await query;
+      // Fetch all data using pagination to overcome Supabase's 1000 row limit
+      let allData: any[] = [];
+      let hasMore = true;
+      let offset = 0;
+      const batchSize = 1000;
 
-      console.log(`🔍 SupabaseDataService: Query result - data length: ${data?.length || 0}, error: ${error?.message || 'none'}`);
+      while (hasMore) {
+        const batchQuery = query.range(offset, offset + batchSize - 1);
+        const { data: batchData, error: batchError } = await batchQuery;
+        
+        if (batchError) throw new Error(`Failed to fetch shot data: ${batchError.message}`);
+        
+        if (batchData && batchData.length > 0) {
+          allData = allData.concat(batchData);
+          offset += batchSize;
+          hasMore = batchData.length === batchSize; // Continue if we got a full batch
+        } else {
+          hasMore = false;
+        }
+      }
 
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        logger.emit({
-          severityNumber: SeverityNumber.ERROR,
-          severityText: 'ERROR',
-          body: 'Error fetching shot data from Supabase',
-          attributes: { 
-            error: error.message,
-            season,
-            view_mode: viewMode,
-            entity_id: entityId || 'none',
-          },
-        });
-        throw new Error(`Failed to fetch shot data: ${error.message}`);
+      console.log(`🔍 SupabaseDataService: Fetched ${allData.length} total rows using pagination`);
+
+      const data = allData;
+      if (!data) {
+        throw new Error('No data returned from Supabase');
       }
 
       const shots: ShotData[] = data.map(row => ({
