@@ -141,7 +141,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
     );
   }
 
-  return <StatisticsPanel entityName={entityName} stats={calculatedStats} />;
+  return <StatisticsPanel entityName={`${entityName} (${selectedSeason})`} stats={calculatedStats} />;
 }
 
 // Helper function to analyze shooting zones

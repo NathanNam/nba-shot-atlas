@@ -162,7 +162,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityStatistics
                           key={`${entity}-${selectedSeason}`}
-                          entityName={`${entity} (${selectedSeason})`}
+                          entityName={entity}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
                         />
@@ -173,7 +173,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityStatistics
                           key={`${entity}-${selectedSeason2}`}
-                          entityName={`${entity} (${selectedSeason2})`}
+                          entityName={entity}
                           selectedSeason={selectedSeason2}
                           viewMode={viewMode}
                         />
