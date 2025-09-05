@@ -104,8 +104,45 @@ All colors MUST be HSL for proper theming
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Mobile-optimized text rendering */
+  @media (max-width: 640px) {
+    body {
+      -webkit-text-size-adjust: 100%;
+    }
+  }
+
+  /* Mobile Touch Targets */
+  .touch-target {
+    min-height: 44px; /* iOS recommended minimum */
+    min-width: 44px;
+  }
+
+  /* Mobile-first responsive text utilities */
+  .text-mobile-responsive {
+    @apply text-mobile-base sm:text-base;
+  }
+
+  .text-mobile-title {
+    @apply text-mobile-lg sm:text-xl font-semibold;
+  }
+
+  .text-mobile-subtitle {
+    @apply text-mobile-sm sm:text-sm;
+  }
+
+  /* Mobile spacing utilities */
+  .mobile-padding {
+    @apply p-4 sm:p-6;
+  }
+
+  .mobile-gap {
+    @apply gap-3 sm:gap-4 lg:gap-6;
   }
 
   /* NBA Typography */

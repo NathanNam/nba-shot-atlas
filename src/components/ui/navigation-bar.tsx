@@ -44,11 +44,12 @@ export function NavigationBar({
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">NBA Shot Analytics</h1>
+                <h1 className="text-mobile-lg sm:text-xl font-bold text-foreground">NBA Shot Analytics</h1>
               </div>
             </div>
-            
-            {/* Live Badge - Mobile */}
+            <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 text-mobile-xs sm:text-xs">
+              Live
+            </Badge>
             <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 text-xs">
               Live
             </Badge>
@@ -111,7 +112,7 @@ export function NavigationBar({
                   variant={viewMode === "player" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onViewModeChange("player")}
-                  className={`px-3 py-1 text-xs transition-all duration-200 ${
+                  className={`touch-target px-3 py-2 text-mobile-xs sm:text-xs transition-all duration-200 ${
                     viewMode === "player" 
                       ? "bg-primary text-primary-foreground shadow-md" 
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -124,7 +125,7 @@ export function NavigationBar({
                   variant={viewMode === "team" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onViewModeChange("team")}
-                  className={`px-3 py-1 text-xs transition-all duration-200 ${
+                  className={`touch-target px-3 py-2 text-mobile-xs sm:text-xs transition-all duration-200 ${
                     viewMode === "team" 
                       ? "bg-primary text-primary-foreground shadow-md" 
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"

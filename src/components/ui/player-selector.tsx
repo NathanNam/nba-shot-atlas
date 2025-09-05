@@ -69,10 +69,10 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
+        <h3 className="text-mobile-title">
           Select {viewMode === "player" ? "Players" : "Teams"}
         </h3>
-        <Badge variant="secondary" className="text-xs">
+        <Badge variant="secondary" className="text-mobile-xs sm:text-xs">
           {selectedEntities.length}/{maxSelections} selected
         </Badge>
       </div>
@@ -107,7 +107,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-secondary/30 border-border hover:bg-secondary/50"
+            className="touch-target w-full justify-between bg-secondary/30 border-border hover:bg-secondary/50"
             disabled={selectedEntities.length >= maxSelections}
           >
             <div className="flex items-center">

@@ -29,24 +29,24 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
   const getFontSizes = () => {
     if (size === "compact") {
       return {
-        title: "text-base sm:text-lg",
-        statValue: "text-lg sm:text-xl font-bold",
-        statLabel: "text-xs",
-        statDetail: "text-xs",
-        zoneTitle: "text-sm sm:text-base",
-        zoneValue: "text-sm sm:text-base",
-        zoneDetail: "text-xs"
+        title: "text-mobile-lg sm:text-lg",
+        statValue: "text-mobile-xl sm:text-xl font-semibold",
+        statLabel: "text-mobile-xs sm:text-xs",
+        statDetail: "text-mobile-xs",
+        zoneTitle: "text-mobile-sm sm:text-sm",
+        zoneValue: "text-mobile-sm sm:text-base",
+        zoneDetail: "text-mobile-xs"
       };
     }
     
     return {
-      title: "text-lg sm:text-xl",
-      statValue: "text-xl sm:text-2xl font-bold",
-      statLabel: "text-xs sm:text-sm",
-      statDetail: "text-xs",
-      zoneTitle: "text-sm sm:text-base",
-      zoneValue: "text-base sm:text-lg",
-      zoneDetail: "text-xs sm:text-sm"
+      title: "text-mobile-title",
+      statValue: "text-mobile-xl sm:text-2xl font-bold",
+      statLabel: "text-mobile-xs sm:text-sm",
+      statDetail: "text-mobile-xs",
+      zoneTitle: "text-mobile-sm sm:text-base",
+      zoneValue: "text-mobile-base sm:text-lg",
+      zoneDetail: "text-mobile-subtitle"
     };
   };
 
@@ -59,7 +59,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
   };
 
   return (
-    <Card className="p-4 sm:p-6 bg-gradient-stats border-border shadow-card">
+    <Card className="mobile-padding bg-gradient-stats border-border shadow-card">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         <h3 className={`${fontSizes.title} font-semibold text-foreground`}>{entityName} Statistics</h3>
         <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30 self-start sm:self-auto">
@@ -67,7 +67,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mobile-gap mb-4 sm:mb-6">
         {/* Field Goal Percentage */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
           <div className={`${fontSizes.statValue} text-primary`}>
