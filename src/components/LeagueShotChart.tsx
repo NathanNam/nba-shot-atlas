@@ -11,7 +11,7 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  console.log('League Shot Chart - Loading from sampled data for season:', selectedSeason);
+  console.log('League Shot Chart - Loading all shots for season:', selectedSeason);
 
   useEffect(() => {
     const fetchLeagueData = async () => {
@@ -19,19 +19,16 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
       setError(null);
       
       try {
-        // For shot chart, we sample shot data for visualization performance
-        // Use a reasonable sample size distributed across the season
+        // Fetch all shots for the league shot chart visualization
         const { data, error: dataError } = await supabase
           .from(`shots_${selectedSeason}` as any)
-          .select('xLegacy, yLegacy, shotResult, shotValue')
-          .limit(15000) // Sample 15k shots for good visualization
-          .order('gameId', { ascending: false }); // Get recent games first
+          .select('xLegacy, yLegacy, shotResult, shotValue');
         
         if (dataError) {
           throw new Error(`Error fetching shot data: ${dataError.message}`);
         }
         
-        console.log(`League Shot Chart - Loaded ${data?.length || 0} sample shots for visualization`);
+        console.log(`League Shot Chart - Loaded ${data?.length || 0} shots for visualization`);
         setShotData(data || []);
         
       } catch (err) {
@@ -74,7 +71,7 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
 
   return (
     <ShotChart
-      title={`NBA League Average (${selectedSeason}) - Sample of ${shotData.length.toLocaleString()} shots`}
+      title={`NBA League Average (${selectedSeason}) - ${shotData.length.toLocaleString()} shots`}
       data={shotData}
     />
   );
