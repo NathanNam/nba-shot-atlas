@@ -50,25 +50,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       };
     }
 
-    console.log(`📊 Statistics calculation for ${entityName}:`, {
-      totalShots: shotData.length,
-      actualDataLength: shotData.length,
-      sampleShots: shotData.slice(0, 10).map(s => ({ 
-        result: s.shotResult, 
-        value: s.shotValue,
-        distance: s.shotDistance 
-      })),
-      // Check for different shot result values in the data
-      uniqueResults: [...new Set(shotData.slice(0, 100).map(s => s.shotResult))],
-      // Add more debugging info
-      isExactly1000: shotData.length === 1000,
-      lastFewShots: shotData.slice(-5).map(s => ({ 
-        personId: s.personId,
-        shotResult: s.shotResult,
-        shotValue: s.shotValue
-      }))
-    });
-
     const totalShots = shotData.length;
     
     // More robust shot result checking - check both parsed and raw formats
@@ -77,8 +58,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       // Check for various formats: 'Made', 'MADE', '1'
       return result === 'Made' || result === 'MADE' || result === '1';
     }).length;
-    
-    console.log(`📊 Made shots calculation: ${madeShots} of ${totalShots}`);
     
     const fieldGoalPercentage = totalShots > 0 ? madeShots / totalShots : 0;
 
@@ -98,6 +77,14 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
     
     const twoPointPercentage = twoPointShots.length > 0 ? twoPointMade / twoPointShots.length : 0;
     const threePointPercentage = threePointShots.length > 0 ? threePointMade / threePointShots.length : 0;
+
+    // Debug output for 3PT calculation
+    console.log(`🏀 3PT Analysis for ${entityName}:`, {
+      threePointMade,
+      threePointAttempted: threePointShots.length,
+      threePointPercentage: (threePointPercentage * 100).toFixed(1) + '%',
+      calculation: `${threePointMade}/${threePointShots.length} = ${(threePointPercentage * 100).toFixed(1)}%`
+    });
 
     // Zone analysis based on shot distance and location
     const zones = analyzeZones(shotData);
@@ -119,7 +106,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       favoriteSpot: zones.favoriteSpot,
       favoriteSpotStats: zones.favoriteSpotStats
     };
-  }, [shotData, entityName, playersLoading, entityId]);
+  }, [shotData, entityName, playersLoading, entityId, selectedSeason]);
 
   if (loading || playersLoading || !entityId) {
     return (
