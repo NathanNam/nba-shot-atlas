@@ -10,7 +10,8 @@ class ShotDataManager {
     data: ShotData[];
     loading: boolean;
     error: string | null;
-    subscribers: Set<(data: { shotData: ShotData[], loading: boolean, error: string | null }) => void>;
+    progress: { loaded: number; total?: number; isProcessing?: boolean } | null;
+    subscribers: Set<(data: { shotData: ShotData[], loading: boolean, error: string | null, progress: { loaded: number; total?: number; isProcessing?: boolean } | null }) => void>;
     fetchPromise?: Promise<ShotData[]>;
   }>();
 
@@ -29,7 +30,7 @@ class ShotDataManager {
     season: string, 
     entityId: string, 
     viewMode: 'player' | 'team' | 'league',
-    callback: (data: { shotData: ShotData[], loading: boolean, error: string | null }) => void
+    callback: (data: { shotData: ShotData[], loading: boolean, error: string | null, progress: { loaded: number; total?: number; isProcessing?: boolean } | null }) => void
   ) {
     const key = this.getKey(season, entityId, viewMode);
     
@@ -38,6 +39,7 @@ class ShotDataManager {
         data: [],
         loading: true,
         error: null,
+        progress: null,
         subscribers: new Set(),
       });
       
@@ -52,7 +54,8 @@ class ShotDataManager {
     callback({
       shotData: entry.data,
       loading: entry.loading,
-      error: entry.error
+      error: entry.error,
+      progress: entry.progress
     });
 
     // Return unsubscribe function
@@ -95,7 +98,18 @@ class ShotDataManager {
           attributes: { season, entity_id: entityId, view_mode: viewMode },
         });
 
-        const data = await SupabaseDataService.getShotData(season, entityId, viewMode);
+        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, (loaded, total) => {
+          // Update progress and notify subscribers
+          entry.progress = { loaded, total, isProcessing: true };
+          entry.subscribers.forEach(callback => {
+            callback({
+              shotData: entry.data,
+              loading: entry.loading,
+              error: entry.error,
+              progress: entry.progress
+            });
+          });
+        });
         
         console.log(`🔐 ShotDataManager: Fetched ${data.length} shots for ${key}`, {
           dataHash: JSON.stringify(data.slice(0, 3)),
@@ -105,6 +119,7 @@ class ShotDataManager {
         entry.data = data;
         entry.loading = false;
         entry.error = null;
+        entry.progress = null; // Clear progress when complete
 
         span.setAttributes({ success: true, result_count: data.length });
 
@@ -113,7 +128,8 @@ class ShotDataManager {
           callback({
             shotData: data,
             loading: false,
-            error: null
+            error: null,
+            progress: null
           });
         });
 
@@ -125,6 +141,7 @@ class ShotDataManager {
         entry.data = [];
         entry.loading = false;
         entry.error = errorMessage;
+        entry.progress = null;
 
         span.setAttributes({ success: false, error: errorMessage });
 
@@ -133,7 +150,8 @@ class ShotDataManager {
           callback({
             shotData: [],
             loading: false,
-            error: errorMessage
+            error: errorMessage,
+            progress: null
           });
         });
 
@@ -166,10 +184,12 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
     shotData: ShotData[];
     loading: boolean;
     error: string | null;
+    progress: { loaded: number; total?: number; isProcessing?: boolean } | null;
   }>({
     shotData: [],
     loading: true,
-    error: null
+    error: null,
+    progress: null
   });
 
   const manager = useRef(ShotDataManager.getInstance());

@@ -46,8 +46,8 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   );
   
   // Use preloaded data if available, otherwise use hook result
-  const { shotData, loading, error } = preloadedData !== undefined 
-    ? { shotData: preloadedData, loading: false, error: null }
+  const { shotData, loading, error, progress } = preloadedData !== undefined 
+    ? { shotData: preloadedData, loading: false, error: null, progress: null }
     : hookResult;
     
   // Debug logging
@@ -88,6 +88,7 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
     <ShotChart
       title={entityName}
       data={isLoading ? undefined : shotData}
+      progress={isLoading ? progress : null}
     />
   );
 }
