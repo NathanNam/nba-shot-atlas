@@ -92,7 +92,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityShotChart
                           key={`${entity}-${selectedSeason}`}
-                          entityName={entity}
+                          entityName={`${entity} (${selectedSeason})`}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
                         />
@@ -103,7 +103,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityShotChart
                           key={`${entity}-${selectedSeason2}`}
-                          entityName={entity}
+                          entityName={`${entity} (${selectedSeason2})`}
                           selectedSeason={selectedSeason2}
                           viewMode={viewMode}
                         />
@@ -162,7 +162,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityStatistics
                           key={`${entity}-${selectedSeason}`}
-                          entityName={entity}
+                          entityName={`${entity} (${selectedSeason})`}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
                         />
@@ -173,7 +173,7 @@ const Index = () => {
                       {selectedEntities.map((entity) => (
                         <EntityStatistics
                           key={`${entity}-${selectedSeason2}`}
-                          entityName={entity}
+                          entityName={`${entity} (${selectedSeason2})`}
                           selectedSeason={selectedSeason2}
                           viewMode={viewMode}
                         />
