@@ -177,7 +177,7 @@ class SupabaseDataService {
 
     console.log(`🔍 SupabaseDataService: Using fallback sequential pagination`);
 
-    while (hasMore && batchCount < 10) { // Limit to 10 batches (10k records) for fallback
+    while (hasMore) { // Remove artificial limit - fetch all data
       let batchQuery = (supabase as any)
         .from(tableName)
         .select('*')
@@ -201,6 +201,8 @@ class SupabaseDataService {
         offset += batchSize;
         batchCount++;
         hasMore = batchData.length === batchSize;
+        
+        console.log(`🔍 SupabaseDataService: Sequential batch ${batchCount} - ${batchData.length} records (total: ${allData.length})`);
         
         if (progressCallback) {
           progressCallback(allData.length, undefined);

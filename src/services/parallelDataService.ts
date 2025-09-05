@@ -25,14 +25,11 @@ export class ParallelDataService {
       console.log('Could not get count estimate:', error);
     }
 
-    // For league mode with large datasets, use sampling instead
-    if (viewMode === 'league' && totalCount > 50000) {
-      console.log(`🚀 ParallelDataService: Large dataset detected (${totalCount}), using sampling approach`);
-      return this.getSampledData(season, entityId, viewMode);
-    }
-
+    // Use parallel fetching for all datasets - no sampling
+    console.log(`🚀 ParallelDataService: Using parallel fetching for ${totalCount} records`);
+    
     const batchSize = 1000;
-    const maxConcurrent = 5; // Limit concurrent requests to avoid overwhelming the server
+    const maxConcurrent = 8; // Increased concurrent requests for better performance
     const totalBatches = Math.ceil(totalCount / batchSize);
     
     console.log(`🚀 ParallelDataService: Will fetch ${totalBatches} batches of ${batchSize} records each`);
@@ -113,45 +110,7 @@ export class ParallelDataService {
   }
 
   /**
-   * Get sampled data for large datasets (like league view)
-   */
-  private static async getSampledData(
-    season: string,
-    entityId?: string,
-    viewMode: 'player' | 'team' | 'league' = 'league'
-  ): Promise<ShotData[]> {
-    try {
-      const response = await fetch('https://icfqngdeohzzjvzcmawo.supabase.co/functions/v1/get-shot-samples', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          season,
-          sampleSize: 10000, // Get 10k representative samples
-          entityId,
-          viewMode
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Edge function error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log(`🚀 ParallelDataService: Got ${result.shots.length} sampled shots`);
-      
-      return result.shots;
-    } catch (error) {
-      console.error('Error getting sampled data:', error);
-      // Fallback to regular fetching with a smaller limit
-      return this.getFallbackData(season, entityId, viewMode);
-    }
-  }
-
-  /**
-   * Fallback method for when other approaches fail
+   * Fallback method for when parallel fetching fails
    */
   private static async getFallbackData(
     season: string,
@@ -163,7 +122,7 @@ export class ParallelDataService {
     let query = (supabase as any)
       .from(tableName)
       .select('*')
-      .limit(5000); // Limit to 5000 for fallback
+      .limit(10000); // Higher limit for fallback
 
     // Apply filters
     if (viewMode === 'player' && entityId) {
