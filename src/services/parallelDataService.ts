@@ -214,4 +214,115 @@ export class ParallelDataService {
     console.log(`🚀 ParallelDataService: Fallback fetch got ${shots.length} records`);
     return shots;
   }
+
+  /**
+   * Parallel data fetching for league mode
+   */
+  private static async getLeagueDataParallel(
+    season: string,
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const batchSize = 5000;
+    const maxParallelRequests = 4;
+    let allData: ShotData[] = [];
+    let hasMoreData = true;
+    let currentGameId: string | null = null;
+    let currentActionNumber: number | null = null;
+    let totalLoaded = 0;
+
+    console.log(`🚀 Starting parallel league data fetch for ${season}`);
+
+    while (hasMoreData) {
+      const promises: Promise<{ data: any[]; hasMore: boolean; lastGameId: string | null; lastActionNumber: number | null }>[] = [];
+      
+      for (let i = 0; i < maxParallelRequests && hasMoreData; i++) {
+        const promise = this.fetchLeagueBatch(season, batchSize, currentGameId, currentActionNumber);
+        promises.push(promise);
+        
+        // For subsequent requests in this batch, we'll need to wait for the previous one to complete
+        // to get the proper cursor values, so we break after the first request in each parallel batch
+        break;
+      }
+
+      const results = await Promise.all(promises);
+      
+      for (const result of results) {
+        if (result.data.length > 0) {
+          // Transform the data to ShotData format
+          const transformedData = result.data.map(shot => ({
+            personId: String(shot.personId || ''),
+            teamTricode: String(shot.teamTricode || ''),
+            xLegacy: Number(shot.xLegacy) || 0,
+            yLegacy: Number(shot.yLegacy) || 0, 
+            shotDistance: Number(shot.shotDistance) || 0,
+            shotResult: String(shot.shotResult || ''),
+            shotValue: Number(shot.shotValue) || 2,
+            description: String(shot.description || ''),
+            subType: String(shot.subType || ''),
+          }));
+          allData = allData.concat(transformedData);
+          totalLoaded += result.data.length;
+          
+          // Update cursor for next batch
+          currentGameId = result.lastGameId;
+          currentActionNumber = result.lastActionNumber;
+          
+          progressCallback?.(totalLoaded);
+          console.log(`📊 Loaded ${totalLoaded} league shots so far...`);
+        }
+        
+        hasMoreData = result.hasMore;
+      }
+    }
+
+    console.log(`✅ Parallel league fetch complete: ${allData.length} shots loaded`);
+    return allData;
+  }
+
+  /**
+   * Fetch a single batch of league data
+   */
+  private static async fetchLeagueBatch(
+    season: string,
+    batchSize: number,
+    gameId: string | null,
+    actionNumber: number | null
+  ): Promise<{ data: any[]; hasMore: boolean; lastGameId: string | null; lastActionNumber: number | null }> {
+    
+    let query = supabase
+      .from(`shots_${season}` as any)
+      .select('*')
+      .order('gameId', { ascending: true })
+      .order('actionNumber', { ascending: true })
+      .limit(batchSize);
+
+    // Apply cursor if provided
+    if (gameId && actionNumber !== null) {
+      query = query.or(`gameId.gt.${gameId},and(gameId.eq.${gameId},actionNumber.gt.${actionNumber})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ Error fetching league batch:', error);
+      throw error;
+    }
+
+    const hasMore = data && data.length === batchSize;
+    let lastGameId: string | null = null;
+    let lastActionNumber: number | null = null;
+
+    if (data && data.length > 0) {
+      const lastShot = data[data.length - 1] as any;
+      lastGameId = lastShot.gameId?.toString() || null;
+      lastActionNumber = lastShot.actionNumber || null;
+    }
+
+    return {
+      data: data || [],
+      hasMore: hasMore || false,
+      lastGameId,
+      lastActionNumber
+    };
+  }
 }

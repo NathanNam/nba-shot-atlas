@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { ShotChart } from "@/components/ui/shot-chart";
+import { ParallelDataService } from '@/services/parallelDataService';
 
 interface LeagueShotChartProps {
   selectedSeason: string;
@@ -10,23 +10,31 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
   const [shotData, setShotData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [totalShots, setTotalShots] = useState<number | undefined>(undefined);
 
-  console.log('League Shot Chart - Loading all shots for season:', selectedSeason);
+  console.log('League Shot Chart - Using parallel loading for season:', selectedSeason);
 
   useEffect(() => {
     const fetchLeagueData = async () => {
       setLoading(true);
       setError(null);
+      setProgress(0);
+      setTotalShots(undefined);
       
       try {
-        // Fetch all shots for the league shot chart visualization
-        const { data, error: dataError } = await supabase
-          .from(`shots_${selectedSeason}` as any)
-          .select('xLegacy, yLegacy, shotResult, shotValue');
+        console.log(`🔍 LeagueShotChart: Using parallel loading for ${selectedSeason}`);
         
-        if (dataError) {
-          throw new Error(`Error fetching shot data: ${dataError.message}`);
-        }
+        // Use parallel data service to fetch all shots for visualization
+        const data = await ParallelDataService.getDataParallel(
+          selectedSeason,
+          undefined,
+          'league',
+          (loaded, total) => {
+            if (total) setTotalShots(total);
+            setProgress(loaded);
+          }
+        );
         
         console.log(`League Shot Chart - Loaded ${data?.length || 0} shots for visualization`);
         setShotData(data || []);
@@ -50,7 +58,20 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
           NBA League Average ({selectedSeason})
         </h3>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <div className="animate-pulse text-muted-foreground">Loading league shot chart...</div>
+          <div className="animate-pulse text-muted-foreground">Loading league shot chart with parallel processing...</div>
+          {totalShots && (
+            <div className="text-sm text-center space-y-2 w-full max-w-xs">
+              <div className="text-muted-foreground">
+                Loaded {progress.toLocaleString()} / {totalShots.toLocaleString()} shots
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${totalShots > 0 ? (progress / totalShots) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from '@/integrations/supabase/client';
+import { Progress } from "@/components/ui/progress";
+import { ParallelDataService } from '@/services/parallelDataService';
 
 interface LeagueStatisticsProps {
   selectedSeason: string;
@@ -19,8 +20,10 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [totalShots, setTotalShots] = useState<number | undefined>(undefined);
   
-  console.log('League Statistics - Calculating directly from shots table for season:', selectedSeason);
+  console.log('League Statistics - Using parallel loading for season:', selectedSeason);
 
   // Helper function to determine zone from coordinates
   const getZoneFromCoordinates = (x: number, y: number): string => {
@@ -38,18 +41,22 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
     const fetchLeagueStats = async () => {
       setLoading(true);
       setError(null);
+      setProgress(0);
+      setTotalShots(undefined);
       
       try {
-        console.log(`🔍 LeagueStatistics: Calculating stats directly from shots_${selectedSeason} table`);
+        console.log(`🔍 LeagueStatistics: Using parallel loading for ${selectedSeason}`);
         
-        // Fetch all shots for the season
-        const { data: shotData, error: shotError } = await supabase
-          .from(`shots_${selectedSeason}` as any)
-          .select('shotResult, shotValue, xLegacy, yLegacy') as any;
-        
-        if (shotError) {
-          throw new Error(`Error fetching shot data: ${shotError.message}`);
-        }
+        // Use parallel data service to fetch all shots
+        const shotData = await ParallelDataService.getDataParallel(
+          selectedSeason,
+          undefined,
+          'league',
+          (loaded, total) => {
+            if (total) setTotalShots(total);
+            setProgress(loaded);
+          }
+        );
         
         if (!shotData || shotData.length === 0) {
           throw new Error(`No shot data found for season ${selectedSeason}`);
@@ -68,7 +75,7 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
         // Zone tracking
         const zoneStats: { [key: string]: { made: number; attempted: number } } = {};
         
-        (shotData as ShotData[]).forEach(shot => {
+        shotData.forEach(shot => {
           const isMade = shot.shotResult === 'Made' || shot.shotResult === 'made';
           const shotValue = typeof shot.shotValue === 'number' ? shot.shotValue : parseInt(String(shot.shotValue) || '2');
           
@@ -82,8 +89,8 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
             if (isMade) threePointMade++;
           }
           
-          // Zone calculation (simplified)
-          const zone = getZoneFromCoordinates(parseFloat(shot.xLegacy) || 0, parseFloat(shot.yLegacy) || 0);
+          // Zone calculation
+          const zone = getZoneFromCoordinates(parseFloat(String(shot.xLegacy)) || 0, parseFloat(String(shot.yLegacy)) || 0);
           if (!zoneStats[zone]) {
             zoneStats[zone] = { made: 0, attempted: 0 };
           }
@@ -165,8 +172,16 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
         <CardContent>
           <div className="space-y-4">
             <div className="text-center text-muted-foreground">
-              Calculating league statistics from shot data...
+              Loading league statistics with parallel processing...
             </div>
+            {totalShots && (
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground text-center">
+                  Processed {progress.toLocaleString()} / {totalShots.toLocaleString()} shots
+                </div>
+                <Progress value={(progress / totalShots) * 100} className="w-full" />
+              </div>
+            )}
             <Skeleton className="h-32 w-full" />
           </div>
         </CardContent>
