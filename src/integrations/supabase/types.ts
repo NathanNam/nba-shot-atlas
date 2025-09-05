@@ -14,7 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      players: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          team: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          team?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          team?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shots: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          person_id: string
+          season: string
+          shot_distance: number
+          shot_result: string
+          shot_value: number
+          sub_type: string | null
+          team_tricode: string
+          x_legacy: number
+          y_legacy: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          person_id: string
+          season: string
+          shot_distance: number
+          shot_result: string
+          shot_value: number
+          sub_type?: string | null
+          team_tricode: string
+          x_legacy: number
+          y_legacy: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          person_id?: string
+          season?: string
+          shot_distance?: number
+          shot_result?: string
+          shot_value?: number
+          sub_type?: string | null
+          team_tricode?: string
+          x_legacy?: number
+          y_legacy?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shots_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
