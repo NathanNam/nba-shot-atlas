@@ -6,7 +6,7 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 
 export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
   const [shotData, setShotData] = useState<ShotData[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ loaded: number; total?: number } | null>(null);
 
@@ -21,12 +21,31 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         return;
       }
 
-      // For league mode, force a fresh fetch to avoid old sampled data
-      if (viewMode === 'league') {
+      // Check preloaded data first for instant loading of defaults
+      const defaultKeys = {
+        'player': entityId === '201939' && season === '2024-25' ? 'player_stephen_curry_2024-25' : null,
+        'team': entityId === 'GSW' && season === '2024-25' ? 'team_gsw_2024-25' : null,
+        'league': season === '2024-25' ? 'league_2024-25' : null
+      };
+      
+      const preloadedKey = defaultKeys[viewMode];
+      if (preloadedKey) {
+        const preloadedData = dataCache.getPreloaded(preloadedKey);
+        if (preloadedData) {
+          console.log(`🚀 useSupabaseShotData: Using preloaded data for ${preloadedKey}, length: ${preloadedData.data.length}`);
+          setShotData(preloadedData.data);
+          setLoading(false);
+          setError(null);
+          return;
+        }
+      }
+
+      // For league mode, force a fresh fetch to avoid old sampled data (except for preloaded)
+      if (viewMode === 'league' && !preloadedKey) {
         console.log(`🚀 useSupabaseShotData: League mode - forcing fresh fetch to avoid old sampled data`);
         // Clear any existing league cache to prevent old sampled data
         dataCache.clear();
-      } else {
+      } else if (!preloadedKey) {
         // Check cache first for immediate response for non-league modes
         const cachedData = dataCache.get(season, entityId, viewMode);
         if (cachedData) {

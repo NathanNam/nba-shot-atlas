@@ -11,9 +11,9 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
   // Use full dataset with progressive loading
   const { shotData, loading, error, progress } = useSupabaseShotData(selectedSeason, "", "league");
   
-  console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error, 'Progress:', progress);
+  console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Loading:', loading, 'Error:', error, 'Progress:', progress);
 
-  if (loading || progress) {
+  if (loading && shotData.length === 0) {
     const progressText = progress 
       ? `Loading: ${progress.loaded.toLocaleString()}${progress.total ? ` / ${progress.total.toLocaleString()}` : ''} shots`
       : 'Loading league statistics...';

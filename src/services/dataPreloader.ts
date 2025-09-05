@@ -13,9 +13,14 @@ export class DataPreloader {
     this.isPreloading = true;
     console.log('🚀 DataPreloader: Starting preload of default data...');
     
-    // Clear any old cache to ensure fresh data
-    dataCache.clear();
-    dataCache.clearPreloaded();
+    // Only clear cache if we don't already have default data ready
+    if (!dataCache.isDefaultDataReady()) {
+      console.log('🚀 DataPreloader: Clearing cache for fresh preload...');
+      dataCache.clear();
+      dataCache.clearPreloaded();
+    } else {
+      console.log('🚀 DataPreloader: Default data already available, skipping cache clear');
+    }
 
     this.preloadingPromise = this.performPreload();
     

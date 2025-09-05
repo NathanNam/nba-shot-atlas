@@ -9,8 +9,8 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
   // Use full dataset with progressive loading
   const { shotData, loading, error, progress } = useSupabaseShotData(selectedSeason, "", "league");
   
-  console.log('League Shot Chart - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error, 'Progress:', progress);
-  if (loading || progress) {
+  console.log('League Shot Chart - Season:', selectedSeason, 'Data length:', shotData.length, 'Loading:', loading, 'Error:', error, 'Progress:', progress);
+  if (loading && shotData.length === 0) {
     const progressText = progress 
       ? `Loading: ${progress.loaded.toLocaleString()}${progress.total ? ` / ${progress.total.toLocaleString()}` : ''} shots`
       : 'Loading league data...';
@@ -36,9 +36,16 @@ export function LeagueShotChart({ selectedSeason }: LeagueShotChartProps) {
   }
 
   return (
-    <ShotChart
-      title={`NBA League Average (${selectedSeason}) - ${shotData.length.toLocaleString()} total shots`}
-      data={shotData}
-    />
+    <div>
+      {progress && shotData.length > 0 && (
+        <div className="mb-2 text-xs text-muted-foreground">
+          Loading additional data: {progress.loaded.toLocaleString()} shots loaded
+        </div>
+      )}
+      <ShotChart
+        title={`NBA League Average (${selectedSeason}) - ${shotData.length.toLocaleString()} total shots`}
+        data={shotData}
+      />
+    </div>
   );
 }
