@@ -118,6 +118,13 @@ export class SupabaseDataService {
     try {
       console.log(`🔍 SupabaseDataService: Starting fresh fetch for ${season}_${viewMode}_${entityId || 'all'}`);
       
+      // FORCE CLEAR ALL CACHE LAYERS FOR TESTING
+      if (viewMode === 'league') {
+        console.log(`🔍 SupabaseDataService: FORCE clearing dataCache for league mode`);
+        dataCache.clear();
+        dataCache.clearPreloaded();
+      }
+      
       span.setAttributes({ cache_hit: false });
 
       dbQueryCounter.add(1, { table: 'shots', operation: 'select' });

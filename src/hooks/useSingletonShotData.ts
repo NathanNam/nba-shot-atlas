@@ -177,11 +177,9 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
   useEffect(() => {
     console.log(`🔐 useSingletonShotData: Subscribing to ${season}_${entityId}_${viewMode}`);
     
-    // Clear cache for league mode to force fresh fetch with new logic
-    if (viewMode === 'league') {
-      console.log(`🔐 useSingletonShotData: Clearing cache for league mode to test new pagination`);
-      manager.current.clearCache();
-    }
+    // FORCE CLEAR ALL CACHE to test new pagination logic
+    console.log(`🔐 useSingletonShotData: FORCE clearing ALL cache to test new pagination`);
+    manager.current.clearCache();
     
     const unsubscribe = manager.current.subscribe(
       season, 
