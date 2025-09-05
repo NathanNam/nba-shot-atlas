@@ -42,9 +42,9 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
     };
 
     shotData.forEach(shot => {
-      const distance = shot.shot_distance || 0;
-      const x = shot.loc_x || 0;
-      const y = shot.loc_y || 0;
+      const distance = shot.shotDistance || 0;
+      const x = shot.xLegacy || 0;
+      const y = shot.yLegacy || 0;
 
       let zone = "Mid Range";
       
@@ -52,7 +52,7 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
         zone = "Restricted Area";
       } else if (distance <= 10 && y <= 80) {
         zone = "Paint";
-      } else if (shot.shot_type === "3PT Field Goal") {
+      } else if (shot.shotValue === 3) {
         if ((x <= -220 && y <= 90) || (x >= 220 && y <= 90)) {
           zone = x <= -220 ? "Left Corner 3" : "Right Corner 3";
         } else {
@@ -61,7 +61,7 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
       }
 
       zones[zone as keyof typeof zones].total++;
-      if (shot.shot_made_flag === 1) {
+      if (shot.shotResult === 'Made') {
         zones[zone as keyof typeof zones].made++;
       }
     });
@@ -87,12 +87,12 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
 
   const calculateStats = (data: any[]) => {
     const totalShots = data.length;
-    const madeShots = data.filter(shot => shot.shot_made_flag === 1).length;
-    const twoPointers = data.filter(shot => shot.shot_type === "2PT Field Goal");
-    const threePointers = data.filter(shot => shot.shot_type === "3PT Field Goal");
+    const madeShots = data.filter(shot => shot.shotResult === 'Made').length;
+    const twoPointers = data.filter(shot => shot.shotValue === 2);
+    const threePointers = data.filter(shot => shot.shotValue === 3);
     
-    const twoPointMade = twoPointers.filter(shot => shot.shot_made_flag === 1).length;
-    const threePointMade = threePointers.filter(shot => shot.shot_made_flag === 1).length;
+    const twoPointMade = twoPointers.filter(shot => shot.shotResult === 'Made').length;
+    const threePointMade = threePointers.filter(shot => shot.shotResult === 'Made').length;
     
     const fgPercent = totalShots > 0 ? (madeShots / totalShots) * 100 : 0;
     const twoPtPercent = twoPointers.length > 0 ? (twoPointMade / twoPointers.length) * 100 : 0;
@@ -224,69 +224,6 @@ export function PlayerVsPlayerComparison({ player1, player2, season, viewMode }:
           </div>
         </CardContent>
       </Card>
-
-      {/* Zone Analysis Comparison */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[
-          { name: player1, stats: player1Stats },
-          { name: player2, stats: player2Stats }
-        ].map(({ name, stats }) => (
-          <Card key={name} className="bg-card border-border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                {name} Zone Analysis
-              </CardTitle>
-              <CardDescription>Court zone performance breakdown</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                {/* Hottest Zone */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-medium">Hottest Zone</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-green-600">{stats.zones.hottest.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {Math.round(stats.zones.hottest.percentage * 10) / 10}% ({stats.zones.hottest.made}/{stats.zones.hottest.total})
-                    </div>
-                  </div>
-                </div>
-
-                {/* Favorite Spot */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    <span className="text-sm font-medium">Favorite Spot</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-blue-600">{stats.zones.favorite.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {stats.zones.favorite.total} shots ({Math.round(stats.zones.favorite.percentage * 10) / 10}%)
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coldest Zone */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span className="text-sm font-medium">Coldest Zone</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-red-600">{stats.zones.coldest.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {Math.round(stats.zones.coldest.percentage * 10) / 10}% ({stats.zones.coldest.made}/{stats.zones.coldest.total})
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }
