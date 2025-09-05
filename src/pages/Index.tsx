@@ -191,6 +191,7 @@ const Index = () => {
                         />
                       ))}
                     </div>
+                  </div>
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
