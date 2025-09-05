@@ -179,6 +179,18 @@ const Index = () => {
                         />
                       ))}
                     </div>
+                    {/* Season Comparison cards for each entity */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {selectedEntities.map((entity) => (
+                        <ComparisonStatistics
+                          key={`${entity}-comparison`}
+                          entityName={entity}
+                          season1={selectedSeason}
+                          season2={selectedSeason2}
+                          viewMode={viewMode}
+                        />
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   // Single entity across seasons
