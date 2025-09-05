@@ -37,7 +37,10 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
   
   console.log(`🔍 ComparisonShotChart: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}", loading1=${loading1}, loading2=${loading2}`);
   
-  // Don't fetch data until we have valid entity IDs
+  // Always call useMultiSeasonData hook - never conditionally call hooks
+  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
+  
+  // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
     return (
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -60,9 +63,6 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
       </div>
     );
   }
-  
-  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
-  
   if (multiSeasonData.season1.error || multiSeasonData.season2?.error) {
     return (
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

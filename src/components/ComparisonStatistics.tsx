@@ -39,7 +39,10 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
   
   console.log(`🔍 ComparisonStatistics: entityName="${entityName}", entityId1="${entityId1}", entityId2="${entityId2}", loading1=${loading1}, loading2=${loading2}`);
   
-  // Don't fetch data until we have valid entity IDs
+  // Always call useMultiSeasonData hook - never conditionally call hooks
+  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
+
+  // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -62,8 +65,6 @@ export function ComparisonStatistics({ entityName, season1, season2, viewMode }:
       </div>
     );
   }
-  
-  const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
 
   // Helper function to analyze shooting zones (same as EntityStatistics)
   const analyzeZones = (shotData: any[]) => {
