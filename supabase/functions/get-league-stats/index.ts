@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     console.log(`🔍 Edge Function: Computing league stats for ${tableName}`)
 
     // Use more efficient aggregation queries to avoid timeouts
-    const batchSize = 50000
+    const batchSize = 10000  // Smaller batches for reliability
     let totalProcessed = 0
     let hasMore = true
     let offset = 0
@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
         .from(tableName)
         .select('shotResult, shotValue, xLegacy, yLegacy')
         .range(offset, offset + batchSize - 1)
+        .limit(batchSize)  // Explicitly set limit to ensure we get full batches
 
       if (batchError) {
         throw new Error(`Error fetching batch: ${batchError.message}`)
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
         hasMore = false
       }
       
-      console.log(`🔍 Processed ${totalProcessed} shots so far`)
+      console.log(`🔍 Processed ${totalProcessed} shots so far, batch size: ${batchData.length}, hasMore: ${hasMore}`)
     }
 
     // Convert zone map to stats array
