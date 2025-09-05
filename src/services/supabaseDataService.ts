@@ -161,8 +161,8 @@ export class SupabaseDataService {
       let hasMore = true;
       let offset = 0;
       
-      // Use larger batch sizes for league data
-      const batchSize = viewMode === 'league' ? 5000 : 1000;
+      // Use larger batch sizes for league data - removed artificial limits
+      const batchSize = viewMode === 'league' ? 10000 : 1000; // Increased league batch size
       let batchCount = 0;
 
       while (hasMore) {
@@ -180,9 +180,16 @@ export class SupabaseDataService {
           // Report progress for league mode
           if (viewMode === 'league' && progressCallback) {
             progressCallback(allData.length, estimatedTotal);
-            console.log(`🔍 SupabaseDataService: League progress - loaded ${allData.length} shots (batch ${batchCount})`);
+            console.log(`🔍 SupabaseDataService: League progress - loaded ${allData.length} shots (batch ${batchCount}, batch size: ${batchData.length})`);
+          }
+          
+          // Add safety check for league mode to prevent infinite loops but allow large datasets
+          if (viewMode === 'league' && allData.length > 2000000) { // 2M shots safety limit
+            console.warn(`🔍 SupabaseDataService: Reached safety limit of 2M shots, stopping`);
+            hasMore = false;
           }
         } else {
+          console.log(`🔍 SupabaseDataService: No more data, stopping at ${allData.length} shots`);
           hasMore = false;
         }
       }
