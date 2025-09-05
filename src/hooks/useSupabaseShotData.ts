@@ -27,10 +27,10 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
 
       // For league mode, always force a fresh fetch to get full dataset (no sampling)
       if (viewMode === 'league') {
-        console.log(`🚀 useSupabaseShotData: League mode - forcing fresh fetch for full dataset`);
-        // Clear any existing league cache to prevent old sampled data
-        dataCache.clear();
-        dataCache.clearPreloaded();
+        console.log(`🚀 useSupabaseShotData [${instanceId}]: League mode - clearing only league cache`);
+        // Only clear league-specific cache, not all preloaded data
+        const leagueCacheKey = `v2_${season}_league_`;
+        // Don't clear all cache - just skip cache check for league
       } else {
         // Check preloaded data first for instant loading of defaults (non-league only)
         const defaultKeys = {
