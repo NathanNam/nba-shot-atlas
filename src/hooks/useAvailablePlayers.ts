@@ -25,7 +25,18 @@ export function useAvailablePlayers(season: string) {
         
         console.log('🔍 useAvailablePlayers: Mapped player options:', playerOptions);
         
-        const sortedPlayers = playerOptions.sort((a, b) => a.name.localeCompare(b.name));
+        // Deduplicate players by name, keeping the first occurrence
+        const uniquePlayerMap = new Map<string, PlayerOption>();
+        playerOptions.forEach(player => {
+          if (!uniquePlayerMap.has(player.name)) {
+            uniquePlayerMap.set(player.name, player);
+          }
+        });
+        
+        const deduplicatedPlayers = Array.from(uniquePlayerMap.values());
+        console.log('🔍 useAvailablePlayers: Deduplicated players:', deduplicatedPlayers);
+        
+        const sortedPlayers = deduplicatedPlayers.sort((a, b) => a.name.localeCompare(b.name));
         console.log('🔍 useAvailablePlayers: Final sorted players:', sortedPlayers);
         setPlayers(sortedPlayers);
         setLoading(false);
