@@ -24,13 +24,13 @@ export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
         // Use server-side edge function for efficient calculation
         const leagueStats = await LeagueStatsService.getLeagueStats(selectedSeason);
         
-        // Convert to format expected by StatisticsPanel
+        // StatisticsPanel expects percentages as decimals (0.475 for 47.5%)
         const formattedStats = {
-          fieldGoalPercentage: leagueStats.fieldGoalPercentage * 100,
-          twoPointPercentage: leagueStats.twoPointPercentage * 100,
+          fieldGoalPercentage: leagueStats.fieldGoalPercentage,
+          twoPointPercentage: leagueStats.twoPointPercentage,
           twoPointMade: leagueStats.twoPointMade,
           twoPointAttempted: leagueStats.twoPointAttempted,
-          threePointPercentage: leagueStats.threePointPercentage * 100,
+          threePointPercentage: leagueStats.threePointPercentage,
           threePointMade: leagueStats.threePointMade,
           threePointAttempted: leagueStats.threePointAttempted,
           totalShots: leagueStats.totalShots,
