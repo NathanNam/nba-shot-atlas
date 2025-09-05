@@ -22,19 +22,24 @@ export function BatchEntityLayout({
 }: BatchEntityLayoutProps) {
   const { players: playersData, loading: playersLoading } = useAvailablePlayers(season1);
 
-  // Get entity IDs - hardcoded for testing to match EntityShotChart logic
+  // Get entity IDs dynamically for any player
   const getEntityId = (entityName: string) => {
     if (viewMode === 'team') {
       return entityName;
     }
     
-    // Hardcoded player IDs to match working shot charts
-    if (entityName === 'Stephen Curry') return '201939';
-    if (entityName === 'LeBron James') return '2544';
+    // Extract clean entity name (remove season info if present)
+    const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
     
-    const player = playersData?.find(p => p.name === entityName);
-    console.log(`🔍 BatchEntityLayout: Looking for "${entityName}", found player:`, player);
-    return player ? player.id.toString() : entityName;
+    const player = playersData?.find(p => p.name === cleanEntityName);
+    console.log(`🔍 BatchEntityLayout: Looking for "${cleanEntityName}", found player:`, player);
+    
+    if (!player) {
+      console.warn(`🚨 BatchEntityLayout: No player found for "${cleanEntityName}"`);
+      return undefined;
+    }
+    
+    return player.id.toString();
   };
 
   const entity1Id = getEntityId(entity1);
