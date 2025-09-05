@@ -38,14 +38,17 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   
   console.log(`🔍 EntityShotChart: Final entityId for "${cleanEntityName}" (display: "${entityName}"):`, entityId, 'playersLoading:', playersLoading);
   
-  // Use preloaded data if available, otherwise fetch via hook
+  // Always call the hook (rules of hooks), but use preloaded data if available
+  const hookResult = useSingletonShotData(
+    selectedSeason, 
+    entityId || '201939', // Use Stephen Curry's ID as fallback for default case
+    viewMode
+  );
+  
+  // Use preloaded data if available, otherwise use hook result
   const { shotData, loading, error } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
-    : useSingletonShotData(
-        selectedSeason, 
-        entityId || '201939', // Use Stephen Curry's ID as fallback for default case
-        viewMode
-      );
+    : hookResult;
   
   console.log(`🔍 EntityShotChart DEBUG - ${entityName}:`, {
     entityId,

@@ -29,14 +29,18 @@ export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, p
   const entity1Id = getEntityId(entity1);
   const entity2Id = getEntityId(entity2);
 
-  // Use preloaded data if available, otherwise fetch via hook
+  // Always call the hooks (rules of hooks), but use preloaded data if available
+  const hookEntity1Data = useSupabaseShotData(season, entity1Id, viewMode);
+  const hookEntity2Data = useSupabaseShotData(season, entity2Id, viewMode);
+  
+  // Use preloaded data if available, otherwise use hook results
   const entity1Data = preloadedEntity1Data !== undefined 
     ? { shotData: preloadedEntity1Data, loading: false, error: null }
-    : useSupabaseShotData(season, entity1Id, viewMode);
+    : hookEntity1Data;
   
   const entity2Data = preloadedEntity2Data !== undefined 
     ? { shotData: preloadedEntity2Data, loading: false, error: null }
-    : useSupabaseShotData(season, entity2Id, viewMode);
+    : hookEntity2Data;
 
   // Zone analysis helper
   const analyzeZones = (shotData: any[]) => {

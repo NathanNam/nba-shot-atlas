@@ -46,14 +46,17 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
   
-  // Use preloaded data if available, otherwise fetch via hook
+  // Always call the hook (rules of hooks), but use preloaded data if available
+  const hookResult = useSingletonShotData(
+    selectedSeason, 
+    stableEntityId,
+    viewMode
+  );
+  
+  // Use preloaded data if available, otherwise use hook result
   const { shotData, loading, error } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
-    : useSingletonShotData(
-        selectedSeason, 
-        stableEntityId,
-        viewMode
-      );
+    : hookResult;
   
   const calculatedStats = useMemo(() => {
     console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {
