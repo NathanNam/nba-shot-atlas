@@ -116,20 +116,7 @@ export class SupabaseDataService {
     const startTime = Date.now();
 
     try {
-      // Check cache first
-      const cachedData = dataCache.get(season, entityId || '', viewMode);
-      if (cachedData) {
-        span.setAttributes({ 
-          cache_hit: true,
-          shot_count: cachedData.length 
-        });
-        return cachedData;
-      }
-
-      const cacheKey = `${season}_${viewMode}_${entityId || 'all'}`;
-      
-      // Clear cache for debugging - remove this once we fix the issue
-      console.log(`🔍 SupabaseDataService: Cache miss for ${cacheKey}, fetching from database`);
+      console.log(`🔍 SupabaseDataService: Starting fresh fetch for ${season}_${viewMode}_${entityId || 'all'}`);
       
       span.setAttributes({ cache_hit: false });
 
@@ -219,8 +206,7 @@ export class SupabaseDataService {
         shotValue: row.shotValue || 0,
       }));
 
-      // Cache the result in new cache system only
-      dataCache.set(season, entityId || '', viewMode, shots);
+      // No caching - just return fresh data
 
       span.setAttributes({
         cache_hit: false,
@@ -257,12 +243,10 @@ export class SupabaseDataService {
 
   static clearCache(): void {
     this.playerCache.clear();
-    dataCache.clear();
-    dataCache.clearPreloaded();
     logger.emit({
       severityNumber: SeverityNumber.INFO,
       severityText: 'INFO',
-      body: 'Cleared Supabase data cache',
+      body: 'Cleared player cache',
     });
   }
 

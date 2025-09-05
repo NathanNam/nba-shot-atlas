@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
-import { dataCache } from '@/services/dataCache';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
@@ -16,63 +15,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
 
   useEffect(() => {
     const loadShotData = async () => {
-      // Add detailed logging to track what entityId is being passed
-      console.log(`🔍 useSupabaseShotData [${instanceId}]: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
+      console.log(`🔍 useSupabaseShotData [${instanceId}]: Starting fresh fetch for season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
       
       if (!entityId && viewMode !== 'league') {
-        console.log(`🔍 useSupabaseShotData: No entityId provided for ${viewMode} mode, skipping data fetch`);
+        console.log(`🔍 useSupabaseShotData [${instanceId}]: No entityId provided for ${viewMode} mode, skipping data fetch`);
         setShotData([]);
+        setLoading(false);
         return;
-      }
-
-      // For league mode, always force a fresh fetch to get full dataset (no sampling)
-      if (viewMode === 'league') {
-        console.log(`🚀 useSupabaseShotData [${instanceId}]: League mode - clearing only league cache`);
-        // Only clear league-specific cache, not all preloaded data
-        const leagueCacheKey = `v2_${season}_league_`;
-        // Don't clear all cache - just skip cache check for league
-      } else {
-        // Check preloaded data first for instant loading of defaults (non-league only)
-        console.log(`🔍 useSupabaseShotData [${instanceId}] PRELOAD CHECK: entityId="${entityId}", season="${season}", viewMode="${viewMode}"`);
-        
-        // Simple check for Stephen Curry in 2024-25 season
-        if (entityId === '201939' && season === '2024-25' && viewMode === 'player') {
-          const preloadedData = dataCache.getPreloaded('player_stephen_curry_2024-25');
-          console.log(`🔍 useSupabaseShotData [${instanceId}] Stephen Curry preload:`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
-          
-          if (preloadedData && preloadedData.data.length > 0) {
-            console.log(`🚀 useSupabaseShotData [${instanceId}]: Using Stephen Curry preloaded data, length: ${preloadedData.data.length}`);
-            setShotData(preloadedData.data);
-            setLoading(false);
-            setError(null);
-            console.log(`🚀 useSupabaseShotData [${instanceId}]: Stephen Curry state updated - loading=false, shotData.length=${preloadedData.data.length}`);
-            return;
-          }
-        }
-        
-        // Check for GSW team preload
-        if (entityId === 'GSW' && season === '2024-25' && viewMode === 'team') {
-          const preloadedData = dataCache.getPreloaded('team_gsw_2024-25');
-          console.log(`🔍 useSupabaseShotData [${instanceId}] GSW team preload:`, preloadedData ? `${preloadedData.data.length} shots` : 'NULL');
-          
-          if (preloadedData && preloadedData.data.length > 0) {
-            console.log(`🚀 useSupabaseShotData [${instanceId}]: Using GSW preloaded data, length: ${preloadedData.data.length}`);
-            setShotData(preloadedData.data);
-            setLoading(false);
-            setError(null);
-            return;
-          }
-        }
-
-        // Check cache for other data
-        const cachedData = dataCache.get(season, entityId, viewMode);
-        if (cachedData) {
-          console.log(`🚀 useSupabaseShotData [${instanceId}]: Using cached data for ${season}_${viewMode}_${entityId}, length: ${cachedData.length}`);
-          setShotData(cachedData);
-          setLoading(false);
-          setError(null);
-          return;
-        }
       }
 
       const span = tracer.startSpan('use_supabase_shot_data.load', {
@@ -84,7 +33,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
       });
 
       try {
-        console.log(`🚀 useSupabaseShotData: Continuing to fresh fetch (preloaded data not used)`);
+        console.log(`🚀 useSupabaseShotData [${instanceId}]: Starting fresh fetch`);
         setLoading(true);
         setError(null);
 
@@ -104,8 +53,8 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         
         const data = await SupabaseDataService.getShotData(season, entityId, viewMode, progressCallback);
         
+        console.log(`🚀 useSupabaseShotData [${instanceId}]: Fresh data loaded, length: ${data.length}`);
         setShotData(data);
-        setProgress(null); // Clear progress when complete
 
         span.setAttributes({
           success: true,
@@ -149,6 +98,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
 
       } finally {
         setProgress(null);
+        setLoading(false);
         span.end();
       }
     };

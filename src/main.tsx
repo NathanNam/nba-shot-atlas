@@ -10,14 +10,14 @@ import "./utils/forceCacheClear";
 // Initialize OpenTelemetry
 import "./otel-client";
 
-// Start preloading default data immediately - but after cache clear
-setTimeout(() => {
-  DataPreloader.preloadDefaultData().then(() => {
-    console.log('🚀 Default data preloading completed');
-  }).catch(error => {
-    console.error('🚀 Error preloading default data:', error);
-  });
-}, 200);
+// Preloading disabled for now to troubleshoot caching issues
+// setTimeout(() => {
+//   DataPreloader.preloadDefaultData().then(() => {
+//     console.log('🚀 Default data preloading completed');
+//   }).catch(error => {
+//     console.error('🚀 Error preloading default data:', error);
+//   });
+// }, 200);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
