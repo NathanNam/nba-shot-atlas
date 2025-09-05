@@ -105,7 +105,7 @@ export class SupabaseDataService {
     }
   }
 
-  static async getShotData(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', sampleSize?: number): Promise<ShotData[]> {
+  static async getShotData(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', progressCallback?: (loaded: number, total?: number) => void): Promise<ShotData[]> {
     const span = tracer.startSpan('supabase.get_shot_data', {
       attributes: {
         season,
@@ -155,31 +155,30 @@ export class SupabaseDataService {
         console.log(`🔍 SupabaseDataService: Filtering by teamTricode=${entityId} for team mode`);
         query = query.eq('teamTricode', entityId);
       }
-      // For league mode, use sampling for better performance
-      if (viewMode === 'league' && sampleSize) {
-        console.log(`🔍 SupabaseDataService: Using random sampling for league data (${sampleSize} shots)`);
-        // Use TABLESAMPLE for efficient random sampling on large datasets
-        query = (supabase as any)
-          .from(tableName)
-          .select('*')
-          .limit(sampleSize);
-      }
+      // For league mode, no filter - load complete dataset with progress reporting
 
-      // Fetch data using optimized pagination strategy
+      // Get total count for league mode to show progress
+      let estimatedTotal = undefined;
+      if (viewMode === 'league' && progressCallback) {
+        try {
+          const { count } = await (supabase as any)
+            .from(tableName)
+            .select('*', { count: 'estimated', head: true });
+          estimatedTotal = count;
+          console.log(`🔍 SupabaseDataService: League mode - estimated ${estimatedTotal} total shots`);
+        } catch (error) {
+          console.log('Could not get count estimate:', error);
+        }
+      }
       let allData: any[] = [];
       let hasMore = true;
       let offset = 0;
       
-      // Use different batch sizes based on view mode
-      const batchSize = viewMode === 'league' ? 
-        (sampleSize ? Math.min(sampleSize, 2000) : 1000) : 1000;
-      
-      // For league with sampling, limit total fetches
-      const maxBatches = viewMode === 'league' && sampleSize ? 
-        Math.ceil(sampleSize / batchSize) : 999999;
+      // Use larger batch sizes for league data
+      const batchSize = viewMode === 'league' ? 5000 : 1000;
       let batchCount = 0;
 
-      while (hasMore && batchCount < maxBatches) {
+      while (hasMore) {
         const batchQuery = query.range(offset, offset + batchSize - 1);
         const { data: batchData, error: batchError } = await batchQuery;
         
@@ -191,10 +190,10 @@ export class SupabaseDataService {
           batchCount++;
           hasMore = batchData.length === batchSize; // Continue if we got a full batch
           
-          // For league sampling, stop when we have enough data
-          if (viewMode === 'league' && sampleSize && allData.length >= sampleSize) {
-            allData = allData.slice(0, sampleSize);
-            hasMore = false;
+          // Report progress for league mode
+          if (viewMode === 'league' && progressCallback) {
+            progressCallback(allData.length, estimatedTotal);
+            console.log(`🔍 SupabaseDataService: League progress - loaded ${allData.length} shots (batch ${batchCount})`);
           }
         } else {
           hasMore = false;

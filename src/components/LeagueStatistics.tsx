@@ -8,19 +8,34 @@ interface LeagueStatisticsProps {
 }
 
 export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
-  // Use larger sample for statistics accuracy
-  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, "", "league", 25000);
+  // Use full dataset with progressive loading
+  const { shotData, loading, error, progress } = useSupabaseShotData(selectedSeason, "", "league");
   
-  console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error);
+  console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error, 'Progress:', progress);
 
-  if (loading) {
+  if (loading || progress) {
+    const progressText = progress 
+      ? `Loading: ${progress.loaded.toLocaleString()}${progress.total ? ` / ${progress.total.toLocaleString()}` : ''} shots`
+      : 'Loading league statistics...';
+      
     return (
       <Card>
         <CardHeader>
           <CardTitle>League Statistics</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-32 w-full" />
+          <div className="space-y-4">
+            <div className="text-center text-muted-foreground">{progressText}</div>
+            {progress && progress.total && (
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${(progress.loaded / progress.total) * 100}%` }}
+                />
+              </div>
+            )}
+            <Skeleton className="h-32 w-full" />
+          </div>
         </CardContent>
       </Card>
     );

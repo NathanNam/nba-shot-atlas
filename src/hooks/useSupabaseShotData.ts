@@ -4,10 +4,11 @@ import { dataCache } from '@/services/dataCache';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
-export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league', sampleSize?: number) {
+export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
   const [shotData, setShotData] = useState<ShotData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ loaded: number; total?: number } | null>(null);
 
   useEffect(() => {
     const loadShotData = async () => {
@@ -53,9 +54,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
           },
         });
 
-        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, sampleSize);
+        const progressCallback = viewMode === 'league' ? 
+          (loaded: number, total?: number) => setProgress({ loaded, total }) : undefined;
+        
+        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, progressCallback);
         
         setShotData(data);
+        setProgress(null); // Clear progress when complete
 
         span.setAttributes({
           success: true,
@@ -98,13 +103,13 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
         });
 
       } finally {
-        setLoading(false);
+        setProgress(null);
         span.end();
       }
     };
 
     loadShotData();
-  }, [season, entityId, viewMode, sampleSize]);
+  }, [season, entityId, viewMode]);
 
-  return { shotData, loading, error };
+  return { shotData, loading, error, progress };
 }

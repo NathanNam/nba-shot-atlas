@@ -50,8 +50,7 @@ export class DataPreloader {
         season: defaultSeason,
         entityId: '',
         viewMode: 'league' as const,
-        label: 'NBA League (2024-25)',
-        sampleSize: 10000 // Preload sampled data for performance
+        label: 'NBA League (2024-25)'
       }
     ];
 
@@ -59,7 +58,7 @@ export class DataPreloader {
     const promises = preloadTasks.map(async (task) => {
       try {
         console.log(`🚀 DataPreloader: Loading ${task.label}...`);
-        const data = await SupabaseDataService.getShotData(task.season, task.entityId, task.viewMode, (task as any).sampleSize);
+        const data = await SupabaseDataService.getShotData(task.season, task.entityId, task.viewMode);
         
         dataCache.setPreloaded(
           task.key,
