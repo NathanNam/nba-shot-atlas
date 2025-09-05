@@ -54,7 +54,7 @@ export class SupabaseDataService {
 
       const { data, error } = await (supabase as any)
         .from('players')
-        .select('*')
+        .select('"personId", "playerFullName"')
         .order('"playerFullName"');
 
       console.log('🔍 SupabaseDataService.getPlayers: Raw response data:', data);
