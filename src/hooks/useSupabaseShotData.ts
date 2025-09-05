@@ -4,7 +4,7 @@ import { dataCache } from '@/services/dataCache';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
-export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
+export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league', sampleSize?: number) {
   const [shotData, setShotData] = useState<ShotData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
           },
         });
 
-        const data = await SupabaseDataService.getShotData(season, entityId, viewMode);
+        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, sampleSize);
         
         setShotData(data);
 
@@ -104,7 +104,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
     };
 
     loadShotData();
-  }, [season, entityId, viewMode]);
+  }, [season, entityId, viewMode, sampleSize]);
 
   return { shotData, loading, error };
 }

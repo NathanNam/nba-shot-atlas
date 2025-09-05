@@ -105,7 +105,7 @@ export class SupabaseDataService {
     }
   }
 
-  static async getShotData(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league'): Promise<ShotData[]> {
+  static async getShotData(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', sampleSize?: number): Promise<ShotData[]> {
     const span = tracer.startSpan('supabase.get_shot_data', {
       attributes: {
         season,
@@ -155,15 +155,31 @@ export class SupabaseDataService {
         console.log(`🔍 SupabaseDataService: Filtering by teamTricode=${entityId} for team mode`);
         query = query.eq('teamTricode', entityId);
       }
-      // For league mode, no additional filter needed
+      // For league mode, use sampling for better performance
+      if (viewMode === 'league' && sampleSize) {
+        console.log(`🔍 SupabaseDataService: Using random sampling for league data (${sampleSize} shots)`);
+        // Use TABLESAMPLE for efficient random sampling on large datasets
+        query = (supabase as any)
+          .from(tableName)
+          .select('*')
+          .limit(sampleSize);
+      }
 
-      // Fetch all data using pagination to overcome Supabase's 1000 row limit
+      // Fetch data using optimized pagination strategy
       let allData: any[] = [];
       let hasMore = true;
       let offset = 0;
-      const batchSize = 1000;
+      
+      // Use different batch sizes based on view mode
+      const batchSize = viewMode === 'league' ? 
+        (sampleSize ? Math.min(sampleSize, 2000) : 1000) : 1000;
+      
+      // For league with sampling, limit total fetches
+      const maxBatches = viewMode === 'league' && sampleSize ? 
+        Math.ceil(sampleSize / batchSize) : 999999;
+      let batchCount = 0;
 
-      while (hasMore) {
+      while (hasMore && batchCount < maxBatches) {
         const batchQuery = query.range(offset, offset + batchSize - 1);
         const { data: batchData, error: batchError } = await batchQuery;
         
@@ -172,7 +188,14 @@ export class SupabaseDataService {
         if (batchData && batchData.length > 0) {
           allData = allData.concat(batchData);
           offset += batchSize;
+          batchCount++;
           hasMore = batchData.length === batchSize; // Continue if we got a full batch
+          
+          // For league sampling, stop when we have enough data
+          if (viewMode === 'league' && sampleSize && allData.length >= sampleSize) {
+            allData = allData.slice(0, sampleSize);
+            hasMore = false;
+          }
         } else {
           hasMore = false;
         }

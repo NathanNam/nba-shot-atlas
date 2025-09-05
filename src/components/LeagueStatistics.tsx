@@ -8,7 +8,8 @@ interface LeagueStatisticsProps {
 }
 
 export function LeagueStatistics({ selectedSeason }: LeagueStatisticsProps) {
-  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, "", "league");
+  // Use larger sample for statistics accuracy
+  const { shotData, loading, error } = useSupabaseShotData(selectedSeason, "", "league", 25000);
   
   console.log('League Statistics - Season:', selectedSeason, 'Data length:', shotData.length, 'Error:', error);
 
