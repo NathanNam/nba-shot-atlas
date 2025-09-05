@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { supabase } from '@/integrations/supabase/client';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
 import { dataCache } from './dataCache';
@@ -9,98 +9,81 @@ export interface ShotData {
   teamTricode: string;
   xLegacy: number;
   yLegacy: number;
-  shotResult: string;
   shotDistance: number;
-  description: string;
-  subType: string;
+  shotResult: string;
   shotValue: number;
+  description?: string;
+  subType?: string;
 }
 
 export interface Player {
-  personId: string;
+  personId: number;
   playerFullName: string;
+  id: string;
+  name: string;
 }
 
 // Metrics
 const dbQueryCounter = meter.createCounter('supabase_queries_total', {
-  description: 'Total number of Supabase queries',
+  description: 'Total number of Supabase queries executed',
 });
 
 const dbQueryDuration = meter.createHistogram('supabase_query_duration_ms', {
   description: 'Duration of Supabase queries in milliseconds',
 });
 
-export class SupabaseDataService {
-  private static playerCache = new Map<string, Player[]>();
-  // Remove old shotCache to prevent conflicts with new cache system
+class SupabaseDataService {
+  // Cache for player data
+  private static playerCache: Player[] | null = null;
 
   static async getPlayers(): Promise<Player[]> {
+    if (this.playerCache) {
+      console.log('🔍 SupabaseDataService: Using cached player data');
+      return this.playerCache;
+    }
+
     const span = tracer.startSpan('supabase.get_players');
     const startTime = Date.now();
 
     try {
-      // Check cache first
-      const cacheKey = 'all_players';
-      if (this.playerCache.has(cacheKey)) {
-        logger.emit({
-          severityNumber: SeverityNumber.DEBUG,
-          severityText: 'DEBUG',
-          body: 'Players cache hit',
-        });
-        span.setAttributes({ cache_hit: true });
-        return this.playerCache.get(cacheKey)!;
-      }
-
       dbQueryCounter.add(1, { table: 'players', operation: 'select' });
 
-      // Use direct fetch since TypeScript types don't match our schema
-      const response = await fetch(`https://icfqngdeohzzjvzcmawo.supabase.co/rest/v1/players`, {
-        headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch players: ${response.status} ${response.statusText}`);
+      const { data, error } = await supabase
+        .from('players')
+        .select('*');
+
+      if (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error.message,
+        });
+        throw new Error(`Failed to fetch players: ${error.message}`);
       }
-      
-      const rawData = await response.json();
-      console.log('🔍 SupabaseDataService.getPlayers: Direct fetch data:', rawData);
-      
-      const players: Player[] = rawData.map((row: any) => ({
-        personId: row.personId?.toString() || '',
-        playerFullName: row.playerFullName || '',
-      })).filter((player: Player) => player.personId && player.playerFullName);
 
-      // Cache the result
-      this.playerCache.set(cacheKey, players);
+      const players: Player[] = (data || []).map(player => ({
+        personId: player.personId || 0,
+        playerFullName: player.playerFullName || '',
+        id: (player.personId || 0).toString(),
+        name: player.playerFullName || ''
+      }));
 
-      span.setAttributes({
-        cache_hit: false,
-        player_count: players.length,
-      });
+      this.playerCache = players;
+      span.setAttributes({ success: true, player_count: players.length });
 
-      logger.emit({
-        severityNumber: SeverityNumber.INFO,
-        severityText: 'INFO',
-        body: 'Successfully fetched players from Supabase',
-        attributes: { player_count: players.length },
-      });
+      const duration = Date.now() - startTime;
+      dbQueryDuration.record(duration, { table: 'players', operation: 'select' });
 
+      console.log(`🔍 SupabaseDataService: Fetched ${players.length} players`);
       return players;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       span.setStatus({
         code: SpanStatusCode.ERROR,
         message: errorMessage,
       });
-      throw error;
+      throw err;
     } finally {
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'players', operation: 'select' });
-      span.setAttributes({ duration_ms: duration });
       span.end();
     }
   }
@@ -132,34 +115,6 @@ export class SupabaseDataService {
       // Determine the correct table name based on season
       const tableName = `shots_${season}`;
       
-      let query = (supabase as any)
-        .from(tableName)
-        .select('*');
-
-      // Apply filters based on view mode - using new column names
-      if (viewMode === 'player' && entityId) {
-        console.log(`🔍 SupabaseDataService: Filtering by personId=${entityId} for player mode`);
-        // Ensure entityId is numeric for personId filter
-        const numericEntityId = parseInt(entityId);
-        if (isNaN(numericEntityId)) {
-          throw new Error(`Invalid player ID: "${entityId}" is not numeric. Player names should be converted to IDs before calling this method.`);
-        }
-        query = query.eq('personId', numericEntityId);
-      } else if (viewMode === 'team' && entityId) {
-        console.log(`🔍 SupabaseDataService: Filtering by teamTricode=${entityId} for team mode`);
-        query = query.eq('teamTricode', entityId);
-      }
-      // For league mode, no filter - load complete dataset with progress reporting
-      
-      // Override PostgREST's default 1000 row limit for league mode
-      if (viewMode === 'league') {
-        console.log(`🔍 SupabaseDataService: Setting headers to override PostgREST limit for league mode`);
-        query = query.select('*', { 
-          head: false, 
-          count: 'exact',
-        }).range(0, 500000); // Set a very high range to get all data
-      }
-
       // Get total count for league mode to show progress
       let estimatedTotal = undefined;
       if (viewMode === 'league' && progressCallback) {
@@ -173,51 +128,38 @@ export class SupabaseDataService {
           console.log('Could not get count estimate:', error);
         }
       }
+
       let allData: any[] = [];
       let hasMore = true;
       let offset = 0;
       
-      // For league mode, try to fetch all data directly with explicit range
-      if (viewMode === 'league') {
-        console.log(`🔍 SupabaseDataService: Attempting direct fetch of ALL league data with explicit range`);
-        try {
-          const { data: allLeagueData, error: allError, count } = await query;
-          
-          console.log(`🔍 SupabaseDataService: Direct fetch result - data length: ${allLeagueData?.length}, error:`, allError, 'count:', count);
-          
-          if (!allError && allLeagueData) {
-            console.log(`🔍 SupabaseDataService: SUCCESS! Direct fetch returned ${allLeagueData.length} shots`);
-            allData = allLeagueData;
-            
-            // Report progress
-            if (progressCallback) {
-              progressCallback(allData.length, allData.length);
-            }
-            
-            // Skip pagination loop
-            hasMore = false;
-          } else {
-            console.log(`🔍 SupabaseDataService: Direct fetch failed, error:`, allError);
-            hasMore = true; // Fall back to pagination
-          }
-        } catch (err) {
-          console.log(`🔍 SupabaseDataService: Direct fetch threw error:`, err);
-          hasMore = true; // Fall back to pagination
-        }
-      }
-
-      
-      // Use batch processing for fallback if direct fetch doesn't work
-      const batchSize = viewMode === 'league' ? 50000 : 1000;
+      // Supabase/PostgREST has a 1000 row default limit, so we must use proper pagination
+      const batchSize = 1000; // Use PostgREST's default limit as batch size
       let batchCount = 0;
 
+      console.log(`🔍 SupabaseDataService: Using proper pagination with ${batchSize} rows per batch due to PostgREST limit`);
+
       while (hasMore) {
-        console.log(`🔍 SupabaseDataService: Starting batch ${batchCount + 1}, offset: ${offset}, batchSize: ${batchSize}`);
-        console.log(`🔍 SupabaseDataService: Range will be: ${offset} to ${offset + batchSize - 1}`);
-        const batchQuery = query.range(offset, offset + batchSize - 1);
+        console.log(`🔍 SupabaseDataService: Fetching batch ${batchCount + 1}, offset: ${offset}`);
         
-        // Log the actual query being executed
-        console.log(`🔍 SupabaseDataService: Executing query for table: shots_${season}, viewMode: ${viewMode}, entityId: ${entityId || 'none'}`);
+        // Create a new query for each batch to avoid query builder issues
+        let batchQuery = (supabase as any)
+          .from(tableName)
+          .select('*')
+          .range(offset, offset + batchSize - 1);
+
+        // Re-apply filters for each batch
+        if (viewMode === 'player' && entityId) {
+          console.log(`🔍 SupabaseDataService: Filtering by personId=${entityId} for player mode`);
+          const numericEntityId = parseInt(entityId);
+          if (isNaN(numericEntityId)) {
+            throw new Error(`Invalid player ID: "${entityId}" is not numeric. Player names should be converted to IDs before calling this method.`);
+          }
+          batchQuery = batchQuery.eq('personId', numericEntityId);
+        } else if (viewMode === 'team' && entityId) {
+          console.log(`🔍 SupabaseDataService: Filtering by teamTricode=${entityId} for team mode`);
+          batchQuery = batchQuery.eq('teamTricode', entityId);
+        }
         
         const { data: batchData, error: batchError } = await batchQuery;
         
@@ -262,55 +204,47 @@ export class SupabaseDataService {
         teamTricode: row.teamTricode || '',
         xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
         yLegacy: parseFloat(row.yLegacy?.toString() || '0'),
-        shotResult: row.shotResult || '',
         shotDistance: parseFloat(row.shotDistance?.toString() || '0'),
+        shotResult: row.shotResult || '',
+        shotValue: parseInt(row.shotValue?.toString() || '2'),
         description: row.description || '',
         subType: row.subType || '',
-        shotValue: row.shotValue || 0,
       }));
 
-      // No caching - just return fresh data
+      span.setAttributes({ success: true, shots_count: shots.length });
 
-      span.setAttributes({
-        cache_hit: false,
-        shot_count: shots.length,
-      });
+      const duration = Date.now() - startTime;
+      dbQueryDuration.record(duration, { table: 'shots', operation: 'select' });
 
       logger.emit({
         severityNumber: SeverityNumber.INFO,
         severityText: 'INFO',
-        body: 'Successfully fetched shot data from Supabase',
-        attributes: { 
-          season,
-          view_mode: viewMode,
-          entity_id: entityId || 'none',
-          shot_count: shots.length,
-        },
+        body: 'Successfully loaded shot data',
+        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, shots_count: shots.length },
       });
 
       return shots;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: errorMessage,
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
+      
+      span.setAttributes({ success: false, error: errorMessage });
+
+      logger.emit({
+        severityNumber: SeverityNumber.ERROR,
+        severityText: 'ERROR',
+        body: 'Error loading shot data',
+        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, error: errorMessage },
       });
-      throw error;
+
+      throw err;
     } finally {
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'shots', operation: 'select' });
-      span.setAttributes({ duration_ms: duration });
       span.end();
     }
   }
 
   static clearCache(): void {
-    this.playerCache.clear();
-    logger.emit({
-      severityNumber: SeverityNumber.INFO,
-      severityText: 'INFO',
-      body: 'Cleared player cache',
-    });
+    this.playerCache = null;
   }
 
   // Method to get unique teams from shots data
@@ -336,59 +270,48 @@ export class SupabaseDataService {
         throw new Error(`Failed to fetch teams: ${error.message}`);
       }
 
-      const uniqueTeams = [...new Set(data.map((row: any) => row.teamTricode))].filter(Boolean).sort() as string[];
+      // Extract unique team tricodes
+      const allTeamTriCodes = (data || []).map((row: any) => row.teamTricode).filter((code): code is string => Boolean(code));
+      const teams = [...new Set(allTeamTriCodes)];
+      
+      span.setAttributes({ success: true, teams_count: teams.length });
 
-      span.setAttributes({
-        team_count: uniqueTeams.length,
-        season: season || 'all',
-      });
+      const duration = Date.now() - startTime;
+      dbQueryDuration.record(duration, { table: 'shots', operation: 'select_distinct' });
 
-      return uniqueTeams;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(`🔍 SupabaseDataService: Fetched ${teams.length} unique teams`);
+      return teams.sort();
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       span.setStatus({
         code: SpanStatusCode.ERROR,
         message: errorMessage,
       });
-      throw error;
+      throw err;
     } finally {
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'shots', operation: 'select_distinct' });
       span.end();
     }
   }
 
-  // Method to get available seasons
   static async getSeasons(): Promise<string[]> {
-    const span = tracer.startSpan('supabase.get_seasons');
-    const startTime = Date.now();
-
-    try {
-      dbQueryCounter.add(1, { table: 'shots', operation: 'select_distinct' });
-
-      // Return the known seasons based on uploaded tables
-      const availableSeasons = [
-        '2013-14', '2014-15', '2015-16', '2016-17', '2017-18',
-        '2018-19', '2019-20', '2020-21', '2021-22', '2022-23',
-        '2023-24', '2024-25'
-      ];
-
-      span.setAttributes({
-        season_count: availableSeasons.length,
-      });
-
-      return availableSeasons;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: errorMessage,
-      });
-      throw error;
-    } finally {
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'shots', operation: 'select_distinct' });
-      span.end();
-    }
+    // Return hardcoded list of available seasons
+    // This could be made dynamic by querying available shot tables
+    return [
+      '2013-14',
+      '2014-15', 
+      '2015-16',
+      '2016-17',
+      '2017-18',
+      '2018-19',
+      '2019-20',
+      '2020-21',
+      '2021-22',
+      '2022-23',
+      '2023-24',
+      '2024-25'
+    ];
   }
 }
+
+export { SupabaseDataService };

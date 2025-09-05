@@ -19,8 +19,8 @@ export function useAvailablePlayers(season: string) {
         console.log('🔍 useAvailablePlayers: Raw Supabase players:', supabasePlayers);
         
         const playerOptions: PlayerOption[] = supabasePlayers.map(player => ({
-          id: player.personId,
-          name: player.playerFullName
+          id: player.id, // Use the string id from the service
+          name: player.name // Use the name from the service
         })).filter(player => player.id && player.name);
         
         console.log('🔍 useAvailablePlayers: Mapped player options:', playerOptions);
