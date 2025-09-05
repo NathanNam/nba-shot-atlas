@@ -367,18 +367,21 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
       </div>
 
       {/* Individual Season Statistics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StatisticsPanel 
-          entityName={firstLabel}
-          stats={actualStats1}
-          size="compact"
-        />
-        <StatisticsPanel 
-          entityName={secondLabel}
-          stats={actualStats2}
-          size="compact"
-        />
-      </div>
+      {/* Only show individual statistics if not in comparison mode already */}
+      {!isPlayerVsPlayer && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StatisticsPanel 
+            entityName={firstLabel}
+            stats={actualStats1}
+            size="compact"
+          />
+          <StatisticsPanel 
+            entityName={secondLabel}
+            stats={actualStats2}
+            size="compact"
+          />
+        </div>
+      )}
       
       {/* Comparison Summary */}
       <Card>
