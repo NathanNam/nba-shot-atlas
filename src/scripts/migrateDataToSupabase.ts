@@ -306,6 +306,121 @@ export class DataMigrator {
       throw error;
     }
   }
+
+  static async migratePlayersFromText(csvText: string): Promise<void> {
+    console.log('🔄 Starting player migration from uploaded text...');
+    
+    try {
+      // Parse CSV text
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',');
+      
+      const players = lines.slice(1).map(line => {
+        const values = line.split(',');
+        return {
+          id: values[0],
+          name: values[1],
+          team: values[2] || '',
+        };
+      }).filter(player => player.id && player.name);
+
+      console.log(`📊 Parsed ${players.length} players from uploaded CSV`);
+
+      // Check if players already exist
+      const { count } = await supabase
+        .from('players')
+        .select('*', { count: 'exact', head: true });
+
+      if (count && count > 0) {
+        console.log(`⚠️  Players table already has ${count} records. Skipping migration.`);
+        return;
+      }
+
+      // Insert players in batches
+      const batchSize = 1000;
+      for (let i = 0; i < players.length; i += batchSize) {
+        const batch = players.slice(i, i + batchSize);
+        
+        const { error } = await supabase
+          .from('players')
+          .insert(batch);
+
+        if (error) {
+          console.error(`❌ Error inserting players batch ${i / batchSize + 1}:`, error);
+          throw error;
+        }
+
+        console.log(`✅ Inserted players batch ${i / batchSize + 1}/${Math.ceil(players.length / batchSize)}`);
+      }
+
+      console.log('🎉 Player migration from upload completed successfully!');
+    } catch (error) {
+      console.error('❌ Player migration from upload failed:', error);
+      throw error;
+    }
+  }
+
+  static async migrateShotDataFromText(csvText: string, season: string): Promise<void> {
+    console.log(`🔄 Starting shot data migration from uploaded text for season ${season}...`);
+    
+    try {
+      // Check if this season already exists
+      const { count } = await supabase
+        .from('shots')
+        .select('*', { count: 'exact', head: true })
+        .eq('season', season);
+
+      if (count && count > 0) {
+        console.log(`⚠️  Season ${season} already has ${count} shots. Skipping.`);
+        return;
+      }
+
+      // Parse shot data from CSV
+      const shots = this.parseShotCsv(csvText, season);
+      console.log(`📈 Parsed ${shots.length} shots for season ${season}`);
+
+      if (shots.length === 0) {
+        console.log(`⚠️  No shots found for season ${season}. Skipping.`);
+        return;
+      }
+
+      // Convert to database format
+      const shotsForDB = shots.map(shot => ({
+        season,
+        person_id: shot.personId,
+        team_tricode: shot.teamTricode,
+        x_legacy: shot.xLegacy,
+        y_legacy: shot.yLegacy,
+        shot_result: shot.shotResult,
+        shot_distance: shot.shotDistance,
+        description: shot.description,
+        sub_type: shot.subType,
+        shot_value: shot.shotValue,
+      }));
+
+      // Insert shots in batches
+      const batchSize = 1000;
+      for (let i = 0; i < shotsForDB.length; i += batchSize) {
+        const batch = shotsForDB.slice(i, i + batchSize);
+        
+        const { error } = await supabase
+          .from('shots')
+          .insert(batch);
+
+        if (error) {
+          console.error(`❌ Error inserting shots batch ${i / batchSize + 1} for ${season}:`, error);
+          throw error;
+        }
+
+        console.log(`✅ Inserted shots batch ${i / batchSize + 1}/${Math.ceil(shotsForDB.length / batchSize)} for ${season}`);
+      }
+
+      console.log(`🎉 Season ${season} migration from upload completed!`);
+    } catch (error) {
+      console.error(`❌ Shot data migration from upload failed for ${season}:`, error);
+      throw error;
+    }
+  }
 }
 
 // Helper function to run migration from browser console
