@@ -49,13 +49,21 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
 
     console.log(`📊 Statistics calculation for ${entityName}:`, {
       totalShots: shotData.length,
+      actualDataLength: shotData.length,
       sampleShots: shotData.slice(0, 10).map(s => ({ 
         result: s.shotResult, 
         value: s.shotValue,
         distance: s.shotDistance 
       })),
       // Check for different shot result values in the data
-      uniqueResults: [...new Set(shotData.slice(0, 100).map(s => s.shotResult))]
+      uniqueResults: [...new Set(shotData.slice(0, 100).map(s => s.shotResult))],
+      // Add more debugging info
+      isExactly1000: shotData.length === 1000,
+      lastFewShots: shotData.slice(-5).map(s => ({ 
+        personId: s.personId,
+        shotResult: s.shotResult,
+        shotValue: s.shotValue
+      }))
     });
 
     const totalShots = shotData.length;

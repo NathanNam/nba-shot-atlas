@@ -117,6 +117,10 @@ export class SupabaseDataService {
     try {
       const cacheKey = `${season}_${viewMode}_${entityId || 'all'}`;
       
+      // Clear cache for debugging - remove this once we fix the issue
+      console.log(`🔍 SupabaseDataService: Clearing cache for debugging`);
+      this.shotCache.clear();
+      
       // Check cache first
       if (this.shotCache.has(cacheKey)) {
         logger.emit({
@@ -147,7 +151,11 @@ export class SupabaseDataService {
       }
       // For league mode, no additional filter needed
 
+      console.log(`🔍 SupabaseDataService: Executing query for ${tableName}, viewMode: ${viewMode}, entityId: ${entityId}`);
+      
       const { data, error } = await query;
+
+      console.log(`🔍 SupabaseDataService: Query result - data length: ${data?.length || 0}, error: ${error?.message || 'none'}`);
 
       if (error) {
         span.setStatus({
