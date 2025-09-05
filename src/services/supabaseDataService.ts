@@ -136,7 +136,8 @@ export class SupabaseDataService {
       
       let query = (supabase as any)
         .from(tableName)
-        .select('*');
+        .select('*')
+        .limit(10000); // Increase limit to allow more shots per player/team
 
       // Apply filters based on view mode - using new column names
       if (viewMode === 'player' && entityId) {
