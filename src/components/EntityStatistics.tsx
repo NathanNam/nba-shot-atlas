@@ -10,12 +10,13 @@ interface EntityStatisticsProps {
 }
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode }: EntityStatisticsProps) {
-  const { players, loading: playersLoading } = useAvailablePlayers(selectedSeason);
+  // Only fetch players for player mode to improve performance
+  const { players, loading: playersLoading } = useAvailablePlayers(viewMode === 'player' ? selectedSeason : '');
   
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
   
-  // Convert player name to player ID for data fetching with stable memoization
+  // Memoize entityId to prevent unnecessary re-computations
   const entityId = useMemo(() => {
     if (viewMode === 'player') {
       if (playersLoading) {
@@ -34,11 +35,13 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       console.warn(`🔍 EntityStatistics: Player "${cleanEntityName}" not found in players list`);
       return undefined;
     }
-    return cleanEntityName; // For teams, use the name directly
+    
+    // For teams/league, return the clean entity name directly
+    return cleanEntityName;
   }, [viewMode, playersLoading, players, cleanEntityName]);
   
   // Create a stable key to prevent unnecessary re-subscriptions  
-  const stableEntityId = entityId && !playersLoading ? String(entityId) : '';
+  const stableEntityId = entityId && (viewMode !== 'player' || !playersLoading) ? String(entityId) : '';
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
   
@@ -61,7 +64,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
       dataPreview: shotData?.slice(0, 2)
     });
     
-    if (!shotData || shotData.length === 0 || playersLoading || !entityId) {
+    if (!shotData || shotData.length === 0 || (viewMode === 'player' && playersLoading) || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,
@@ -136,7 +139,8 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode }: Entit
     };
   }, [shotData, entityName, playersLoading, entityId, selectedSeason]);
 
-  if (loading || playersLoading || !entityId) {
+  // Show loading while fetching players (player mode only) or shot data
+  if (loading || (viewMode === 'player' && playersLoading) || !entityId) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
         <div className="animate-pulse">
