@@ -169,12 +169,41 @@ export class SupabaseDataService {
       let offset = 0;
       
       // Use larger batch sizes for league data - removed artificial limits
-      const batchSize = viewMode === 'league' ? 10000 : 1000; // Increased league batch size
+      const batchSize = viewMode === 'league' ? 50000 : 1000; // Massive batch for league to test limits
       let batchCount = 0;
+
+      // For league mode, try to fetch all data in one go first
+      if (viewMode === 'league') {
+        console.log(`🔍 SupabaseDataService: Attempting to fetch ALL league data without pagination`);
+        try {
+          const { data: allLeagueData, error: allError } = await query;
+          if (!allError && allLeagueData && allLeagueData.length > 1000) {
+            console.log(`🔍 SupabaseDataService: SUCCESS! Fetched ${allLeagueData.length} shots without pagination`);
+            allData = allLeagueData;
+            
+            // Report progress
+            if (progressCallback) {
+              progressCallback(allData.length, allData.length);
+            }
+            
+            // Skip pagination loop
+            hasMore = false;
+          } else {
+            console.log(`🔍 SupabaseDataService: All-at-once fetch failed or returned <= 1000, falling back to pagination. Error:`, allError);
+          }
+        } catch (err) {
+          console.log(`🔍 SupabaseDataService: All-at-once fetch failed, falling back to pagination:`, err);
+        }
+      }
 
       while (hasMore) {
         console.log(`🔍 SupabaseDataService: Starting batch ${batchCount + 1}, offset: ${offset}, batchSize: ${batchSize}`);
+        console.log(`🔍 SupabaseDataService: Range will be: ${offset} to ${offset + batchSize - 1}`);
         const batchQuery = query.range(offset, offset + batchSize - 1);
+        
+        // Log the actual query being executed
+        console.log(`🔍 SupabaseDataService: Executing query for table: shots_${season}, viewMode: ${viewMode}, entityId: ${entityId || 'none'}`);
+        
         const { data: batchData, error: batchError } = await batchQuery;
         
         if (batchError) throw new Error(`Failed to fetch shot data: ${batchError.message}`);
