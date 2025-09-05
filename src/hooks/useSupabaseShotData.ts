@@ -10,12 +10,14 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ loaded: number; total?: number } | null>(null);
 
-  console.log(`🚀 useSupabaseShotData HOOK: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
+  // Generate unique instance ID for debugging
+  const instanceId = `${viewMode}_${entityId}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`🚀 useSupabaseShotData HOOK [${instanceId}]: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
 
   useEffect(() => {
     const loadShotData = async () => {
       // Add detailed logging to track what entityId is being passed
-      console.log(`🔍 useSupabaseShotData: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
+      console.log(`🔍 useSupabaseShotData [${instanceId}]: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
       
       if (!entityId && viewMode !== 'league') {
         console.log(`🔍 useSupabaseShotData: No entityId provided for ${viewMode} mode, skipping data fetch`);
