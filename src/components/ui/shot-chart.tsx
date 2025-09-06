@@ -171,14 +171,15 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
     if (data && data.length > 0) {
       if (viewMode === "shots") {
         // Individual shots view - render all shots
+        const fragment = document.createDocumentFragment();
         data.forEach((shot, index) => {
           const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          
+
           const svgX = centerX + (shot.xLegacy * scale / 10);
           const svgY = hoopCenterY - (shot.yLegacy * scale / 10);
-          
+
           const isMade = shot.shotResult === 'Made';
-          
+
           shotCircle.setAttribute("cx", svgX.toString());
           shotCircle.setAttribute("cy", svgY.toString());
           shotCircle.setAttribute("r", "3");
@@ -187,15 +188,17 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           shotCircle.setAttribute("stroke-width", "0.5");
           shotCircle.setAttribute("opacity", "0.7");
           shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
-          
+
           shotCircle.setAttribute("data-shot-key", `${shot.personId || 'unknown'}-${index}`);
           shotCircle.setAttribute("data-player", shot.personId?.toString() || 'unknown');
           shotCircle.setAttribute("data-shot-type", shot.subType || '');
           shotCircle.setAttribute("data-distance", shot.shotDistance?.toString() || '0');
           shotCircle.setAttribute("data-description", shot.description || '');
-          
-          svg.appendChild(shotCircle);
+
+          fragment.appendChild(shotCircle);
         });
+
+        svg.appendChild(fragment);
       } else {
         // Heat map view
         renderHeatMap(data, svg, centerX, hoopCenterY, scale);
@@ -231,6 +234,7 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
     });
     
     // Render hexagons
+    const fragment = document.createDocumentFragment();
     hexGrid.forEach(bin => {
       if (bin.total < 3) return; // Skip bins with too few shots
       
@@ -289,9 +293,11 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
       });
       
       hexPath.addEventListener("mouseleave", hideTooltip);
-      
-      svg.appendChild(hexPath);
+
+      fragment.appendChild(hexPath);
     });
+
+    svg.appendChild(fragment);
   };
 
   // Tooltip functions
