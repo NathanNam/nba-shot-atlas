@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/integrations/supabase/client';
 import { ShotData } from './supabaseDataService';
+import pLimit from 'p-limit';
 
 export class ParallelDataService {
   /**
@@ -40,70 +42,59 @@ export class ParallelDataService {
   ): Promise<ShotData[]> {
     const tableName = `shots_${season}`;
     const batchSize = 500; // Smaller batch size for team data to avoid timeouts
-    const maxRetries = 2;
-    
+    const concurrency = 5;
+
     console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
-    
-    let allData: any[] = [];
-    let hasMore = true;
-    let offset = 0;
-    let batchCount = 0;
-    const maxBatches = 50; // Safety limit
 
-    while (hasMore && batchCount < maxBatches) {
-      let retryCount = 0;
-      let success = false;
-      
-      while (!success && retryCount < maxRetries) {
-        try {
-          const query = (supabase as any)
-            .from(tableName)
-            .select('*')
-            .eq('teamTricode', teamId)
-            .order('gameId', { ascending: true })
-            .order('actionNumber', { ascending: true })
-            .range(offset, offset + batchSize - 1);
+    // Fetch total count of shots for the team
+    const { count: total, error: countError } = await (supabase as any)
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .eq('teamTricode', teamId);
 
-          const { data: batchData, error } = await query;
-          
-          if (error) {
-            throw new Error(`Team data query failed: ${error.message}`);
-          }
-
-          if (batchData && batchData.length > 0) {
-            allData.push(...batchData);
-            offset += batchSize;
-            batchCount++;
-            
-            console.log(`🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`);
-            
-            // Check if we got a full batch (indicates more data might be available)
-            hasMore = batchData.length === batchSize;
-            
-            if (progressCallback) {
-              progressCallback(allData.length, undefined);
-            }
-            
-            success = true;
-          } else {
-            hasMore = false;
-            success = true;
-          }
-        } catch (error: any) {
-          retryCount++;
-          console.warn(`⚠️ Team batch ${batchCount + 1} failed (attempt ${retryCount}/${maxRetries}):`, error.message);
-          
-          if (retryCount >= maxRetries) {
-            console.error(`❌ Failed to fetch team batch after ${maxRetries} attempts, stopping`);
-            hasMore = false;
-            success = true;
-          } else {
-            // Wait before retrying with exponential backoff
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
-      }
+    if (countError) {
+      throw new Error(`Failed to get team shot count: ${countError.message}`);
     }
+
+    if (!total) {
+      return [];
+    }
+
+    // Compute ranges for parallel fetching
+    const ranges: Array<[number, number]> = [];
+    for (let start = 0; start < total; start += batchSize) {
+      ranges.push([start, Math.min(start + batchSize - 1, total - 1)]);
+    }
+
+    const limit = pLimit(concurrency);
+    let loaded = 0;
+
+    const batchPromises = ranges.map(([from, to], index) =>
+      limit(async () => {
+        const { data, error } = await (supabase as any)
+          .from(tableName)
+          .select('*')
+          .eq('teamTricode', teamId)
+          .order('gameId', { ascending: true })
+          .order('actionNumber', { ascending: true })
+          .range(from, to);
+
+        if (error) {
+          throw new Error(`Team data query failed: ${error.message}`);
+        }
+
+        const batchData = data || [];
+        loaded += batchData.length;
+        console.log(
+          `🚀 ParallelDataService: Team batch ${index + 1}/${ranges.length} - got ${batchData.length} records (total: ${loaded})`
+        );
+        progressCallback?.(loaded, total);
+        return batchData;
+      })
+    );
+
+    const results = await Promise.all(batchPromises);
+    const allData = results.flat();
 
     console.log(`🚀 ParallelDataService: Team fetch complete. Got ${allData.length} total records`);
 
@@ -112,7 +103,7 @@ export class ParallelDataService {
       personId: String(row.personId || ''),
       teamTricode: String(row.teamTricode || ''),
       xLegacy: Number(row.xLegacy) || 0,
-      yLegacy: Number(row.yLegacy) || 0, 
+      yLegacy: Number(row.yLegacy) || 0,
       shotDistance: Number(row.shotDistance) || 0,
       shotResult: String(row.shotResult || ''),
       shotValue: Number(row.shotValue) || 2,
@@ -134,7 +125,7 @@ export class ParallelDataService {
     const tableName = `shots_${season}`;
     const batchSize = 1000;
     
-    let allData: any[] = [];
+    const allData: any[] = [];
     let hasMore = true;
     let lastActionNumber: number | null = null;
     let lastGameId: number | null = null;
@@ -331,7 +322,7 @@ export class ParallelDataService {
     let currentActionNumber: number | null = null;
     let totalLoaded = 0;
     let batchCount = 0;
-    let maxRetries = 3;
+    const maxRetries = 3;
 
     console.log(`🚀 Starting sequential league data fetch for ${season} with batch size ${batchSize}`);
 
