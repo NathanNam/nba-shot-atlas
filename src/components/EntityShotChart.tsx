@@ -40,9 +40,10 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
-    selectedSeason, 
+    selectedSeason,
     entityId || '201939', // Use Stephen Curry's ID as fallback for default case
-    viewMode
+    viewMode,
+    preloadedData === undefined
   );
   
   // Use preloaded data if available, otherwise use hook result

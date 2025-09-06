@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { ShotData } from '@/services/supabaseDataService';
 import { ParallelDataService } from '@/services/parallelDataService';
 
-interface BatchRequest {
+export interface BatchRequest {
   season: string;
   entityId: string;
   viewMode: 'player' | 'team' | 'league';
   key: string;
 }
 
-interface BatchResult {
+export interface BatchResult {
   [key: string]: {
     data: ShotData[];
     loading: boolean;

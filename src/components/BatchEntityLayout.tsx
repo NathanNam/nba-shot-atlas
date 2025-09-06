@@ -1,9 +1,6 @@
-import { useMemo } from "react";
-import { EntityShotChart } from "./EntityShotChart";
 import { EntityStatistics } from "./EntityStatistics";
 import { EntityVsEntityComparison } from "./EntityVsEntityComparison";
-import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
-import { useBatchShotData } from "@/hooks/useBatchShotData";
+import { BatchResult } from "@/hooks/useBatchShotData";
 
 interface BatchEntityLayoutProps {
   entity1: string;
@@ -11,98 +8,24 @@ interface BatchEntityLayoutProps {
   season1: string;
   season2: string;
   viewMode: "player" | "team";
+  preloadedResults: BatchResult;
 }
 
-export function BatchEntityLayout({ 
-  entity1, 
-  entity2, 
-  season1, 
-  season2, 
-  viewMode 
+export function BatchEntityLayout({
+  entity1,
+  entity2,
+  season1,
+  season2,
+  viewMode,
+  preloadedResults
 }: BatchEntityLayoutProps) {
-  const { players: playersData, loading: playersLoading } = useAvailablePlayers();
+  const batchResults = preloadedResults;
 
-  // Get entity IDs dynamically for any player
-  const getEntityId = (entityName: string) => {
-    if (viewMode === 'team') {
-      return entityName;
-    }
-    
-    // Extract clean entity name (remove season info if present)
-    const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
-    
-    const player = playersData?.find(p => p.name === cleanEntityName);
-    console.log(`🔍 BatchEntityLayout: Looking for "${cleanEntityName}", found player:`, player);
-    
-    if (!player) {
-      console.warn(`🚨 BatchEntityLayout: No player found for "${cleanEntityName}"`);
-      return undefined;
-    }
-    
-    return player.id.toString();
-  };
-
-  const entity1Id = getEntityId(entity1);
-  const entity2Id = getEntityId(entity2);
-
-  // Create batch requests for all 4 combinations
-  const batchRequests = useMemo(() => {
-    if (playersLoading || !entity1Id || !entity2Id) {
-      return [];
-    }
-
-    return [
-      {
-        season: season1,
-        entityId: entity1Id,
-        viewMode,
-        key: `${entity1}_${season1}`
-      },
-      {
-        season: season1,
-        entityId: entity2Id,
-        viewMode,
-        key: `${entity2}_${season1}`
-      },
-      {
-        season: season2,
-        entityId: entity1Id,
-        viewMode,
-        key: `${entity1}_${season2}`
-      },
-      {
-        season: season2,
-        entityId: entity2Id,
-        viewMode,
-        key: `${entity2}_${season2}`
-      }
-    ];
-  }, [entity1Id, entity2Id, season1, season2, viewMode, playersLoading]);
-
-  const batchResults = useBatchShotData(batchRequests);
-  
-  // Debug logging - Enhanced
-  console.log('🔍 BatchEntityLayout: Complete debug info', {
-    entity1, entity2, season1, season2, viewMode,
-    entity1Id, entity2Id,
-    playersLoading,
-    batchRequestsCount: batchRequests.length,
-    batchRequests: batchRequests.map(r => ({ key: r.key, entityId: r.entityId, season: r.season })),
-    resultKeys: Object.keys(batchResults),
-    resultSummary: Object.entries(batchResults).map(([key, value]) => ({
-      key,
-      dataLength: value?.data?.length || 0,
-      loading: value?.loading,
-      error: value?.error,
-      firstRecord: value?.data?.[0]
-    }))
-  });
-
-  // Show loading state
+  // Show loading or error states based on provided results
   const isLoading = Object.values(batchResults).some(result => result?.loading);
   const hasError = Object.values(batchResults).some(result => result?.error);
 
-  if (playersLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -166,7 +89,7 @@ export function BatchEntityLayout({
   }
 
   return (
-    <div className="space-y-8">
+      <div className="space-y-8">
       {/* Statistics Grid - Reorganized by season rows */}
       <div className="space-y-6">
         {/* Row 3: Two stats charts for 2024-25 Season */}
