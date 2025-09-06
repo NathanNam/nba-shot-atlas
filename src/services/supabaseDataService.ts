@@ -101,6 +101,13 @@ class SupabaseDataService {
     const startTime = Date.now();
 
     try {
+      // Check cache before executing any queries
+      const cached = dataCache.get(season, entityId || '', viewMode);
+      if (cached) {
+        console.log(`🔍 SupabaseDataService: Cache hit for ${season}_${viewMode}_${entityId || 'all'}`);
+        return cached;
+      }
+
       console.log(`🔍 SupabaseDataService: Starting optimized fetch for ${season}_${viewMode}_${entityId || 'all'}`);
       
       // For league mode, redirect to server-side statistics calculation
@@ -133,6 +140,8 @@ class SupabaseDataService {
         body: 'Successfully loaded shot data with optimized approach',
         attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, shots_count: shots.length },
       });
+      // Store in cache after successful fetch
+      dataCache.set(season, entityId || '', viewMode, shots);
 
       return shots;
 
@@ -168,8 +177,15 @@ class SupabaseDataService {
    * Original method as fallback
    */
   private static async getShotDataOriginal(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', progressCallback?: (loaded: number, total?: number) => void): Promise<ShotData[]> {
+    // Check cache before executing fallback queries
+    const cached = dataCache.get(season, entityId || '', viewMode);
+    if (cached) {
+      console.log(`🔍 SupabaseDataService: Fallback cache hit for ${season}_${viewMode}_${entityId || 'all'}`);
+      return cached;
+    }
+
     const tableName = `shots_${season}`;
-    
+
     let allData: any[] = [];
     let hasMore = true;
     let offset = 0;
@@ -224,6 +240,9 @@ class SupabaseDataService {
       description: row.description || '',
       subType: row.subType || '',
     }));
+
+    // Cache results from fallback path
+    dataCache.set(season, entityId || '', viewMode, shots);
 
     return shots;
   }
