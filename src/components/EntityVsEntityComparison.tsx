@@ -15,7 +15,7 @@ interface EntityVsEntityComparisonProps {
 
 export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, preloadedEntity1Data, preloadedEntity2Data }: EntityVsEntityComparisonProps) {
   const { players: playersData, loading: playersLoading } =
-    viewMode === "player" ? useAvailablePlayers(season) : { players: [], loading: false };
+    viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
 
   const entity1Id =
     viewMode === "player"

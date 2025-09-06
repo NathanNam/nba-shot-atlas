@@ -11,8 +11,8 @@ interface ComparisonShotChartProps {
 }
 
 export function ComparisonShotChart({ entityName, season1, season2, viewMode }: ComparisonShotChartProps) {
-  const { players: players1, loading: loading1 } = useAvailablePlayers(season1);
-  const { players: players2, loading: loading2 } = useAvailablePlayers(season2);
+  const { players: players1, loading: loading1 } = useAvailablePlayers();
+  const { players: players2, loading: loading2 } = useAvailablePlayers();
   
   // Convert player name to player ID for data fetching
   const getEntityId = (season: string, isSecondSeason = false) => {

@@ -20,7 +20,7 @@ export function BatchEntityLayout({
   season2, 
   viewMode 
 }: BatchEntityLayoutProps) {
-  const { players: playersData, loading: playersLoading } = useAvailablePlayers(season1);
+  const { players: playersData, loading: playersLoading } = useAvailablePlayers();
 
   // Get entity IDs dynamically for any player
   const getEntityId = (entityName: string) => {

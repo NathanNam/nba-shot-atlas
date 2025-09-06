@@ -12,7 +12,7 @@ interface EntityStatisticsProps {
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
   // Only fetch players for player mode to improve performance
-  const { players, loading: playersLoading } = useAvailablePlayers(viewMode === 'player' ? selectedSeason : '');
+  const { players, loading: playersLoading } = useAvailablePlayers();
   
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
@@ -100,89 +100,86 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
 
     const totalShots = shotData.length;
 
-    const totals = shotData.reduce(
-      (acc, shot) => {
-        // Determine if the shot was made
-        const result = shot.shotResult;
-        const made = result === 'Made' || result === 'MADE' || result === '1';
+    // Initialize accumulator
+    let madeShots = 0;
+    let twoPointAttempted = 0;
+    let twoPointMade = 0;
+    let threePointAttempted = 0;
+    let threePointMade = 0;
+    const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
 
-        if (made) {
-          acc.madeShots += 1;
-        }
+    // Process each shot
+    shotData.forEach(shot => {
+      // Determine if the shot was made
+      const result = shot.shotResult;
+      const made = result === 'Made' || result === 'MADE' || result === '1';
 
-        // Count 2PT/3PT attempts and makes
-        if (shot.shotValue === 2) {
-          acc.twoPointAttempted += 1;
-          if (made) acc.twoPointMade += 1;
-        } else if (shot.shotValue === 3) {
-          acc.threePointAttempted += 1;
-          if (made) acc.threePointMade += 1;
-        }
-
-        // Zone classification (formerly analyzeZones)
-        let zone = "Unknown";
-        const distance = shot.shotDistance;
-        const x = shot.xLegacy;
-        const y = shot.yLegacy;
-
-        if (distance <= 3) {
-          zone = "Restricted Area";
-        } else if (distance <= 8) {
-          zone = "Paint";
-        } else if (distance <= 16) {
-          if (Math.abs(x) <= 80) {
-            zone = "Mid Range Center";
-          } else {
-            zone = Math.abs(x) > 150 ? "Mid Range Wing" : "Mid Range";
-          }
-        } else if (shot.shotValue === 3) {
-          if (y <= 100 && Math.abs(x) >= 220) {
-            zone = x < 0 ? "Left Corner 3" : "Right Corner 3";
-          } else if (Math.abs(x) <= 80) {
-            zone = "Above Break 3 Center";
-          } else if (Math.abs(x) <= 160) {
-            zone = x < 0 ? "Above Break 3 Left" : "Above Break 3 Right";
-          } else {
-            zone = x < 0 ? "Left Wing 3" : "Right Wing 3";
-          }
-        } else {
-          if (Math.abs(x) <= 80) {
-            zone = "Long 2 Center";
-          } else {
-            zone = x < 0 ? "Left Elbow" : "Right Elbow";
-          }
-        }
-
-        const zoneData = acc.zoneStats.get(zone) || { made: 0, total: 0, percentage: 0 };
-        zoneData.total += 1;
-        if (made) zoneData.made += 1;
-        zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
-        acc.zoneStats.set(zone, zoneData);
-
-        return acc;
-      },
-      {
-        madeShots: 0,
-        twoPointAttempted: 0,
-        twoPointMade: 0,
-        threePointAttempted: 0,
-        threePointMade: 0,
-        zoneStats: new Map<string, { made: number; total: number; percentage: number }>()
+      if (made) {
+        madeShots += 1;
       }
-    );
 
-    const fieldGoalPercentage = totalShots > 0 ? totals.madeShots / totalShots : 0;
+      // Count 2PT/3PT attempts and makes
+      if (shot.shotValue === 2) {
+        twoPointAttempted += 1;
+        if (made) twoPointMade += 1;
+      } else if (shot.shotValue === 3) {
+        threePointAttempted += 1;
+        if (made) threePointMade += 1;
+      }
+
+      // Zone classification (formerly analyzeZones)
+      let zone = "Unknown";
+      const distance = shot.shotDistance;
+      const x = shot.xLegacy;
+      const y = shot.yLegacy;
+
+      if (distance <= 3) {
+        zone = "Restricted Area";
+      } else if (distance <= 8) {
+        zone = "Paint";
+      } else if (distance <= 16) {
+        if (Math.abs(x) <= 80) {
+          zone = "Mid Range Center";
+        } else {
+          zone = Math.abs(x) > 150 ? "Mid Range Wing" : "Mid Range";
+        }
+      } else if (shot.shotValue === 3) {
+        if (y <= 100 && Math.abs(x) >= 220) {
+          zone = x < 0 ? "Left Corner 3" : "Right Corner 3";
+        } else if (Math.abs(x) <= 80) {
+          zone = "Above Break 3 Center";
+        } else if (Math.abs(x) <= 160) {
+          zone = x < 0 ? "Above Break 3 Left" : "Above Break 3 Right";
+        } else {
+          zone = x < 0 ? "Left Wing 3" : "Right Wing 3";
+        }
+      } else {
+        if (Math.abs(x) <= 80) {
+          zone = "Long 2 Center";
+        } else {
+          zone = x < 0 ? "Left Elbow" : "Right Elbow";
+        }
+      }
+
+      const zoneData = zoneStats.get(zone) || { made: 0, total: 0, percentage: 0 };
+      zoneData.total += 1;
+      if (made) zoneData.made += 1;
+      zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
+      zoneStats.set(zone, zoneData);
+    });
+
+    const fieldGoalPercentage = totalShots > 0 ? madeShots / totalShots : 0;
     const twoPointPercentage =
-      totals.twoPointAttempted > 0 ? totals.twoPointMade / totals.twoPointAttempted : 0;
+      twoPointAttempted > 0 ? twoPointMade / twoPointAttempted : 0;
     const threePointPercentage =
-      totals.threePointAttempted > 0 ? totals.threePointMade / totals.threePointAttempted : 0;
+      threePointAttempted > 0 ? threePointMade / threePointAttempted : 0;
 
     // Debug output for 3PT calculation
     console.log(`🏀 3PT Analysis for ${entityName}:`, {
-      threePointMade: totals.threePointMade,
-      threePointAttempted: totals.threePointAttempted,
+      threePointMade: threePointMade,
+      threePointAttempted: threePointAttempted,
       threePointPercentage: (threePointPercentage * 100).toFixed(1) + '%',
-      calculation: `${totals.threePointMade}/${totals.threePointAttempted} = ${(threePointPercentage * 100).toFixed(1)}%`
+      calculation: `${threePointMade}/${threePointAttempted} = ${(threePointPercentage * 100).toFixed(1)}%`
     });
 
     // Determine hottest, coldest and favorite zones from accumulated stats
@@ -197,7 +194,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     let lowestPercentage = 1;
     let mostAttempts = 0;
 
-    totals.zoneStats.forEach((stats, zone) => {
+    zoneStats.forEach((stats, zone) => {
       if (stats.total >= 3) {
         if (stats.percentage > highestPercentage) {
           highestPercentage = stats.percentage;
@@ -220,14 +217,14 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
 
     return {
       totalShots,
-      madeShots: totals.madeShots,
+      madeShots: madeShots,
       fieldGoalPercentage,
       twoPointPercentage,
-      twoPointMade: totals.twoPointMade,
-      twoPointAttempted: totals.twoPointAttempted,
+      twoPointMade: twoPointMade,
+      twoPointAttempted: twoPointAttempted,
       threePointPercentage,
-      threePointMade: totals.threePointMade,
-      threePointAttempted: totals.threePointAttempted,
+      threePointMade: threePointMade,
+      threePointAttempted: threePointAttempted,
       hottestZone,
       hottestZoneStats,
       coldestZone,
@@ -261,5 +258,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     );
   }
 
-  return <StatisticsPanel entityName={`${entityName} (${selectedSeason})`} stats={calculatedStats} />;
+  // Don't add season if it's already in the entityName
+  const displayName = entityName.includes('(') ? entityName : `${entityName} (${selectedSeason})`;
+  return <StatisticsPanel entityName={displayName} stats={calculatedStats} />;
 }

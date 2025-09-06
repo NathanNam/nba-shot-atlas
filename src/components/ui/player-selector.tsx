@@ -30,7 +30,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
-  const { players, loading } = useAvailablePlayers(selectedSeason);
+  const { players, loading } = useAvailablePlayers();
   
   const entities = viewMode === "player" ? players.map(p => p.name) : teams;
   const entityOptions = viewMode === "player" ? players : teams.map(t => ({ id: t, name: t }));
