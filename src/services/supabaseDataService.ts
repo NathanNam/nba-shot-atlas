@@ -48,21 +48,37 @@ class SupabaseDataService {
     const startTime = Date.now();
 
     try {
-      dbQueryCounter.add(1, { table: 'players', operation: 'select' });
+      const batchSize = 1000;
+      let from = 0;
+      let more = true;
+      let allPlayers: Record<string, unknown>[] = [];
 
-      const { data, error } = await supabase
-        .from('players')
-        .select('*');
+      while (more) {
+        dbQueryCounter.add(1, { table: 'players', operation: 'select' });
 
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        throw new Error(`Failed to fetch players: ${error.message}`);
+        const { data, error } = await supabase
+          .from('players')
+          .select('*')
+          .range(from, from + batchSize - 1);
+
+        if (error) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error.message,
+          });
+          throw new Error(`Failed to fetch players: ${error.message}`);
+        }
+
+        if (data && data.length > 0) {
+          allPlayers = allPlayers.concat(data);
+          from += batchSize;
+          more = data.length === batchSize;
+        } else {
+          more = false;
+        }
       }
 
-      const players: Player[] = (data || []).map(player => ({
+      const players: Player[] = allPlayers.map(player => ({
         personId: player.personId || 0,
         playerFullName: player.playerFullName || '',
         id: (player.personId || 0).toString(),
