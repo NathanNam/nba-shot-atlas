@@ -13,7 +13,14 @@ class ShotDataManager {
     progress: { loaded: number; total?: number; isProcessing?: boolean } | null;
     subscribers: Set<(data: { shotData: ShotData[], loading: boolean, error: string | null, progress: { loaded: number; total?: number; isProcessing?: boolean } | null }) => void>;
     fetchPromise?: Promise<ShotData[]>;
+    timestamp: number;
   }>();
+  private cleanupInterval: ReturnType<typeof setInterval>;
+  private static readonly TTL = 10 * 60 * 1000; // 10 minutes
+
+  private constructor() {
+    this.cleanupInterval = setInterval(() => this.cleanup(), ShotDataManager.TTL);
+  }
 
   static getInstance(): ShotDataManager {
     if (!ShotDataManager.instance) {
@@ -32,8 +39,15 @@ class ShotDataManager {
     viewMode: 'player' | 'team' | 'league',
     callback: (data: { shotData: ShotData[], loading: boolean, error: string | null, progress: { loaded: number; total?: number; isProcessing?: boolean } | null }) => void
   ) {
+    this.cleanup();
     const key = this.getKey(season, entityId, viewMode);
-    
+    const now = Date.now();
+
+    const existing = this.cache.get(key);
+    if (existing && now - existing.timestamp > ShotDataManager.TTL) {
+      this.cache.delete(key);
+    }
+
     if (!this.cache.has(key)) {
       this.cache.set(key, {
         data: [],
@@ -41,13 +55,15 @@ class ShotDataManager {
         error: null,
         progress: null,
         subscribers: new Set(),
+        timestamp: now,
       });
-      
+
       // Start fetching data
       this.fetchData(key, season, entityId, viewMode);
     }
 
     const entry = this.cache.get(key)!;
+    entry.timestamp = now;
     entry.subscribers.add(callback);
 
     // Immediately call back with current state
@@ -69,6 +85,7 @@ class ShotDataManager {
 
   private async fetchData(key: string, season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
     const entry = this.cache.get(key)!;
+    entry.timestamp = Date.now();
     
     // Prevent duplicate fetches
     if (entry.fetchPromise) {
@@ -120,6 +137,7 @@ class ShotDataManager {
         entry.loading = false;
         entry.error = null;
         entry.progress = null; // Clear progress when complete
+        entry.timestamp = Date.now();
 
         span.setAttributes({ success: true, result_count: data.length });
 
@@ -142,6 +160,7 @@ class ShotDataManager {
         entry.loading = false;
         entry.error = errorMessage;
         entry.progress = null;
+        entry.timestamp = Date.now();
 
         span.setAttributes({ success: false, error: errorMessage });
 
@@ -170,6 +189,16 @@ class ShotDataManager {
     })();
 
     return entry.fetchPromise;
+  }
+
+  cleanup() {
+    const now = Date.now();
+    this.cache.forEach((entry, key) => {
+      if (now - entry.timestamp > ShotDataManager.TTL) {
+        console.log(`🔐 ShotDataManager: Pruning stale cache entry ${key}`);
+        this.cache.delete(key);
+      }
+    });
   }
 
   // Clear cache for debugging
