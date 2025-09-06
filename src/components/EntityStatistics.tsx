@@ -12,7 +12,7 @@ interface EntityStatisticsProps {
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
   // Only fetch players for player mode to improve performance
-  const { players, loading: playersLoading } = useAvailablePlayers();
+  const { players, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
   
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
@@ -20,7 +20,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   // Memoize entityId to prevent unnecessary re-computations
   const entityId = useMemo(() => {
     if (viewMode === 'player') {
-      if (playersLoading) {
+      if (playersLoading || !players || players.length === 0) {
         console.log(`🔍 EntityStatistics: Players still loading for "${cleanEntityName}"`);
         return undefined;
       }

@@ -21,7 +21,7 @@ export function BatchEntityVsEntityDualSeasonComparison({
   season2, 
   viewMode 
 }: BatchEntityVsEntityDualSeasonComparisonProps) {
-  const { players: playersData, loading: playersLoading } = useAvailablePlayers();
+  const { players: playersData, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
 
   // Get entity IDs
   const getEntityId = (entityName: string) => {

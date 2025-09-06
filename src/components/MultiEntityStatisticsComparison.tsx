@@ -11,7 +11,7 @@ interface MultiEntityStatisticsComparisonProps {
 }
 
 export function MultiEntityStatisticsComparison({ entities, selectedSeason, viewMode }: MultiEntityStatisticsComparisonProps) {
-  const { players, loading: playersLoading } = useAvailablePlayers();
+  const { players, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
   
   // Get entity data for all entities
   const entityData = entities.map(entityName => {
