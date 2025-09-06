@@ -11,9 +11,13 @@ interface EntityStatisticsProps {
 }
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
-  // Only fetch players for player mode to improve performance
+  // Always call hook but only use results in player mode  
   console.log(`🔍 EntityStatistics: viewMode=${viewMode}, entityName=${entityName}`);
-  const { players, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
+  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
+  
+  // Only use player data in player mode
+  const players = viewMode === "player" ? rawPlayers : [];
+  const playersLoading = viewMode === "player" ? rawLoading : false;
   
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;

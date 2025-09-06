@@ -15,8 +15,14 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
-  const { players: players1, loading: loading1 } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
-  const { players: players2, loading: loading2 } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
+  // Always call hooks but only use results in player mode
+  const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
+  const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
+  
+  const players1 = viewMode === "player" ? rawPlayers1 : [];
+  const loading1 = viewMode === "player" ? rawLoading1 : false;
+  const players2 = viewMode === "player" ? rawPlayers2 : [];
+  const loading2 = viewMode === "player" ? rawLoading2 : false;
   
   const getEntityId = (entityName: string, season: string, isSecondSeason = false) => {
     if (viewMode === 'player') {

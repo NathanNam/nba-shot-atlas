@@ -21,7 +21,11 @@ export function BatchEntityVsEntityDualSeasonComparison({
   season2, 
   viewMode 
 }: BatchEntityVsEntityDualSeasonComparisonProps) {
-  const { players: playersData, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
+  // Always call hook but only use results in player mode
+  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
+  
+  const playersData = viewMode === "player" ? rawPlayers : [];
+  const playersLoading = viewMode === "player" ? rawLoading : false;
 
   // Get entity IDs
   const getEntityId = (entityName: string) => {

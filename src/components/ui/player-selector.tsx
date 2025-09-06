@@ -30,9 +30,13 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
-  // Only fetch players when in player mode
-  console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers conditionally`);
-  const { players, loading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
+  // Always call hook but only use results in player mode
+  console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers`);
+  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
+  
+  // Only use player data in player mode
+  const players = viewMode === "player" ? rawPlayers : [];
+  const loading = viewMode === "player" ? rawLoading : false;
   
   console.log(`🔍 PlayerSelector: players=${players?.length || 0}, loading=${loading}`);
   const entities = viewMode === "player" ? (players || []).map(p => p.name) : teams;

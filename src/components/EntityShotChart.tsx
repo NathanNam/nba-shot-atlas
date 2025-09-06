@@ -10,8 +10,12 @@ interface EntityShotChartProps {
 }
 
 export function EntityShotChart({ entityName, selectedSeason, viewMode, preloadedData }: EntityShotChartProps) {
-  // Only fetch players for player mode to improve performance
-  const { players, loading: playersLoading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
+  // Always call hook but only use results in player mode
+  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
+  
+  // Only use player data in player mode
+  const players = viewMode === "player" ? rawPlayers : [];
+  const playersLoading = viewMode === "player" ? rawLoading : false;
   
   // Extract clean entity name from display name (remove season info if present)
   const cleanEntityName = entityName.includes(' (') ? entityName.split(' (')[0] : entityName;
