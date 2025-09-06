@@ -123,13 +123,16 @@ class SupabaseDataService {
 
       // Use optimized parallel fetching for better performance
       const shots = await ParallelDataService.getDataParallel(
-        season, 
-        entityId, 
-        viewMode, 
+        season,
+        entityId,
+        viewMode,
         progressCallback
       );
 
-      span.setAttributes({ success: true, shots_count: shots.length });
+      // Ensure we always return an array
+      const safeShots = Array.isArray(shots) ? shots : [];
+
+      span.setAttributes({ success: true, shots_count: safeShots.length });
 
       const duration = Date.now() - startTime;
       dbQueryDuration.record(duration, { table: 'shots', operation: 'select' });
@@ -138,12 +141,12 @@ class SupabaseDataService {
         severityNumber: SeverityNumber.INFO,
         severityText: 'INFO',
         body: 'Successfully loaded shot data with optimized approach',
-        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, shots_count: shots.length },
+        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, shots_count: safeShots.length },
       });
       // Store in cache after successful fetch
-      dataCache.set(season, entityId || '', viewMode, shots);
+      dataCache.set(season, entityId || '', viewMode, safeShots);
 
-      return shots;
+      return safeShots;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';

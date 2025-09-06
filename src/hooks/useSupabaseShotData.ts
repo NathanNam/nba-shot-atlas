@@ -66,14 +66,24 @@ export function useSupabaseShotData(
           });
         };
         
-        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, progressCallback);
-        
-        console.log(`🚀 useSupabaseShotData [${instanceId}]: Fresh data loaded, length: ${data.length}`);
-        setShotData(data);
+        const data = await SupabaseDataService.getShotData(
+          season,
+          entityId,
+          viewMode,
+          progressCallback
+        );
+
+        // Ensure we always work with an array
+        const safeData = Array.isArray(data) ? data : [];
+
+        console.log(
+          `🚀 useSupabaseShotData [${instanceId}]: Fresh data loaded, length: ${safeData.length}`
+        );
+        setShotData(safeData);
 
         span.setAttributes({
           success: true,
-          result_count: data.length,
+          result_count: safeData.length,
         });
 
         logger.emit({
@@ -84,7 +94,7 @@ export function useSupabaseShotData(
             season,
             entity_id: entityId,
             view_mode: viewMode,
-            result_count: data.length,
+            result_count: safeData.length,
           },
         });
 
