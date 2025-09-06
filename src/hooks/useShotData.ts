@@ -16,15 +16,19 @@ export interface ShotData {
   shotValue: number;
 }
 
+interface CacheEntry {
+  rawData: ShotData[];
+  filteredData: Map<string, ShotData[]>;
+  playerMap: Map<string, ShotData[]>;
+  teamMap: Map<string, ShotData[]>;
+  timestamp: number;
+}
+
 // Global cache for shot data to persist across component unmounts
 // Use window global to share with preloader
 declare global {
   interface Window {
-    __NBA_DATA_CACHE__?: Map<string, {
-      rawData: ShotData[];
-      filteredData: Map<string, ShotData[]>;
-      timestamp: number;
-    }>;
+    __NBA_DATA_CACHE__?: Map<string, CacheEntry>;
   }
 }
 
@@ -33,7 +37,8 @@ if (typeof window !== 'undefined' && !window.__NBA_DATA_CACHE__) {
   window.__NBA_DATA_CACHE__ = new Map();
 }
 
-const dataCache = typeof window !== 'undefined' ? window.__NBA_DATA_CACHE__! : new Map();
+const dataCache: Map<string, CacheEntry> =
+  typeof window !== 'undefined' ? window.__NBA_DATA_CACHE__! : new Map();
 
 // Cache TTL: 5 minutes
 const CACHE_TTL = 5 * 60 * 1000;
@@ -162,7 +167,7 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
             cache_type: 'raw',
           });
 
-          const filteredShots = applyFilter(cached.rawData, viewMode, entityId);
+          const filteredShots = applyFilter(cached, viewMode, entityId);
           cached.filteredData.set(filterKey, filteredShots);
 
           span.setAttributes({
@@ -259,15 +264,32 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
         const shots = parseCsv(csvText);
         if (signal.aborted) return;
 
-        // Cache the raw data
-        const newCache = {
+        // Build maps for quick lookup by player and team
+        const playerMap = new Map<string, ShotData[]>();
+        const teamMap = new Map<string, ShotData[]>();
+        for (const shot of shots) {
+          if (!playerMap.has(shot.personId)) {
+            playerMap.set(shot.personId, []);
+          }
+          playerMap.get(shot.personId)!.push(shot);
+
+          if (!teamMap.has(shot.teamTricode)) {
+            teamMap.set(shot.teamTricode, []);
+          }
+          teamMap.get(shot.teamTricode)!.push(shot);
+        }
+
+        // Cache the raw data and indexes
+        const newCache: CacheEntry = {
           rawData: shots,
           filteredData: new Map<string, ShotData[]>(),
+          playerMap,
+          teamMap,
           timestamp: now
         };
 
         // Apply current filter and cache it
-        const filteredShots = applyFilter(shots, viewMode, entityId);
+        const filteredShots = applyFilter(newCache, viewMode, entityId);
         newCache.filteredData.set(filterKey, filteredShots);
 
         dataCache.set(cacheKey, newCache);
@@ -355,34 +377,35 @@ export function useShotData(season: string, entityId: string, viewMode: 'player'
   return { shotData, loading, error };
 }
 
-function applyFilter(shots: ShotData[], viewMode: 'player' | 'team' | 'league', entityId: string): ShotData[] {
+function applyFilter(cache: CacheEntry, viewMode: 'player' | 'team' | 'league', entityId: string): ShotData[] {
   // Log filtered data for debugging
-  console.log(`🔍 Filtering ${shots.length} shots: ${viewMode} = "${entityId}"`);
-  
-  let filtered: ShotData[];
+  console.log(`🔍 Filtering ${cache.rawData.length} shots: ${viewMode} = "${entityId}"`);
+
   if (viewMode === 'league') {
-    filtered = shots;
-  } else if (viewMode === 'player') {
-    filtered = shots.filter(shot => shot.personId === entityId);
-    console.log(`👤 Player filter: found ${filtered.length} shots for ID ${entityId}`);
-    if (filtered.length === 0) {
-      // Debug: show sample of available player IDs
-      const sampleIds = [...new Set(shots.slice(0, 100).map(s => s.personId))].slice(0, 10);
+    return cache.rawData;
+  }
+
+  if (viewMode === 'player') {
+    const playerShots = cache.playerMap.get(entityId) || [];
+    console.log(`👤 Player filter: found ${playerShots.length} shots for ID ${entityId}`);
+    if (playerShots.length === 0) {
+      const sampleIds = [...cache.playerMap.keys()].slice(0, 10);
       console.log('🔍 Sample player IDs in data:', sampleIds);
     }
-  } else if (viewMode === 'team') {
-    filtered = shots.filter(shot => shot.teamTricode === entityId);
-    console.log(`🏀 Team filter: found ${filtered.length} shots for team ${entityId}`);
-    if (filtered.length === 0) {
-      // Debug: show sample of available team codes
-      const sampleTeams = [...new Set(shots.slice(0, 100).map(s => s.teamTricode))].slice(0, 10);
+    return playerShots;
+  }
+
+  if (viewMode === 'team') {
+    const teamShots = cache.teamMap.get(entityId) || [];
+    console.log(`🏀 Team filter: found ${teamShots.length} shots for team ${entityId}`);
+    if (teamShots.length === 0) {
+      const sampleTeams = [...cache.teamMap.keys()].slice(0, 10);
       console.log('🔍 Sample team codes in data:', sampleTeams);
     }
-  } else {
-    filtered = shots;
+    return teamShots;
   }
-  
-  return filtered;
+
+  return cache.rawData;
 }
 
 function parseCsv(csvText: string): ShotData[] {
