@@ -32,7 +32,7 @@ export class ParallelDataService {
   }
 
   /**
-   * Optimized team data fetching with smaller batches and better timeout handling
+   * Optimized team data fetching with smaller batches, retry logic, and better timeout handling
    */
   private static async getTeamDataOptimized(
     season: string,
@@ -40,46 +40,86 @@ export class ParallelDataService {
     progressCallback?: (loaded: number, total?: number) => void
   ): Promise<ShotData[]> {
     const tableName = `shots_${season}`;
-    const batchSize = 500; // Smaller batch size for team data to avoid timeouts
+    const batchSize = 100; // Smaller batch size for better performance
+    const maxRetries = 3;
+    const timeoutMs = 10000; // 10 second timeout per batch
 
     console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
 
-    // Sequentially fetch data in batches until no more records are returned
+    // Use cursor-based pagination instead of offset for better performance
     const allData: any[] = [];
-    let offset = 0;
-    let batchCount = 0;
     let hasMore = true;
+    let lastGameId: number | null = null;
+    let lastActionNumber: number | null = null;
+    let batchCount = 0;
 
-    while (hasMore) {
-      const { data, error } = await (supabase as any)
-        .from(tableName)
-        .select('*')
-        .eq('teamTricode', teamId)
-        .order('gameId', { ascending: true })
-        .order('actionNumber', { ascending: true })
-        .range(offset, offset + batchSize - 1);
-
-      if (error) {
-        console.error(
-          `🚀 ParallelDataService: Team batch query failed for offset ${offset} (team: ${teamId}, season: ${season}):`,
-          error
-        );
-        throw new Error(`Team data query failed: ${error.message}`);
-      }
-
-      const batchData = data || [];
-      allData.push(...batchData);
+    while (hasMore && batchCount < 500) { // Safety limit
       batchCount++;
-      offset += batchSize;
+      let retryCount = 0;
+      let success = false;
+      
+      while (!success && retryCount < maxRetries) {
+        try {
+          // Create query with timeout
+          const queryPromise = this.fetchTeamBatchWithCursor(
+            tableName, 
+            teamId, 
+            batchSize, 
+            lastGameId, 
+            lastActionNumber
+          );
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+          );
+          
+          const result = await Promise.race([queryPromise, timeoutPromise]) as {
+            data: any[];
+            hasMore: boolean;
+            lastGameId: number | null;
+            lastActionNumber: number | null;
+          };
 
-      console.log(
-        `🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`
-      );
+          const batchData = result.data || [];
+          allData.push(...batchData);
 
-      progressCallback?.(allData.length, undefined);
+          // Update cursor
+          lastGameId = result.lastGameId;
+          lastActionNumber = result.lastActionNumber;
 
-      // If we received less than batchSize, we've reached the end
-      hasMore = batchData.length === batchSize;
+          console.log(
+            `🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`
+          );
+
+          progressCallback?.(allData.length, undefined);
+
+          hasMore = result.hasMore && batchData.length === batchSize;
+          success = true;
+          
+        } catch (error: any) {
+          retryCount++;
+          const isTimeout = error.message.includes('timeout');
+          
+          console.warn(
+            `⚠️ Team batch ${batchCount} failed (attempt ${retryCount}/${maxRetries}) - ${isTimeout ? 'timeout' : error.message}`
+          );
+          
+          if (retryCount >= maxRetries) {
+            // For older seasons that may have indexing issues, try fallback
+            if (batchCount === 1 && allData.length === 0) {
+              console.log(`🔄 Trying fallback method for ${teamId} in ${season}`);
+              return await this.getTeamDataFallback(season, teamId, progressCallback);
+            }
+            
+            console.error(`❌ Failed to fetch team data after ${maxRetries} attempts, returning partial data`);
+            hasMore = false;
+            success = true; // Stop trying but return what we have
+          } else {
+            // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+          }
+        }
+      }
     }
 
     console.log(`🚀 ParallelDataService: Team fetch complete. Got ${allData.length} total records`);
@@ -98,6 +138,100 @@ export class ParallelDataService {
     }));
 
     return shots;
+  }
+
+  /**
+   * Helper method to fetch a team batch with cursor pagination
+   */
+  private static async fetchTeamBatchWithCursor(
+    tableName: string,
+    teamId: string,
+    batchSize: number,
+    lastGameId: number | null,
+    lastActionNumber: number | null
+  ): Promise<{ data: any[]; hasMore: boolean; lastGameId: number | null; lastActionNumber: number | null }> {
+    let query = (supabase as any)
+      .from(tableName)
+      .select('*')
+      .eq('teamTricode', teamId)
+      .order('gameId', { ascending: true })
+      .order('actionNumber', { ascending: true })
+      .limit(batchSize);
+
+    // Apply cursor pagination
+    if (lastGameId !== null && lastActionNumber !== null) {
+      query = query.or(`gameId.gt.${lastGameId},and(gameId.eq.${lastGameId},actionNumber.gt.${lastActionNumber})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Team batch query failed: ${error.message}`);
+    }
+
+    const batchData = data || [];
+    const hasMore = batchData.length === batchSize;
+    
+    let newLastGameId: number | null = null;
+    let newLastActionNumber: number | null = null;
+    
+    if (batchData.length > 0) {
+      const lastRecord = batchData[batchData.length - 1];
+      newLastGameId = lastRecord.gameId;
+      newLastActionNumber = lastRecord.actionNumber;
+    }
+
+    return {
+      data: batchData,
+      hasMore,
+      lastGameId: newLastGameId,
+      lastActionNumber: newLastActionNumber
+    };
+  }
+
+  /**
+   * Fallback method for team data when optimized method fails
+   */
+  private static async getTeamDataFallback(
+    season: string,
+    teamId: string,
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const tableName = `shots_${season}`;
+    
+    console.log(`🔄 ParallelDataService: Using fallback method for ${teamId} in ${season}`);
+    
+    try {
+      const { data, error } = await (supabase as any)
+        .from(tableName)
+        .select('*')
+        .eq('teamTricode', teamId)
+        .limit(5000); // Conservative limit for fallback
+
+      if (error) {
+        throw new Error(`Fallback team query failed: ${error.message}`);
+      }
+
+      const shots: ShotData[] = (data || []).map(row => ({
+        personId: String(row.personId || ''),
+        teamTricode: String(row.teamTricode || ''),
+        xLegacy: Number(row.xLegacy) || 0,
+        yLegacy: Number(row.yLegacy) || 0,
+        shotDistance: Number(row.shotDistance) || 0,
+        shotResult: String(row.shotResult || ''),
+        shotValue: Number(row.shotValue) || 2,
+        description: String(row.description || ''),
+        subType: String(row.subType || ''),
+      }));
+
+      console.log(`🔄 ParallelDataService: Fallback got ${shots.length} records for ${teamId}`);
+      progressCallback?.(shots.length, shots.length);
+      
+      return shots;
+    } catch (error: any) {
+      console.error(`❌ ParallelDataService: Fallback failed for ${teamId} in ${season}:`, error);
+      throw error;
+    }
   }
 
   /**

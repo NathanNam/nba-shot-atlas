@@ -115,7 +115,8 @@ export function BatchEntityVsEntityDualSeasonComparison({
 
   // Show loading state
   const isLoading = Object.values(batchResults).some(result => result?.loading);
-  const hasError = Object.values(batchResults).some(result => result?.error);
+  const criticalErrors = Object.values(batchResults).filter(result => result?.error && result?.data?.length === 0);
+  const partialErrors = Object.values(batchResults).filter(result => result?.error && result?.data?.length > 0);
 
   if (playersLoading || isLoading) {
     return (
@@ -132,10 +133,9 @@ export function BatchEntityVsEntityDualSeasonComparison({
     );
   }
 
-  if (hasError) {
-    const errorMessages = Object.values(batchResults)
-      .filter(result => result?.error)
-      .map(result => result!.error);
+  // Only show error if there are critical errors (no data at all)
+  if (criticalErrors.length > 0) {
+    const errorMessages = criticalErrors.map(result => result!.error);
     
     return (
       <div className="space-y-8">
@@ -165,6 +165,20 @@ export function BatchEntityVsEntityDualSeasonComparison({
 
   return (
     <div className="space-y-8">
+      {/* Show partial error warnings if any */}
+      {partialErrors.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+          <CardHeader>
+            <CardTitle className="text-yellow-800 dark:text-yellow-200 text-sm">
+              Partial Data Warning
+            </CardTitle>
+            <CardDescription className="text-yellow-600 dark:text-yellow-400 text-xs">
+              Some data may be incomplete due to timeout issues. Showing available data.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* Season 1 Comparison */}
       <Card>
         <CardHeader className="text-center">
