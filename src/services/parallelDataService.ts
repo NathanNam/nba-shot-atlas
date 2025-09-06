@@ -46,14 +46,29 @@ export class ParallelDataService {
 
     console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
 
-    // Fetch total count of shots for the team
-    const { count: total, error: countError } = await (supabase as any)
-      .from(tableName)
-      .select('id', { count: 'exact', head: true })
-      .eq('teamTricode', teamId);
+    // Fetch total count of shots for the team using an existing column
+    let total = 0;
+    try {
+      const { count, error: countError } = await (supabase as any)
+        .from(tableName)
+        .select('*', { count: 'exact', head: true })
+        .eq('teamTricode', teamId);
 
-    if (countError) {
-      throw new Error(`Failed to get team shot count: ${countError.message}`);
+      if (countError) {
+        console.error(
+          `🚀 ParallelDataService: Count query failed for team ${teamId} (season: ${season}):`,
+          countError
+        );
+        throw new Error(`Failed to get team shot count: ${countError.message}`);
+      }
+
+      total = count || 0;
+    } catch (error: any) {
+      console.error(
+        `🚀 ParallelDataService: Unexpected error during team count fetch for ${teamId} (season: ${season}):`,
+        error
+      );
+      throw error;
     }
 
     if (!total) {
@@ -80,6 +95,10 @@ export class ParallelDataService {
           .range(from, to);
 
         if (error) {
+          console.error(
+            `🚀 ParallelDataService: Team batch query failed for range ${from}-${to} (team: ${teamId}, season: ${season}):`,
+            error
+          );
           throw new Error(`Team data query failed: ${error.message}`);
         }
 
