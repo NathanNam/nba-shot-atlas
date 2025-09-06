@@ -436,7 +436,7 @@ export class ParallelDataService {
     progressCallback?: (loaded: number, total?: number) => void
   ): Promise<ShotData[]> {
     const batchSize = 1000; // Smaller batch size to avoid timeouts
-    let allData: ShotData[] = [];
+    const allData: ShotData[] = [];
     let hasMoreData = true;
     let currentGameId: string | null = null;
     let currentActionNumber: number | null = null;
@@ -468,7 +468,7 @@ export class ParallelDataService {
               description: String(shot.description || ''),
               subType: String(shot.subType || ''),
             }));
-            allData = allData.concat(transformedData);
+            allData.push(...transformedData);
             totalLoaded += result.data.length;
             
             // Update cursor for next batch
