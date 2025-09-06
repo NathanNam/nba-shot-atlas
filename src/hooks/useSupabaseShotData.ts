@@ -3,9 +3,14 @@ import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
-export function useSupabaseShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
+export function useSupabaseShotData(
+  season: string,
+  entityId: string,
+  viewMode: 'player' | 'team' | 'league',
+  enabled: boolean = true
+) {
   const [shotData, setShotData] = useState<ShotData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ loaded: number; total?: number; isProcessing?: boolean } | null>(null);
 
@@ -14,6 +19,11 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
   console.log(`🚀 useSupabaseShotData HOOK [${instanceId}]: Called with season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     const loadShotData = async () => {
       console.log(`🔍 useSupabaseShotData [${instanceId}]: Starting fresh fetch for season="${season}", entityId="${entityId}", viewMode="${viewMode}"`);
       
@@ -109,7 +119,7 @@ export function useSupabaseShotData(season: string, entityId: string, viewMode: 
     };
 
     loadShotData();
-  }, [season, entityId, viewMode]);
+  }, [season, entityId, viewMode, enabled]);
 
   return { shotData, loading, error, progress };
 }

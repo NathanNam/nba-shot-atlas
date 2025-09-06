@@ -15,6 +15,7 @@ import { EntityVsEntityDualSeasonComparison } from "@/components/EntityVsEntityD
 import { BatchEntityVsEntityDualSeasonComparison } from "@/components/BatchEntityVsEntityDualSeasonComparison";
 import { BatchEntityLayout } from "@/components/BatchEntityLayout";
 import { Button } from "@/components/ui/button";
+import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
@@ -29,7 +30,7 @@ const Index = () => {
   
   // Get current selections based on view mode
   const selectedEntities = viewMode === "player" ? playerSelections : teamSelections;
-  
+
   // Handle view mode changes
   const handleViewModeChange = (newViewMode: "player" | "team") => {
     setViewMode(newViewMode);
@@ -43,6 +44,15 @@ const Index = () => {
       setTeamSelections(entities);
     }
   };
+
+  const { batchResults } = useComparisonBatchShotData({
+    entity1: selectedEntities[0] || '',
+    entity2: selectedEntities[1] || '',
+    season1: selectedSeason,
+    season2: selectedSeason2,
+    viewMode,
+    enabled: isComparisonMode && selectedEntities.length > 1,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,6 +99,7 @@ const Index = () => {
                           entityName={`${entity} (${selectedSeason})`}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
+                          preloadedData={batchResults[`${entity}_${selectedSeason}`]?.data}
                         />
                       ))}
                     </div>
@@ -101,6 +112,7 @@ const Index = () => {
                           entityName={`${entity} (${selectedSeason2})`}
                           selectedSeason={selectedSeason2}
                           viewMode={viewMode}
+                          preloadedData={batchResults[`${entity}_${selectedSeason2}`]?.data}
                         />
                       ))}
                     </div>
@@ -144,6 +156,7 @@ const Index = () => {
                     season1={selectedSeason}
                     season2={selectedSeason2}
                     viewMode={viewMode}
+                    preloadedResults={batchResults}
                   />
                 ) : (
                   // Single entity across seasons: Show individual stats for each season + season comparison

@@ -48,9 +48,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
-    selectedSeason, 
+    selectedSeason,
     stableEntityId,
-    viewMode
+    viewMode,
+    preloadedData === undefined
   );
   
   // Use preloaded data if available, otherwise use hook result

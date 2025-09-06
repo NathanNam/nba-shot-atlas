@@ -208,7 +208,12 @@ class ShotDataManager {
   }
 }
 
-export function useSingletonShotData(season: string, entityId: string, viewMode: 'player' | 'team' | 'league') {
+export function useSingletonShotData(
+  season: string,
+  entityId: string,
+  viewMode: 'player' | 'team' | 'league',
+  enabled: boolean = true
+) {
   const [state, setState] = useState<{
     shotData: ShotData[];
     loading: boolean;
@@ -216,7 +221,7 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
     progress: { loaded: number; total?: number; isProcessing?: boolean } | null;
   }>({
     shotData: [],
-    loading: true,
+    loading: enabled,
     error: null,
     progress: null
   });
@@ -224,19 +229,24 @@ export function useSingletonShotData(season: string, entityId: string, viewMode:
   const manager = useRef(ShotDataManager.getInstance());
 
   useEffect(() => {
+    if (!enabled) {
+      console.log(`🔐 useSingletonShotData: Skipping subscription for ${season}_${entityId}_${viewMode}`);
+      return;
+    }
+
     console.log(`🔐 useSingletonShotData: Subscribing to ${season}_${entityId}_${viewMode}`);
-    
+
     const unsubscribe = manager.current.subscribe(
-      season, 
-      entityId, 
-      viewMode, 
+      season,
+      entityId,
+      viewMode,
       (data) => {
         setState(data);
       }
     );
 
     return unsubscribe;
-  }, [season, entityId, viewMode]);
+  }, [season, entityId, viewMode, enabled]);
 
   return state;
 }

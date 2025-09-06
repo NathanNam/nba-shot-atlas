@@ -27,8 +27,8 @@ export function EntityVsEntityComparison({ entity1, entity2, season, viewMode, p
       : entity2;
 
   // Always call the hooks (rules of hooks), but use preloaded data if available
-  const hookEntity1Data = useSupabaseShotData(season, entity1Id, viewMode);
-  const hookEntity2Data = useSupabaseShotData(season, entity2Id, viewMode);
+  const hookEntity1Data = useSupabaseShotData(season, entity1Id, viewMode, preloadedEntity1Data === undefined);
+  const hookEntity2Data = useSupabaseShotData(season, entity2Id, viewMode, preloadedEntity2Data === undefined);
   
   // Use preloaded data if available, otherwise use hook results
   const entity1Data = preloadedEntity1Data !== undefined 
