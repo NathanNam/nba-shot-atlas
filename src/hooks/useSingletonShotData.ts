@@ -115,43 +115,50 @@ class ShotDataManager {
           attributes: { season, entity_id: entityId, view_mode: viewMode },
         });
 
-        const data = await SupabaseDataService.getShotData(season, entityId, viewMode, (loaded, total) => {
-          // Update progress and notify subscribers
-          entry.progress = { loaded, total, isProcessing: true };
-          entry.subscribers.forEach(callback => {
-            callback({
-              shotData: entry.data,
-              loading: entry.loading,
-              error: entry.error,
-              progress: entry.progress
+        const data = await SupabaseDataService.getShotData(
+          season,
+          entityId,
+          viewMode,
+          (loaded, total) => {
+            // Update progress and notify subscribers
+            entry.progress = { loaded, total, isProcessing: true };
+            entry.subscribers.forEach(callback => {
+              callback({
+                shotData: entry.data,
+                loading: entry.loading,
+                error: entry.error,
+                progress: entry.progress
+              });
             });
-          });
-        });
-        
-        console.log(`🔐 ShotDataManager: Fetched ${data.length} shots for ${key}`, {
-          dataHash: JSON.stringify(data.slice(0, 3)),
+          }
+        );
+
+        const safeData = Array.isArray(data) ? data : [];
+
+        console.log(`🔐 ShotDataManager: Fetched ${safeData.length} shots for ${key}`, {
+          dataHash: JSON.stringify(safeData.slice(0, 3)),
           subscriberCount: entry.subscribers.size
         });
-        
-        entry.data = data;
+
+        entry.data = safeData;
         entry.loading = false;
         entry.error = null;
         entry.progress = null; // Clear progress when complete
         entry.timestamp = Date.now();
 
-        span.setAttributes({ success: true, result_count: data.length });
+        span.setAttributes({ success: true, result_count: safeData.length });
 
         // Notify all subscribers
         entry.subscribers.forEach(callback => {
           callback({
-            shotData: data,
+            shotData: safeData,
             loading: false,
             error: null,
             progress: null
           });
         });
 
-        return data;
+        return safeData;
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
