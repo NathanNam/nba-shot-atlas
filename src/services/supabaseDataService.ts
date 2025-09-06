@@ -50,23 +50,53 @@ class SupabaseDataService {
     try {
       dbQueryCounter.add(1, { table: 'players', operation: 'select' });
 
-      const { data, error } = await supabase
-        .from('players')
-        .select('*');
+      // Supabase limits queries to 1000 rows. Fetch in batches to ensure we
+      // retrieve the complete players table.
+      const batchSize = 1000;
+      let from = 0;
+      interface SupabasePlayerRow {
+        personId?: number;
+        playerFullName?: string;
+        id?: string | number;
+        name?: string;
+      }
+      let allPlayers: SupabasePlayerRow[] = [];
 
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        throw new Error(`Failed to fetch players: ${error.message}`);
+      while (true) {
+        const { data, error } = await supabase
+          .from<SupabasePlayerRow>('players')
+          .select('*')
+          .range(from, from + batchSize - 1);
+
+        if (error) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error.message,
+          });
+          throw new Error(`Failed to fetch players: ${error.message}`);
+        }
+
+        if (!data || data.length === 0) {
+          break;
+        }
+
+        allPlayers = allPlayers.concat(data);
+
+        // If we received less than the batch size, we've fetched all rows
+        if (data.length < batchSize) {
+          break;
+        }
+
+        from += batchSize;
       }
 
-      const players: Player[] = (data || []).map(player => ({
-        personId: player.personId || 0,
-        playerFullName: player.playerFullName || '',
-        id: (player.personId || 0).toString(),
-        name: player.playerFullName || ''
+      const players: Player[] = allPlayers.map(player => ({
+        // Support both column naming conventions: personId/playerFullName or
+        // id/name. Fall back to 0/empty string when not available.
+        personId: player.personId || player.id || 0,
+        playerFullName: player.playerFullName || player.name || '',
+        id: (player.personId || player.id || 0).toString(),
+        name: player.playerFullName || player.name || ''
       }));
 
       this.playerCache = players;
