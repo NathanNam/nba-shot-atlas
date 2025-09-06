@@ -31,8 +31,10 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [searchValue, setSearchValue] = useState("");
   
   // Only fetch players when in player mode
+  console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers conditionally`);
   const { players, loading } = viewMode === "player" ? useAvailablePlayers() : { players: [], loading: false };
   
+  console.log(`🔍 PlayerSelector: players=${players?.length || 0}, loading=${loading}`);
   const entities = viewMode === "player" ? (players || []).map(p => p.name) : teams;
   const entityOptions = viewMode === "player" ? (players || []) : teams.map(t => ({ id: t, name: t }));
   const maxSelections = 2;
@@ -50,9 +52,10 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
     onEntitiesChange(selectedEntities.filter(item => item !== entityName));
   };
 
-  const filteredEntities = entities.filter(entity =>
+  const filteredEntities = (entities || []).filter(entity =>
     entity.toLowerCase().includes(searchValue.toLowerCase())
   );
+  console.log(`🔍 PlayerSelector: filteredEntities length=${filteredEntities.length}`);
 
   if (isLeagueView) {
     return (

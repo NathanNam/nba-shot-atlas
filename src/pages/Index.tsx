@@ -33,6 +33,7 @@ const Index = () => {
 
   // Handle view mode changes
   const handleViewModeChange = (newViewMode: "player" | "team") => {
+    console.log(`🔍 Index: Switching to viewMode: ${newViewMode}`);
     setViewMode(newViewMode);
   };
   
