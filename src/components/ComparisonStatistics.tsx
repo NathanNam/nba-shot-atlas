@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ShotData } from "@/services/supabaseDataService";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,22 +16,22 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
-  const { players: players1, loading: loading1 } = useAvailablePlayers(season1);
-  const { players: players2, loading: loading2 } = useAvailablePlayers(season2);
+  const { playerMap: playerMap1, loading: loading1 } = useAvailablePlayers(season1);
+  const { playerMap: playerMap2, loading: loading2 } = useAvailablePlayers(season2);
   
   const getEntityId = (entityName: string, season: string, isSecondSeason = false) => {
     if (viewMode === 'player') {
-      const players = isSecondSeason ? players2 : players1;
+      const playerMap = isSecondSeason ? playerMap2 : playerMap1;
       const loading = isSecondSeason ? loading2 : loading1;
-      
-      if (loading || !players.length) {
+
+      if (loading || playerMap.size === 0) {
         console.log(`🔍 ComparisonStatistics: Players still loading for ${season}, returning undefined`);
         return undefined;
       }
-      
-      const player = players.find(p => p.name === entityName);
-      console.log(`🔍 ComparisonStatistics: Found player for "${entityName}" in ${season}:`, player);
-      return player?.id || entityName;
+
+      const playerId = playerMap.get(entityName);
+      console.log(`🔍 ComparisonStatistics: Found player for "${entityName}" in ${season}:`, playerId);
+      return playerId || entityName;
     }
     return entityName;
   };
@@ -73,7 +74,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   }
 
   // Helper function to analyze shooting zones (same as EntityStatistics)
-  const analyzeZones = (shotData: any[]) => {
+  const analyzeZones = (shotData: ShotData[]) => {
     const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
     
     if (shotData.length === 0) {
@@ -225,7 +226,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   const data2 = multiSeasonData.season2?.data || [];
   
   // Calculate statistics for both seasons
-  const calculateStats = (data: any[]) => {
+  const calculateStats = (data: ShotData[]) => {
     const totalShots = data.length;
     
     // More robust shot result checking

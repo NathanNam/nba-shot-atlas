@@ -21,7 +21,7 @@ export function BatchEntityVsEntityDualSeasonComparison({
   season2, 
   viewMode 
 }: BatchEntityVsEntityDualSeasonComparisonProps) {
-  const { players: playersData, loading: playersLoading } = useAvailablePlayers(season1);
+  const { playerMap, loading: playersLoading } = useAvailablePlayers(season1);
 
   // Get entity IDs
   const getEntityId = (entityName: string) => {
@@ -29,8 +29,7 @@ export function BatchEntityVsEntityDualSeasonComparison({
       return entityName;
     }
     
-    const player = playersData?.find(p => p.name === entityName);
-    return player ? player.id.toString() : entityName;
+    return playerMap.get(entityName) ?? entityName;
   };
 
   const entity1Id = getEntityId(entity1);
@@ -68,7 +67,7 @@ export function BatchEntityVsEntityDualSeasonComparison({
         key: `${entity2}_${season2}`
       }
     ];
-  }, [entity1Id, entity2Id, season1, season2, viewMode, playersLoading]);
+  }, [entity1Id, entity2Id, season1, season2, viewMode, playersLoading, entity1, entity2]);
 
   const batchResults = useBatchShotData(batchRequests);
 

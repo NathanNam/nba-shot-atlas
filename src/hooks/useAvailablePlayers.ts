@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SupabaseDataService } from '@/services/supabaseDataService';
 
 interface PlayerOption {
@@ -9,6 +9,11 @@ interface PlayerOption {
 export function useAvailablePlayers(season: string) {
   const [players, setPlayers] = useState<PlayerOption[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const playerMap = useMemo(
+    () => new Map(players.map(p => [p.name, p.id])),
+    [players]
+  );
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -59,8 +64,9 @@ export function useAvailablePlayers(season: string) {
     loadPlayers();
   }, [season]);
 
-  return { 
-    players, 
+  return {
+    players,
+    playerMap,
     loading
   };
 }
