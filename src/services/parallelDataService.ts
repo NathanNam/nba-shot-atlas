@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/integrations/supabase/client';
 import { ShotData } from './supabaseDataService';
 import pLimit from 'p-limit';
@@ -124,7 +125,7 @@ export class ParallelDataService {
     const tableName = `shots_${season}`;
     const batchSize = 1000;
     
-    let allData: any[] = [];
+    const allData: any[] = [];
     let hasMore = true;
     let lastActionNumber: number | null = null;
     let lastGameId: number | null = null;
@@ -321,7 +322,7 @@ export class ParallelDataService {
     let currentActionNumber: number | null = null;
     let totalLoaded = 0;
     let batchCount = 0;
-    let maxRetries = 3;
+    const maxRetries = 3;
 
     console.log(`🚀 Starting sequential league data fetch for ${season} with batch size ${batchSize}`);
 
