@@ -47,7 +47,7 @@ export class ParallelDataService {
     console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
 
     // Use cursor-based pagination instead of offset for better performance
-    const allData: any[] = [];
+    const allData: ShotData[] = [];
     let hasMore = true;
     let lastGameId: number | null = null;
     let lastActionNumber: number | null = null;
@@ -81,19 +81,30 @@ export class ParallelDataService {
           };
 
           const batchData = result.data || [];
-          allData.push(...batchData);
+          const batchShots: ShotData[] = batchData.map(row => ({
+            personId: String(row.personId || ''),
+            teamTricode: String(row.teamTricode || ''),
+            xLegacy: Number(row.xLegacy) || 0,
+            yLegacy: Number(row.yLegacy) || 0,
+            shotDistance: Number(row.shotDistance) || 0,
+            shotResult: String(row.shotResult || ''),
+            shotValue: Number(row.shotValue) || 2,
+            description: String(row.description || ''),
+            subType: String(row.subType || ''),
+          }));
+          allData.push(...batchShots);
 
           // Update cursor
           lastGameId = result.lastGameId;
           lastActionNumber = result.lastActionNumber;
 
           console.log(
-            `🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`
+            `🚀 ParallelDataService: Team batch ${batchCount} - got ${batchShots.length} records (total: ${allData.length})`
           );
 
           progressCallback?.(allData.length, undefined);
 
-          hasMore = result.hasMore && batchData.length === batchSize;
+          hasMore = result.hasMore && batchShots.length === batchSize;
           success = true;
           
         } catch (error: any) {
@@ -124,20 +135,7 @@ export class ParallelDataService {
 
     console.log(`🚀 ParallelDataService: Team fetch complete. Got ${allData.length} total records`);
 
-    // Transform data with strict type conversion for consistency
-    const shots: ShotData[] = allData.map(row => ({
-      personId: String(row.personId || ''),
-      teamTricode: String(row.teamTricode || ''),
-      xLegacy: Number(row.xLegacy) || 0,
-      yLegacy: Number(row.yLegacy) || 0,
-      shotDistance: Number(row.shotDistance) || 0,
-      shotResult: String(row.shotResult || ''),
-      shotValue: Number(row.shotValue) || 2,
-      description: String(row.description || ''),
-      subType: String(row.subType || ''),
-    }));
-
-    return shots;
+    return allData;
   }
 
   /**
