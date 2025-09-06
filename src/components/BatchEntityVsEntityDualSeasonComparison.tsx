@@ -84,20 +84,37 @@ export function BatchEntityVsEntityDualSeasonComparison({
       };
     }
 
-    const totalShots = shotData.length;
-    const madeShots = shotData.filter(shot => shot.shotResult === 'Made').length;
-    const twoPointers = shotData.filter(shot => shot.shotValue === 2);
-    const threePointers = shotData.filter(shot => shot.shotValue === 3);
-    
-    const madeTwoPointers = twoPointers.filter(shot => shot.shotResult === 'Made').length;
-    const madeThreePointers = threePointers.filter(shot => shot.shotResult === 'Made').length;
+    const totals = shotData.reduce(
+      (acc, shot) => {
+        acc.totalShots++;
+        const made = shot.shotResult === "Made";
+        if (made) acc.madeShots++;
+
+        if (shot.shotValue === 2) {
+          acc.twoPtAttempts++;
+          if (made) acc.twoPtMakes++;
+        } else if (shot.shotValue === 3) {
+          acc.threePtAttempts++;
+          if (made) acc.threePtMakes++;
+        }
+        return acc;
+      },
+      {
+        totalShots: 0,
+        madeShots: 0,
+        twoPtAttempts: 0,
+        twoPtMakes: 0,
+        threePtAttempts: 0,
+        threePtMakes: 0
+      }
+    );
 
     return {
-      fgPct: totalShots > 0 ? (madeShots / totalShots) * 100 : 0,
-      twoPtPct: twoPointers.length > 0 ? (madeTwoPointers / twoPointers.length) * 100 : 0,
-      threePtPct: threePointers.length > 0 ? (madeThreePointers / threePointers.length) * 100 : 0,
-      totalShots,
-      madeShots
+      fgPct: totals.totalShots > 0 ? (totals.madeShots / totals.totalShots) * 100 : 0,
+      twoPtPct: totals.twoPtAttempts > 0 ? (totals.twoPtMakes / totals.twoPtAttempts) * 100 : 0,
+      threePtPct: totals.threePtAttempts > 0 ? (totals.threePtMakes / totals.threePtAttempts) * 100 : 0,
+      totalShots: totals.totalShots,
+      madeShots: totals.madeShots
     };
   };
 
