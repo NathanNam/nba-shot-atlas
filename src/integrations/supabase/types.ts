@@ -14,66 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      league_stats: {
-        Row: {
-          coldest_zone: string | null
-          created_at: string
-          favorite_spot: string | null
-          field_goal_percentage: number
-          hottest_zone: string | null
-          id: string
-          made_shots: number
-          season: string
-          three_point_attempted: number
-          three_point_made: number
-          three_point_percentage: number
-          total_shots: number
-          two_point_attempted: number
-          two_point_made: number
-          two_point_percentage: number
-          updated_at: string
-          zone_stats: Json
-        }
-        Insert: {
-          coldest_zone?: string | null
-          created_at?: string
-          favorite_spot?: string | null
-          field_goal_percentage?: number
-          hottest_zone?: string | null
-          id?: string
-          made_shots?: number
-          season: string
-          three_point_attempted?: number
-          three_point_made?: number
-          three_point_percentage?: number
-          total_shots?: number
-          two_point_attempted?: number
-          two_point_made?: number
-          two_point_percentage?: number
-          updated_at?: string
-          zone_stats?: Json
-        }
-        Update: {
-          coldest_zone?: string | null
-          created_at?: string
-          favorite_spot?: string | null
-          field_goal_percentage?: number
-          hottest_zone?: string | null
-          id?: string
-          made_shots?: number
-          season?: string
-          three_point_attempted?: number
-          three_point_made?: number
-          three_point_percentage?: number
-          total_shots?: number
-          two_point_attempted?: number
-          two_point_made?: number
-          two_point_percentage?: number
-          updated_at?: string
-          zone_stats?: Json
-        }
-        Relationships: []
-      }
       players: {
         Row: {
           personId: number | null
