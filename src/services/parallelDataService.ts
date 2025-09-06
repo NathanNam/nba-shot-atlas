@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/integrations/supabase/client';
 import { ShotData } from './supabaseDataService';
-import pLimit from 'p-limit';
 
 export class ParallelDataService {
   /**
@@ -42,78 +41,46 @@ export class ParallelDataService {
   ): Promise<ShotData[]> {
     const tableName = `shots_${season}`;
     const batchSize = 500; // Smaller batch size for team data to avoid timeouts
-    const concurrency = 5;
 
     console.log(`🚀 ParallelDataService: Starting optimized team fetch for ${teamId} (season: ${season})`);
 
-    // Fetch total count of shots for the team using an existing column
-    let total = 0;
-    try {
-      const { count, error: countError } = await (supabase as any)
-        .from(tableName)
-        .select('*', { count: 'exact', head: true })
-        .eq('teamTricode', teamId);
+    // Sequentially fetch data in batches until no more records are returned
+    const allData: any[] = [];
+    let offset = 0;
+    let batchCount = 0;
+    let hasMore = true;
 
-      if (countError) {
+    while (hasMore) {
+      const { data, error } = await (supabase as any)
+        .from(tableName)
+        .select('*')
+        .eq('teamTricode', teamId)
+        .order('gameId', { ascending: true })
+        .order('actionNumber', { ascending: true })
+        .range(offset, offset + batchSize - 1);
+
+      if (error) {
         console.error(
-          `🚀 ParallelDataService: Count query failed for team ${teamId} (season: ${season}):`,
-          countError
+          `🚀 ParallelDataService: Team batch query failed for offset ${offset} (team: ${teamId}, season: ${season}):`,
+          error
         );
-        throw new Error(`Failed to get team shot count: ${countError.message}`);
+        throw new Error(`Team data query failed: ${error.message}`);
       }
 
-      total = count || 0;
-    } catch (error: any) {
-      console.error(
-        `🚀 ParallelDataService: Unexpected error during team count fetch for ${teamId} (season: ${season}):`,
-        error
+      const batchData = data || [];
+      allData.push(...batchData);
+      batchCount++;
+      offset += batchSize;
+
+      console.log(
+        `🚀 ParallelDataService: Team batch ${batchCount} - got ${batchData.length} records (total: ${allData.length})`
       );
-      throw error;
+
+      progressCallback?.(allData.length, undefined);
+
+      // If we received less than batchSize, we've reached the end
+      hasMore = batchData.length === batchSize;
     }
-
-    if (!total) {
-      return [];
-    }
-
-    // Compute ranges for parallel fetching
-    const ranges: Array<[number, number]> = [];
-    for (let start = 0; start < total; start += batchSize) {
-      ranges.push([start, Math.min(start + batchSize - 1, total - 1)]);
-    }
-
-    const limit = pLimit(concurrency);
-    let loaded = 0;
-
-    const batchPromises = ranges.map(([from, to], index) =>
-      limit(async () => {
-        const { data, error } = await (supabase as any)
-          .from(tableName)
-          .select('*')
-          .eq('teamTricode', teamId)
-          .order('gameId', { ascending: true })
-          .order('actionNumber', { ascending: true })
-          .range(from, to);
-
-        if (error) {
-          console.error(
-            `🚀 ParallelDataService: Team batch query failed for range ${from}-${to} (team: ${teamId}, season: ${season}):`,
-            error
-          );
-          throw new Error(`Team data query failed: ${error.message}`);
-        }
-
-        const batchData = data || [];
-        loaded += batchData.length;
-        console.log(
-          `🚀 ParallelDataService: Team batch ${index + 1}/${ranges.length} - got ${batchData.length} records (total: ${loaded})`
-        );
-        progressCallback?.(loaded, total);
-        return batchData;
-      })
-    );
-
-    const results = await Promise.all(batchPromises);
-    const allData = results.flat();
 
     console.log(`🚀 ParallelDataService: Team fetch complete. Got ${allData.length} total records`);
 
