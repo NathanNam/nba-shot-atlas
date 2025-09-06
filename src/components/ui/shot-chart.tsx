@@ -4,6 +4,22 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ShotData } from "@/services/supabaseDataService";
 
+const MAX_RENDER_SHOTS = 5000;
+
+function sampleArray<T>(array: T[], sampleSize: number): T[] {
+  if (array.length <= sampleSize) return array;
+
+  const step = array.length / sampleSize;
+  const sampled: T[] = [];
+
+  for (let i = 0; i < sampleSize; i++) {
+    const index = Math.floor(i * step);
+    sampled.push(array[index]);
+  }
+
+  return sampled;
+}
+
 interface ShotChartProps {
   title: string;
   data?: ShotData[];
@@ -170,15 +186,22 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
     // Render shot data based on view mode
     if (data && data.length > 0) {
       if (viewMode === "shots") {
-        // Individual shots view - render all shots
-        data.forEach((shot, index) => {
+        const startTime = performance.now();
+        const startMemory = (performance as any).memory?.usedJSHeapSize ?? 0;
+
+        const shotsToRender = data.length > MAX_RENDER_SHOTS
+          ? sampleArray(data, MAX_RENDER_SHOTS)
+          : data;
+        const fragment = document.createDocumentFragment();
+
+        shotsToRender.forEach((shot, index) => {
           const shotCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          
+
           const svgX = centerX + (shot.xLegacy * scale / 10);
           const svgY = hoopCenterY - (shot.yLegacy * scale / 10);
-          
+
           const isMade = shot.shotResult === 'Made';
-          
+
           shotCircle.setAttribute("cx", svgX.toString());
           shotCircle.setAttribute("cy", svgY.toString());
           shotCircle.setAttribute("r", "3");
@@ -187,15 +210,25 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           shotCircle.setAttribute("stroke-width", "0.5");
           shotCircle.setAttribute("opacity", "0.7");
           shotCircle.setAttribute("class", "transition-all duration-300 hover:opacity-100 cursor-pointer");
-          
+
           shotCircle.setAttribute("data-shot-key", `${shot.personId || 'unknown'}-${index}`);
           shotCircle.setAttribute("data-player", shot.personId?.toString() || 'unknown');
           shotCircle.setAttribute("data-shot-type", shot.subType || '');
           shotCircle.setAttribute("data-distance", shot.shotDistance?.toString() || '0');
           shotCircle.setAttribute("data-description", shot.description || '');
-          
-          svg.appendChild(shotCircle);
+
+          fragment.appendChild(shotCircle);
         });
+
+        svg.appendChild(fragment);
+
+        const endTime = performance.now();
+        const endMemory = (performance as any).memory?.usedJSHeapSize ?? 0;
+        const memoryDiff = endMemory && startMemory ? ((endMemory - startMemory) / 1024 / 1024).toFixed(2) : null;
+        console.log(
+          `ShotChart render (${shotsToRender.length}/${data.length} shots): ${(endTime - startTime).toFixed(2)}ms` +
+            (memoryDiff ? `, memory diff: ${memoryDiff} MB` : "")
+        );
       } else {
         // Heat map view
         renderHeatMap(data, svg, centerX, hoopCenterY, scale);
@@ -348,21 +381,6 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
     });
     
     return `M ${points[0]} L ${points.slice(1).join(' L ')} Z`;
-  };
-
-  // Helper function to sample array efficiently  
-  const sampleArray = <T,>(array: T[], sampleSize: number): T[] => {
-    if (array.length <= sampleSize) return array;
-    
-    const step = array.length / sampleSize;
-    const sampled: T[] = [];
-    
-    for (let i = 0; i < sampleSize; i++) {
-      const index = Math.floor(i * step);
-      sampled.push(array[index]);
-    }
-    
-    return sampled;
   };
 
   return (
