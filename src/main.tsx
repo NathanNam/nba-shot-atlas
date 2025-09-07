@@ -19,32 +19,35 @@ initOtel().then(({ tracer, logger, meter }) => {
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
   
-  // Test NBA metrics directly - ensure they get created
-  setTimeout(() => {
-    console.log('🧪 Starting NBA metrics test...');
-    
-    // Use dynamic import to ensure everything is ready
+  // Test NBA metrics immediately after OTEL is ready
+  console.log('🧪 Starting NBA metrics test immediately after OTEL init...');
+  
+  try {
+    // Import and test NBA metrics
     import('./services/nbaAnalyticsMetrics').then(({ NBAAnalyticsMetrics }) => {
       console.log('🧪 NBA metrics module imported successfully');
       
-      try {
-        console.log('🧪 Test 1: trackFeatureUsage');
-        NBAAnalyticsMetrics.trackFeatureUsage('direct_test_feature', { test: true, timestamp: Date.now() });
-        
-        console.log('🧪 Test 2: trackUserSession');
-        NBAAnalyticsMetrics.trackUserSession('new', 'Mozilla/5.0 test-agent', '1920x1080');
-        
-        console.log('🧪 Test 3: trackComparison');
-        NBAAnalyticsMetrics.trackComparison('player_vs_player', 'LeBron James', 'Stephen Curry', '2023-24', '2023-24', 150);
-        
-        console.log('🧪 All NBA metric tests completed successfully');
-      } catch (error) {
-        console.error('🧪 Error calling NBA metrics:', error);
-      }
+      // Test multiple metrics to ensure they appear in Observe
+      console.log('🧪 Test 1: trackFeatureUsage');
+      NBAAnalyticsMetrics.trackFeatureUsage('otel_ready_test', { 
+        test: true, 
+        timestamp: Date.now(),
+        otel_ready: true 
+      });
+      
+      console.log('🧪 Test 2: trackUserSession');
+      NBAAnalyticsMetrics.trackUserSession('new', 'Mozilla/5.0 test-agent', '1920x1080');
+      
+      console.log('🧪 Test 3: trackComparison');
+      NBAAnalyticsMetrics.trackComparison('player_vs_player', 'LeBron James', 'Stephen Curry', '2023-24', '2023-24', 150);
+      
+      console.log('🧪 All NBA metric tests completed successfully');
     }).catch(error => {
       console.error('🧪 Error importing NBA metrics module:', error);
     });
-  }, 2000);
+  } catch (error) {
+    console.error('🧪 Error with NBA metrics test:', error);
+  }
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
