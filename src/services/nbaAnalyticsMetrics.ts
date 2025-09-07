@@ -39,9 +39,26 @@ export class NBAAnalyticsMetrics {
     }
     
     console.log('🎯 Initializing NBA metrics instruments...');
-    // Use the global metrics API to get the meter, same as the working approach
-    this.meter = metrics.getMeter('hoops-analytics-viz');
-    
+    // Import and use the global meter set by main.tsx
+    import('../otel-client').then(({ globalMeter }) => {
+      if (!globalMeter) {
+        console.error('🎯 No global meter available - using fallback');
+        this.meter = metrics.getMeter('hoops-analytics-viz');
+      } else {
+        console.log('🎯 Using global meter from otel-client');
+        this.meter = globalMeter;
+      }
+      
+      this.createMetrics();
+    }).catch(error => {
+      console.error('🎯 Error importing global meter:', error);
+      // Fallback to global metrics API
+      this.meter = metrics.getMeter('hoops-analytics-viz');
+      this.createMetrics();
+    });
+  }
+
+  private static createMetrics() {
     // User engagement metrics
     this.userSessionCounter = this.meter.createCounter('nba_user_sessions_total', {
       description: 'Total number of NBA analytics user sessions',

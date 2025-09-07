@@ -283,5 +283,12 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
   }
 }
 
+// Export the meter for use by NBA metrics
+export let globalMeter: any = null;
+
+export const setGlobalMeter = (meter: any) => {
+  globalMeter = meter;
+};
+
 // Export global instances for use throughout the app
 export { tracer, logger, meter };

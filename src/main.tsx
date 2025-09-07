@@ -16,6 +16,12 @@ initOtel().then(({ tracer, logger, meter }) => {
   console.log('✅ OpenTelemetry initialized successfully');
   console.log('✅ OTEL Components ready:', { tracer: !!tracer, logger: !!logger, meter: !!meter });
   
+  // Set global meter for NBA metrics
+  import('./otel-client').then(({ setGlobalMeter }) => {
+    setGlobalMeter(meter);
+    console.log('✅ Global meter set for NBA metrics');
+  });
+  
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
   
