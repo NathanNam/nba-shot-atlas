@@ -64,28 +64,27 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
           throw new Error(`Invalid player ID: ${playerId}`);
         }
 
-        // Use direct SQL to replicate the exact query that worked
-        // Only select the columns we need to reduce data transfer and avoid timeout
-        const { data: shotData, error: dbError } = await (supabase as any)
-          .from(`shots_${season}`)
-          .select('shotResult, shotValue, shotDistance, xLegacy, yLegacy')
-          .eq('personId', numericPlayerId);
+        // Use edge function to calculate stats server-side for better performance
+        console.log(`🎯 CONSISTENT HOOK: Calling edge function for player ${playerId} season ${season}`);
+        
+        const { data: playerStats, error: functionError } = await supabase.functions.invoke('get-player-stats', {
+          body: { playerId, season }
+        });
 
-        if (dbError) {
-          throw new Error(`Database error: ${dbError.message}`);
+        if (functionError) {
+          throw new Error(`Edge function error: ${functionError.message}`);
         }
 
-        const allShots = shotData || [];
-        console.log(`🎯 CONSISTENT HOOK: Query returned ${allShots.length} shots for Stephen Curry`);
-        
-        // Verify we got the expected count
-        if (allShots.length !== 1258) {
-          console.error(`🚨 Expected 1258 shots, got ${allShots.length}`);
+        if (!playerStats) {
+          throw new Error('No stats returned from edge function');
         }
-        
-        // Calculate stats directly from raw data
-        const calculatedStats = calculateStatsFromRawData(allShots);
-        setStats(calculatedStats);
+
+        console.log(`🎯 CONSISTENT HOOK: Edge function returned stats:`, {
+          totalShots: playerStats.totalShots,
+          threePoint: `${playerStats.threePointMade}/${playerStats.threePointAttempted}`
+        });
+
+        setStats(playerStats);
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch stats';
