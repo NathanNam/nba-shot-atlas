@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingDown, Zap, Heart } from "lucide-react";
+import { useMemo } from "react";
 import { useEntityComparisonData } from "@/hooks/useEntityComparisonData";
 
 interface MultiEntityStatisticsComparisonProps {
@@ -19,6 +20,56 @@ export function MultiEntityStatisticsComparison({
     selectedSeason,
     viewMode
   );
+
+  const headToHeadMetrics = useMemo(() => {
+    const metrics = [
+      {
+        key: "fg",
+        label: "Field Goal %",
+        values: [] as { name: string; value: string; detail: string }[],
+      },
+      {
+        key: "twoPt",
+        label: "2PT %",
+        values: [] as { name: string; value: string; detail: string }[],
+      },
+      {
+        key: "threePt",
+        label: "3PT %",
+        values: [] as { name: string; value: string; detail: string }[],
+      },
+      {
+        key: "total",
+        label: "Total Shots",
+        values: [] as { name: string; value: string; detail: string }[],
+      },
+    ];
+
+    statsData.forEach(entity => {
+      metrics[0].values.push({
+        name: entity.name,
+        value: `${(entity.stats.fieldGoalPercentage * 100).toFixed(1)}%`,
+        detail: `${entity.stats.madeShots}/${entity.stats.totalShots}`,
+      });
+      metrics[1].values.push({
+        name: entity.name,
+        value: `${(entity.stats.twoPointPercentage * 100).toFixed(1)}%`,
+        detail: `${entity.stats.twoPointMade}/${entity.stats.twoPointAttempted}`,
+      });
+      metrics[2].values.push({
+        name: entity.name,
+        value: `${(entity.stats.threePointPercentage * 100).toFixed(1)}%`,
+        detail: `${entity.stats.threePointMade}/${entity.stats.threePointAttempted}`,
+      });
+      metrics[3].values.push({
+        name: entity.name,
+        value: entity.stats.totalShots.toLocaleString(),
+        detail: "This Season",
+      });
+    });
+
+    return metrics;
+  }, [statsData]);
 
   if (isLoading) {
     return (
@@ -73,75 +124,18 @@ export function MultiEntityStatisticsComparison({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Field Goal Percentage */}
-            <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">Field Goal %</div>
-              {statsData.map(entity => (
-                <div key={entity.name} className="space-y-1">
-                  <div className="font-semibold text-lg">
-                    {(entity.stats.fieldGoalPercentage * 100).toFixed(1)}%
+            {headToHeadMetrics.map(metric => (
+              <div key={metric.key} className="text-center space-y-2">
+                <div className="text-sm text-muted-foreground">{metric.label}</div>
+                {metric.values.map(item => (
+                  <div key={item.name} className="space-y-1">
+                    <div className="font-semibold text-lg">{item.value}</div>
+                    <div className="text-xs text-muted-foreground">{item.detail}</div>
+                    <div className="text-xs font-medium text-foreground">{item.name}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {entity.stats.madeShots}/{entity.stats.totalShots}
-                  </div>
-                  <div className="text-xs font-medium text-foreground">
-                    {entity.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Two Point Percentage */}
-            <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">2PT %</div>
-              {statsData.map(entity => (
-                <div key={entity.name} className="space-y-1">
-                  <div className="font-semibold text-lg">
-                    {(entity.stats.twoPointPercentage * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {entity.stats.twoPointMade}/{entity.stats.twoPointAttempted}
-                  </div>
-                  <div className="text-xs font-medium text-foreground">
-                    {entity.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Three Point Percentage */}
-            <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">3PT %</div>
-              {statsData.map(entity => (
-                <div key={entity.name} className="space-y-1">
-                  <div className="font-semibold text-lg">
-                    {(entity.stats.threePointPercentage * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {entity.stats.threePointMade}/{entity.stats.threePointAttempted}
-                  </div>
-                  <div className="text-xs font-medium text-foreground">
-                    {entity.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Total Shots */}
-            <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">Total Shots</div>
-              {statsData.map(entity => (
-                <div key={entity.name} className="space-y-1">
-                  <div className="font-semibold text-lg">
-                    {entity.stats.totalShots.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-muted-foreground">This Season</div>
-                  <div className="text-xs font-medium text-foreground">
-                    {entity.name}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
