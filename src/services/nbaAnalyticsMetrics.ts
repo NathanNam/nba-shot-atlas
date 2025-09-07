@@ -39,23 +39,15 @@ export class NBAAnalyticsMetrics {
     }
     
     console.log('🎯 Initializing NBA metrics instruments...');
-    // Import and use the global meter set by main.tsx
-    import('../otel-client').then(({ globalMeter }) => {
-      if (!globalMeter) {
-        console.error('🎯 No global meter available - using fallback');
-        this.meter = metrics.getMeter('hoops-analytics-viz');
-      } else {
-        console.log('🎯 Using global meter from otel-client');
-        this.meter = globalMeter;
-      }
-      
-      this.createMetrics();
-    }).catch(error => {
-      console.error('🎯 Error importing global meter:', error);
-      // Fallback to global metrics API
-      this.meter = metrics.getMeter('hoops-analytics-viz');
-      this.createMetrics();
-    });
+    // Use the global metrics API directly - same as working test metric
+    this.meter = metrics.getMeter('hoops-analytics-viz');
+    
+    if (!this.meter) {
+      console.error('🎯 Failed to get meter');
+      return;
+    }
+    
+    this.createMetrics();
   }
 
   private static createMetrics() {
@@ -143,6 +135,12 @@ export class NBAAnalyticsMetrics {
    */
   static trackUserSession(sessionType: 'new' | 'returning', userAgent?: string, viewport?: string) {
     this.initializeMetrics();
+    
+    // Ensure metrics are actually created before using them
+    if (!this.userSessionCounter) {
+      console.error('🎯 userSessionCounter not initialized');
+      return;
+    }
     const span = tracer.startSpan('nba_analytics.user_session', {
       attributes: {
         'nba.session_type': sessionType,
@@ -259,6 +257,13 @@ export class NBAAnalyticsMetrics {
   ) {
     console.log('🎯 trackFeatureUsage called:', featureName);
     this.initializeMetrics();
+    
+    // Ensure metrics are actually created before using them
+    if (!this.featureUsageCounter) {
+      console.error('🎯 featureUsageCounter not initialized');
+      return;
+    }
+    
     console.log('🎯 About to emit feature usage metric');
     const span = tracer.startSpan('nba_analytics.feature_usage', {
       attributes: {
@@ -308,6 +313,12 @@ export class NBAAnalyticsMetrics {
     dataPoints?: number
   ) {
     this.initializeMetrics();
+    
+    // Ensure metrics are actually created before using them  
+    if (!this.comparisonCounter) {
+      console.error('🎯 comparisonCounter not initialized');
+      return;
+    }
     const span = tracer.startSpan('nba_analytics.comparison', {
       attributes: {
         'nba.comparison_type': comparisonType,
