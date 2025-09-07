@@ -132,6 +132,28 @@ initOtel().then(({ tracer, logger, meter }) => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
 
+// Clear all caches to fix data inconsistency issues
+import { dataCache } from './services/dataCache';
+import { ShotDataManager } from './hooks/useSingletonShotData';
+
+if (import.meta.env.DEV) {
+  // Clear all caches on development startup to prevent stale data issues
+  dataCache.clear();
+  dataCache.clearPreloaded();
+  ShotDataManager.getInstance().clearCache();
+  
+  // Force clear browser cache as well
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      names.forEach(name => {
+        caches.delete(name);
+      });
+    });
+  }
+  
+  console.log('🧹 Development mode: Cleared all caches including browser cache');
+}
+
 // Preloading disabled for now to troubleshoot caching issues
 // setTimeout(() => {
 //   DataPreloader.preloadDefaultData().then(() => {
