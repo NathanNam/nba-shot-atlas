@@ -104,9 +104,18 @@ async function fetchOtelConfig() {
   }
 }
 
-// Create resource
+// Create resource with additional service identification
 const resource = resourceFromAttributes({
   [ATTR_SERVICE_NAME]: serviceName,
+  'service.version': import.meta.env.VITE_APP_VERSION || '1.0.0',
+  'service.instance.id': crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36),
+  'deployment.environment': import.meta.env.MODE || 'development',
+  'telemetry.sdk.name': 'opentelemetry',
+  'telemetry.sdk.language': 'webjs',
+  'telemetry.sdk.version': '2.1.0',
+  'application.type': 'spa',
+  'application.framework': 'react',
+  'application.domain': 'nba-analytics',
 });
 
 // These will be initialized after fetching config
@@ -130,9 +139,9 @@ function createProviders() {
           },
         }),
         {
-          maxQueueSize: 100,
-          maxExportBatchSize: 10,
-          scheduledDelayMillis: 500,
+          maxQueueSize: import.meta.env.MODE === 'production' ? 200 : 100,
+          maxExportBatchSize: import.meta.env.MODE === 'production' ? 20 : 10,
+          scheduledDelayMillis: import.meta.env.MODE === 'production' ? 1000 : 500, // Slightly higher delay in production
           exportTimeoutMillis: 30000, // 30s timeout
         }
       ),
@@ -157,23 +166,36 @@ function createProviders() {
   });
 
   // Initialize Metrics Provider with OTLP and Prometheus exporters
-  const metricExporters = [
-    new OTLPMetricExporter({
-      url: `${otlpEndpoint}/v1/metrics`,
-      headers: {
-        ...authHeader,
-        "x-observe-target-package": "Metrics",
-        "Content-Type": "application/x-protobuf",
-      },
+  const metricReaders = [];
+
+  // Primary OTLP metrics exporter
+  metricReaders.push(
+    new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter({
+        url: `${otlpEndpoint}/v1/metrics`,
+        headers: {
+          ...authHeader,
+          "x-observe-target-package": "Metrics",
+          "Content-Type": "application/x-protobuf",
+        },
+      }),
+      exportIntervalMillis: 10000, // Export metrics every 10 seconds
+      exportTimeoutMillis: 5000,   // 5 second timeout
     })
-  ];
+  );
 
   // Add Prometheus exporter for development/debugging (optional)
   if (import.meta.env.MODE === 'development') {
     try {
-      metricExporters.push(new PrometheusExporter({
-        port: 9464, // Default Prometheus metrics port
-      }));
+      metricReaders.push(
+        new PeriodicExportingMetricReader({
+          exporter: new PrometheusExporter({
+            port: 9464, // Default Prometheus metrics port
+            preventServerStart: true, // Prevent auto-starting HTTP server in browser environment
+          }),
+          exportIntervalMillis: 15000, // Export to Prometheus every 15 seconds
+        })
+      );
     } catch (error) {
       console.warn('Failed to initialize Prometheus exporter:', error);
     }
@@ -181,12 +203,7 @@ function createProviders() {
 
   meterProvider = new MeterProvider({
     resource: resource,
-    readers: metricExporters.map(exporter => 
-      new PeriodicExportingMetricReader({
-        exporter,
-        exportIntervalMillis: 10000, // Export metrics every 10 seconds
-      })
-    ),
+    readers: metricReaders,
   });
 }
 
@@ -264,6 +281,46 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
     throw error;
   }
 }
+
+// Safe wrappers for creating metrics - these will check if meter is initialized
+export const createSafeCounter = (name: string, options?: any) => {
+  return {
+    add: (value: number, attributes?: any) => {
+      if (meter?.createCounter) {
+        if (!(globalThis as any)[`__metric_${name}`]) {
+          (globalThis as any)[`__metric_${name}`] = meter.createCounter(name, options);
+        }
+        return (globalThis as any)[`__metric_${name}`]?.add(value, attributes);
+      }
+    }
+  };
+};
+
+export const createSafeHistogram = (name: string, options?: any) => {
+  return {
+    record: (value: number, attributes?: any) => {
+      if (meter?.createHistogram) {
+        if (!(globalThis as any)[`__metric_${name}`]) {
+          (globalThis as any)[`__metric_${name}`] = meter.createHistogram(name, options);
+        }
+        return (globalThis as any)[`__metric_${name}`]?.record(value, attributes);
+      }
+    }
+  };
+};
+
+export const createSafeUpDownCounter = (name: string, options?: any) => {
+  return {
+    add: (value: number, attributes?: any) => {
+      if (meter?.createUpDownCounter) {
+        if (!(globalThis as any)[`__metric_${name}`]) {
+          (globalThis as any)[`__metric_${name}`] = meter.createUpDownCounter(name, options);
+        }
+        return (globalThis as any)[`__metric_${name}`]?.add(value, attributes);
+      }
+    }
+  };
+};
 
 // Export global instances for use throughout the app
 export { tracer, logger, meter };

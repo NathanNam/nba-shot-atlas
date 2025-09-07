@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 interface PlayerSelectorProps {
   viewMode: "player" | "team" | "league";
@@ -29,6 +31,7 @@ const teams = [
 export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, selectedSeason }: PlayerSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const { trackPlayerSelection, trackTeamSelection, trackViewModeChange } = useNBAAnalyticsTracking();
   
   // Always call hook but only use results in player mode
   console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers`);
@@ -37,6 +40,16 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   // Only use player data in player mode
   const players = viewMode === "player" ? rawPlayers : [];
   const loading = viewMode === "player" ? rawLoading : false;
+
+  // Track view mode changes for analytics
+  const [previousViewMode, setPreviousViewMode] = useState<string>(viewMode);
+  
+  useEffect(() => {
+    if (previousViewMode !== viewMode) {
+      trackViewModeChange(previousViewMode, viewMode);
+      setPreviousViewMode(viewMode);
+    }
+  }, [viewMode, previousViewMode, trackViewModeChange]);
   
   console.log(`🔍 PlayerSelector: players=${players?.length || 0}, loading=${loading}`);
   const entities = viewMode === "player" ? (players || []).map(p => p.name) : teams;
@@ -49,6 +62,14 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
       onEntitiesChange(selectedEntities.filter(item => item !== entityName));
     } else if (selectedEntities.length < maxSelections) {
       onEntitiesChange([...selectedEntities, entityName]);
+      
+      // Track entity selection for analytics
+      if (viewMode === "player") {
+        const selectedPlayer = players?.find(p => p.name === entityName);
+        trackPlayerSelection(selectedPlayer?.id || entityName, entityName, selectedSeason);
+      } else if (viewMode === "team") {
+        trackTeamSelection(entityName, entityName, selectedSeason);
+      }
     }
   };
 
@@ -75,15 +96,16 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-mobile-title">
-          Select {viewMode === "player" ? "Players" : "Teams"}
-        </h3>
-        <Badge variant="secondary" className="text-mobile-xs sm:text-xs">
-          {selectedEntities.length}/{maxSelections} selected
-        </Badge>
-      </div>
+    <PerformanceMonitor componentName={`PlayerSelector-${viewMode}`}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-mobile-title">
+            Select {viewMode === "player" ? "Players" : "Teams"}
+          </h3>
+          <Badge variant="secondary" className="text-mobile-xs sm:text-xs">
+            {selectedEntities.length}/{maxSelections} selected
+          </Badge>
+        </div>
 
       {/* Selected Entities */}
       {selectedEntities.length > 0 && (
@@ -174,6 +196,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
           Maximum of {maxSelections} {viewMode === "player" ? "players" : "teams"} can be compared at once.
         </div>
       )}
-    </div>
+      </div>
+    </PerformanceMonitor>
   );
 }

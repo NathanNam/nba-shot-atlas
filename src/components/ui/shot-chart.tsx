@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ShotData } from "@/services/supabaseDataService";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 interface ShotChartProps {
   title: string;
@@ -17,6 +19,22 @@ type ViewMode = "shots" | "heatmap";
 export function ShotChart({ title, data, width = 500, height = 470, progress }: ShotChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("shots");
+  const { trackShotChartInteraction } = useNBAAnalyticsTracking();
+
+  // Track view mode changes
+  const handleViewModeChange = (checked: boolean) => {
+    const newMode = checked ? "heatmap" : "shots";
+    setViewMode(newMode);
+    
+    // Track interaction with shot chart view mode
+    trackShotChartInteraction("filter", {
+      entity_name: title,
+      entity_type: "unknown", // Could be enhanced to detect entity type from title
+      season: "unknown", // Could be passed as prop
+      shots_count: data?.length || 0,
+      filter_applied: `view_mode_${newMode}`,
+    });
+  };
 
   console.log(`🔍 ShotChart DEBUG - ${title}:`, {
     dataLength: data?.length || 0,
@@ -195,6 +213,28 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           shotCircle.setAttribute("data-distance", shot.shotDistance?.toString() || '0');
           shotCircle.setAttribute("data-description", shot.description || '');
 
+          // Add click tracking for individual shots
+          shotCircle.addEventListener("click", (e) => {
+            trackShotChartInteraction("click", {
+              entity_name: title,
+              entity_type: "unknown",
+              season: "unknown",
+              shots_count: data?.length || 0,
+              filter_applied: `shot_detail_${shot.shotResult}`,
+            });
+          });
+
+          // Add hover tracking for shot details
+          shotCircle.addEventListener("mouseenter", (e) => {
+            trackShotChartInteraction("hover", {
+              entity_name: title,
+              entity_type: "unknown", 
+              season: "unknown",
+              shots_count: data?.length || 0,
+              filter_applied: `shot_hover_${shot.shotResult}`,
+            });
+          });
+
           fragment.appendChild(shotCircle);
         });
 
@@ -372,17 +412,18 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
   };
 
   return (
-    <Card className="p-3 sm:p-6 bg-card border-border shadow-card">
-      {/* Mobile-optimized header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h3 className="text-fluid-heading text-foreground">{title}</h3>
+    <PerformanceMonitor componentName={`ShotChart-${viewMode}`}>
+      <Card className="p-3 sm:p-6 bg-card border-border shadow-card">
+        {/* Mobile-optimized header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h3 className="text-fluid-heading text-foreground">{title}</h3>
         <div className="flex items-center justify-between sm:justify-end">
           <div className="flex items-center space-x-2">
             <Label htmlFor="view-mode" className="text-sm font-medium">Heat Map</Label>
             <Switch
               id="view-mode"
               checked={viewMode === "heatmap"}
-              onCheckedChange={(checked) => setViewMode(checked ? "heatmap" : "shots")}
+              onCheckedChange={handleViewModeChange}
               className="data-[state=checked]:bg-primary"
             />
           </div>
@@ -465,6 +506,7 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           </div>
         </>
       )}
-    </Card>
+      </Card>
+    </PerformanceMonitor>
   );
 }

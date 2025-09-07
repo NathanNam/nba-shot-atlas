@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { useEffect } from "react";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +18,17 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  const { trackComparisonView, trackStatisticsView } = useNBAAnalyticsTracking();
+  
+  // Track comparison view usage
+  useEffect(() => {
+    trackComparisonView(season1, season2, viewMode, entityName, entityName2);
+    trackStatisticsView(viewMode, entityName, season1);
+    if (entityName2) {
+      trackStatisticsView(viewMode, entityName2, season1);
+    }
+  }, [entityName, entityName2, season1, season2, viewMode, trackComparisonView, trackStatisticsView]);
+  
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -322,14 +336,15 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   };
 
   return (
-    <div className="space-y-6">
-      {/* Comparison Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {comparisonTitle}
-          </CardTitle>
-        </CardHeader>
+    <PerformanceMonitor componentName={`ComparisonStatistics-${viewMode}`}>
+      <div className="space-y-6">
+        {/* Comparison Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {comparisonTitle}
+            </CardTitle>
+          </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center space-y-1">
@@ -369,7 +384,8 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </PerformanceMonitor>
   );
 }

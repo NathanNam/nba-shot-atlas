@@ -304,11 +304,214 @@ export function trackComponentError(componentName: string, errorMessage: string,
   });
 }
 
+// Core Web Vitals metrics
+let coreWebVitalsHistogram: any;
+let layoutShiftGauge: any;
+let interactionToNextPaintHistogram: any;
+let timeToFirstByteHistogram: any;
+
+// Initialize Core Web Vitals metrics
+const initCoreWebVitalsMetrics = () => {
+  if (meter?.createHistogram) {
+    coreWebVitalsHistogram = meter.createHistogram('core_web_vitals_ms', {
+      description: 'Core Web Vitals metrics (LCP, FID, CLS)',
+      unit: 'ms',
+    });
+
+    layoutShiftGauge = meter.createUpDownCounter('cumulative_layout_shift', {
+      description: 'Cumulative Layout Shift (CLS) score',
+    });
+
+    interactionToNextPaintHistogram = meter.createHistogram('interaction_to_next_paint_ms', {
+      description: 'Interaction to Next Paint (INP) timing',
+      unit: 'ms',
+    });
+
+    timeToFirstByteHistogram = meter.createHistogram('time_to_first_byte_ms', {
+      description: 'Time to First Byte (TTFB) timing',
+      unit: 'ms',
+    });
+  }
+};
+
+// Initialize Core Web Vitals metrics when module loads
+initCoreWebVitalsMetrics();
+
+// Core Web Vitals tracking function
+function trackCoreWebVitals() {
+  if (typeof window === 'undefined') return;
+
+  // Track Largest Contentful Paint (LCP)
+  if ('PerformanceObserver' in window) {
+    try {
+      const lcpObserver = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          const lcp = entry.startTime;
+          
+          if (coreWebVitalsHistogram?.record) {
+            coreWebVitalsHistogram.record(lcp, { 
+              metric: 'lcp',
+              performance_tier: lcp < 2500 ? 'good' : lcp < 4000 ? 'needs_improvement' : 'poor'
+            });
+          }
+
+          safeLog({
+            severityNumber: lcp > 4000 ? SeverityNumber.WARN : SeverityNumber.INFO,
+            severityText: lcp > 4000 ? 'WARN' : 'INFO',
+            body: 'Largest Contentful Paint recorded',
+            attributes: {
+              lcp_ms: lcp,
+              lcp_element: entry.element?.tagName || 'unknown',
+              performance_tier: lcp < 2500 ? 'good' : lcp < 4000 ? 'needs_improvement' : 'poor',
+              url: window.location.href,
+            },
+          });
+        });
+      });
+      
+      lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+    } catch (error) {
+      console.warn('Failed to observe LCP:', error);
+    }
+
+    // Track First Input Delay (FID)
+    try {
+      const fidObserver = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          const fid = entry.processingStart - entry.startTime;
+          
+          if (coreWebVitalsHistogram?.record) {
+            coreWebVitalsHistogram.record(fid, { 
+              metric: 'fid',
+              performance_tier: fid < 100 ? 'good' : fid < 300 ? 'needs_improvement' : 'poor'
+            });
+          }
+
+          safeLog({
+            severityNumber: fid > 300 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+            severityText: fid > 300 ? 'WARN' : 'DEBUG',
+            body: 'First Input Delay recorded',
+            attributes: {
+              fid_ms: fid,
+              event_type: entry.name,
+              performance_tier: fid < 100 ? 'good' : fid < 300 ? 'needs_improvement' : 'poor',
+              url: window.location.href,
+            },
+          });
+        });
+      });
+      
+      fidObserver.observe({ entryTypes: ['first-input'] });
+    } catch (error) {
+      console.warn('Failed to observe FID:', error);
+    }
+
+    // Track Cumulative Layout Shift (CLS)
+    try {
+      let clsValue = 0;
+      const clsObserver = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          if (!entry.hadRecentInput) {
+            clsValue += entry.value;
+            
+            if (layoutShiftGauge?.add) {
+              layoutShiftGauge.add(entry.value, { 
+                shift_type: 'unexpected',
+                performance_tier: clsValue < 0.1 ? 'good' : clsValue < 0.25 ? 'needs_improvement' : 'poor'
+              });
+            }
+          }
+        });
+
+        if (clsValue > 0.1) {
+          safeLog({
+            severityNumber: clsValue > 0.25 ? SeverityNumber.WARN : SeverityNumber.INFO,
+            severityText: clsValue > 0.25 ? 'WARN' : 'INFO',
+            body: 'Cumulative Layout Shift detected',
+            attributes: {
+              cls_score: clsValue,
+              performance_tier: clsValue < 0.1 ? 'good' : clsValue < 0.25 ? 'needs_improvement' : 'poor',
+              url: window.location.href,
+            },
+          });
+        }
+      });
+      
+      clsObserver.observe({ entryTypes: ['layout-shift'] });
+    } catch (error) {
+      console.warn('Failed to observe CLS:', error);
+    }
+
+    // Track Interaction to Next Paint (INP) - if available
+    try {
+      const inpObserver = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          const inp = entry.processingEnd - entry.startTime;
+          
+          if (interactionToNextPaintHistogram?.record) {
+            interactionToNextPaintHistogram.record(inp, { 
+              interaction_type: entry.name,
+              performance_tier: inp < 200 ? 'good' : inp < 500 ? 'needs_improvement' : 'poor'
+            });
+          }
+
+          if (inp > 200) {
+            safeLog({
+              severityNumber: inp > 500 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+              severityText: inp > 500 ? 'WARN' : 'DEBUG',
+              body: 'Slow interaction detected',
+              attributes: {
+                inp_ms: inp,
+                interaction_type: entry.name,
+                target: entry.target?.tagName || 'unknown',
+                performance_tier: inp < 200 ? 'good' : inp < 500 ? 'needs_improvement' : 'poor',
+                url: window.location.href,
+              },
+            });
+          }
+        });
+      });
+      
+      inpObserver.observe({ entryTypes: ['event'] });
+    } catch (error) {
+      console.warn('Failed to observe INP:', error);
+    }
+  }
+
+  // Track Time to First Byte (TTFB)
+  window.addEventListener('load', () => {
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    if (navigation) {
+      const ttfb = navigation.responseStart - navigation.requestStart;
+      
+      if (timeToFirstByteHistogram?.record) {
+        timeToFirstByteHistogram.record(ttfb, { 
+          performance_tier: ttfb < 800 ? 'good' : ttfb < 1800 ? 'needs_improvement' : 'poor'
+        });
+      }
+
+      safeLog({
+        severityNumber: ttfb > 1800 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+        severityText: ttfb > 1800 ? 'WARN' : 'DEBUG',
+        body: 'Time to First Byte recorded',
+        attributes: {
+          ttfb_ms: ttfb,
+          performance_tier: ttfb < 800 ? 'good' : ttfb < 1800 ? 'needs_improvement' : 'poor',
+          url: window.location.href,
+        },
+      });
+    }
+  });
+}
+
 // Global performance monitoring setup
 export function setupGlobalPerformanceMonitoring() {
   const span = tracer.startSpan('performance_monitor.setup_global_monitoring');
 
   try {
+    // Initialize Core Web Vitals tracking
+    trackCoreWebVitals();
+
     // Monitor page load performance
     if (typeof window !== 'undefined') {
       window.addEventListener('load', () => {
