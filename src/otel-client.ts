@@ -270,6 +270,20 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
     
     console.log('✅ NBA test metric emitted directly');
 
+    // Test the NBA class directly after initialization
+    setTimeout(() => {
+      console.log('🧪 Testing NBAAnalyticsMetrics class directly...');
+      import('./services/nbaAnalyticsMetrics').then(({ NBAAnalyticsMetrics }) => {
+        try {
+          console.log('🧪 Calling NBAAnalyticsMetrics.trackFeatureUsage...');
+          NBAAnalyticsMetrics.trackFeatureUsage('otel_direct_test', { source: 'otel_client' });
+          console.log('🧪 NBAAnalyticsMetrics call completed');
+        } catch (error) {
+          console.error('🧪 Error calling NBAAnalyticsMetrics:', error);
+        }
+      });
+    }, 100);
+
     return { tracer, logger, meter };
   } catch (error) {
     const fallbackLogger = loggerProvider.getLogger(serviceName);
