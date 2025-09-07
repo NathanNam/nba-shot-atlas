@@ -1,14 +1,15 @@
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
-import { useConsistentPlayerStats } from "@/hooks/useConsistentPlayerStats";
+import { usePlayerStats } from "@/hooks/usePlayerStats";
+import { ShotData } from "@/hooks/useShotData";
 import { useMemo } from "react";
 
 interface EntityStatisticsProps {
   entityName: string;
   selectedSeason: string;
   viewMode: "player" | "team" | "league";
-  preloadedData?: any[]; // Optional preloaded shot data
+  preloadedData?: ShotData[]; // Optional preloaded shot data
 }
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
@@ -51,50 +52,28 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   const stableEntityId = entityId && (viewMode !== 'player' || !playersLoading) ? String(entityId) : '';
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
-  
-  // Use consistent stats for Stephen Curry to fix data fluctuation issue
-  const isStephenCurry = cleanEntityName === 'Stephen Curry' && viewMode === 'player';
-  console.log(`🎯 EntityStatistics: Checking Stephen Curry - cleanEntityName: "${cleanEntityName}", viewMode: "${viewMode}", isStephenCurry: ${isStephenCurry}`);
-  
-  const consistentStats = useConsistentPlayerStats(
-    isStephenCurry ? stableEntityId : '',
-    isStephenCurry ? selectedSeason : ''
+
+  const serverStats = usePlayerStats(
+    viewMode === 'player' ? stableEntityId : '',
+    viewMode === 'player' ? selectedSeason : ''
   );
-  
-  console.log(`🎯 EntityStatistics: Consistent stats hook result`, {
-    isStephenCurry,
-    stableEntityId,
-    selectedSeason,
-    loading: consistentStats.loading,
-    error: consistentStats.error,
-    hasStats: !!consistentStats.stats,
-    stats: consistentStats.stats
-  });
-  
+
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
     selectedSeason,
     stableEntityId,
     viewMode,
-    preloadedData === undefined && !isStephenCurry
+    preloadedData === undefined
   );
-  
-  // Use consistent stats for Stephen Curry, preloaded data if available, otherwise use hook result
-  const { shotData, loading, error } = isStephenCurry 
-    ? { 
-        shotData: [], // Force empty - we'll use consistent stats directly
-        loading: consistentStats.loading, 
-        error: consistentStats.error 
-      }
-    : preloadedData !== undefined 
+
+  const { shotData, loading, error } = preloadedData !== undefined
     ? { shotData: preloadedData, loading: false, error: null }
     : hookResult;
-    
+
   // Debug logging
   console.log(`🔍 EntityStatistics [${cleanEntityName}]: Data source and details`, {
-    isStephenCurry,
-    hasConsistentStats: !!consistentStats.stats,
-    consistentStats: consistentStats.stats,
+    hasServerStats: !!serverStats.stats,
+    serverStats: serverStats.stats,
     hasPreloadedData: preloadedData !== undefined,
     preloadedLength: preloadedData?.length,
     hookLength: hookResult.shotData?.length,
@@ -106,8 +85,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   const calculatedStats = useMemo(() => {
     console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {
-      isStephenCurry,
-      hasConsistentStats: !!consistentStats.stats,
       shotDataLength: shotData?.length,
       playersLoading,
       entityId,
@@ -115,23 +92,34 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       selectedSeason,
       loading,
       error,
-      dataPreview: shotData?.slice(0, 2)
+      serverStats: serverStats.stats
     });
-    
-    // ALWAYS use consistent stats for Stephen Curry when available - no fallback to calculated stats
-    if (isStephenCurry && consistentStats.stats && !consistentStats.loading) {
-      console.log(`🎯 ENTITY STATS: Using FINAL consistent stats for Stephen Curry:`, {
-        totalShots: consistentStats.stats.totalShots,
-        threePointMade: consistentStats.stats.threePointMade,
-        threePointAttempted: consistentStats.stats.threePointAttempted,
-        threePointPercentage: consistentStats.stats.threePointPercentage
-      });
-      return consistentStats.stats;
-    }
-    
-    // For Stephen Curry, if we're still loading consistent stats, return loading state
-    if (isStephenCurry && consistentStats.loading) {
-      console.log(`🎯 ENTITY STATS: Stephen Curry consistent stats still loading, returning empty stats`);
+
+    if (viewMode === 'player') {
+      if (serverStats.loading) {
+        return {
+          totalShots: 0,
+          madeShots: 0,
+          fieldGoalPercentage: 0,
+          twoPointPercentage: 0,
+          twoPointMade: 0,
+          twoPointAttempted: 0,
+          threePointPercentage: 0,
+          threePointMade: 0,
+          threePointAttempted: 0,
+          hottestZone: "Loading...",
+          hottestZoneStats: { made: 0, total: 0, percentage: 0 },
+          coldestZone: "Loading...",
+          coldestZoneStats: { made: 0, total: 0, percentage: 0 },
+          favoriteSpot: "Loading...",
+          favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
+        };
+      }
+
+      if (serverStats.stats) {
+        return serverStats.stats;
+      }
+
       return {
         totalShots: 0,
         madeShots: 0,
@@ -142,25 +130,16 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         threePointPercentage: 0,
         threePointMade: 0,
         threePointAttempted: 0,
-        hottestZone: "Loading...",
+        hottestZone: "No data",
         hottestZoneStats: { made: 0, total: 0, percentage: 0 },
-        coldestZone: "Loading...",
+        coldestZone: "No data",
         coldestZoneStats: { made: 0, total: 0, percentage: 0 },
-        favoriteSpot: "Loading...",
+        favoriteSpot: "No data",
         favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
       };
     }
-    
-    // Stephen Curry should NEVER reach this point if consistent stats are working
-    if (isStephenCurry) {
-      console.error(`🚨 ENTITY STATS: Stephen Curry reached fallback calculation! This should not happen!`, {
-        hasConsistentStats: !!consistentStats.stats,
-        consistentLoading: consistentStats.loading,
-        consistentError: consistentStats.error
-      });
-    }
-    
-    if (!shotData || shotData.length === 0 || (viewMode === 'player' && playersLoading) || !entityId) {
+
+    if (!shotData || shotData.length === 0 || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,
@@ -189,7 +168,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
 
     // Process each shot
     shotData.forEach(shot => {
-      // Determine if the shot was made
       const result = shot.shotResult;
       const made = result === 'Made' || result === 'MADE' || result === '1';
 
@@ -197,7 +175,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         madeShots += 1;
       }
 
-      // Count 2PT/3PT attempts and makes
       if (shot.shotValue === 2) {
         twoPointAttempted += 1;
         if (made) twoPointMade += 1;
@@ -206,7 +183,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         if (made) threePointMade += 1;
       }
 
-      // Zone classification (formerly analyzeZones)
       let zone = "Unknown";
       const distance = shot.shotDistance;
       const x = shot.xLegacy;
@@ -253,7 +229,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     const threePointPercentage =
       threePointAttempted > 0 ? threePointMade / threePointAttempted : 0;
 
-    // Debug output for 3PT calculation
     console.log(`🏀 3PT Analysis for ${entityName}:`, {
       threePointMade: threePointMade,
       threePointAttempted: threePointAttempted,
@@ -261,7 +236,6 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       calculation: `${threePointMade}/${threePointAttempted} = ${(threePointPercentage * 100).toFixed(1)}%`
     });
 
-    // Determine hottest, coldest and favorite zones from accumulated stats
     let hottestZone = "No data";
     let hottestZoneStats = { made: 0, total: 0, percentage: 0 };
     let coldestZone = "No data";
@@ -311,11 +285,13 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       favoriteSpot,
       favoriteSpotStats
     };
-  }, [shotData, entityName, playersLoading, entityId, selectedSeason, isStephenCurry, consistentStats.stats]);
+  }, [shotData, entityName, playersLoading, entityId, selectedSeason, viewMode, serverStats.stats, serverStats.loading, loading, error]);
 
-  // Show loading while fetching players (player mode only) or shot data, or consistent stats for Stephen Curry
-  const isLoadingConsistentStats = isStephenCurry && consistentStats.loading;
-  const shouldShowLoading = loading || (viewMode === 'player' && playersLoading) || !entityId || isLoadingConsistentStats;
+  // Show loading while fetching players (player mode only), shot data, or server-calculated stats
+  const shouldShowLoading =
+    loading ||
+    (viewMode === 'player' && (playersLoading || serverStats.loading)) ||
+    !entityId;
   
   if (shouldShowLoading) {
     return (
@@ -332,10 +308,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     );
   }
 
-  if (error) {
+  if (error || serverStats.error) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
-        <p className="text-destructive text-center">Error loading statistics: {error}</p>
+        <p className="text-destructive text-center">Error loading statistics: {error || serverStats.error}</p>
       </div>
     );
   }
