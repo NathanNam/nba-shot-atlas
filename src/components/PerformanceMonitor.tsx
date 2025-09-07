@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
+import { useAPITracking } from '../hooks/useAPITracking';
 
 // Safe logger function that checks if logger is initialized
 const safeLog = (logData: any) => {
@@ -22,6 +23,10 @@ let cacheHitCounter: any;
 let errorCounter: any;
 let componentMountCounter: any;
 let renderPerformanceHistogram: any;
+let coreWebVitalsHistogram: any;
+let nbaSpecificMetricsHistogram: any;
+let chartRenderingHistogram: any;
+let dataVisualizationHistogram: any;
 
 // Initialize metrics safely
 const initMetrics = () => {
@@ -75,6 +80,27 @@ const initMetrics = () => {
       description: 'Current memory usage in megabytes',
       unit: 'MB',
     });
+
+    // Enhanced metrics for NBA analytics specific operations
+    coreWebVitalsHistogram = meter.createHistogram('core_web_vitals', {
+      description: 'Core Web Vitals metrics (LCP, FID, CLS)',
+      unit: 'ms',
+    });
+
+    nbaSpecificMetricsHistogram = meter.createHistogram('nba_operations_performance', {
+      description: 'Performance metrics for NBA-specific operations',
+      unit: 'ms',
+    });
+
+    chartRenderingHistogram = meter.createHistogram('chart_rendering_performance', {
+      description: 'Performance metrics for chart rendering operations',
+      unit: 'ms',
+    });
+
+    dataVisualizationHistogram = meter.createHistogram('data_visualization_performance', {
+      description: 'Performance metrics for data visualization operations',
+      unit: 'ms',
+    });
   }
 };
 
@@ -89,6 +115,124 @@ interface PerformanceMonitorProps {
 export function PerformanceMonitor({ componentName = 'unknown', children }: PerformanceMonitorProps) {
   const renderStartTime = useRef<number>(Date.now());
   const mountTime = useRef<number>(Date.now());
+  const [coreWebVitalsTracked, setCoreWebVitalsTracked] = useState(false);
+  const { trackServiceHealth } = useAPITracking();
+
+  // Track Core Web Vitals
+  useEffect(() => {
+    if (!coreWebVitalsTracked && typeof window !== 'undefined') {
+      setCoreWebVitalsTracked(true);
+      
+      // Track Largest Contentful Paint (LCP)
+      if ('PerformanceObserver' in window) {
+        try {
+          const lcpObserver = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            const lastEntry = entries[entries.length - 1];
+            
+            if (coreWebVitalsHistogram?.record) {
+              coreWebVitalsHistogram.record(lastEntry.startTime, {
+                metric: 'lcp',
+                component: componentName,
+                performance_rating: lastEntry.startTime < 2500 ? 'good' : 
+                                  lastEntry.startTime < 4000 ? 'needs_improvement' : 'poor',
+              });
+            }
+            
+            safeLog({
+              severityNumber: lastEntry.startTime > 4000 ? SeverityNumber.WARN : SeverityNumber.INFO,
+              severityText: lastEntry.startTime > 4000 ? 'WARN' : 'INFO',
+              body: `LCP measured: ${lastEntry.startTime}ms`,
+              attributes: {
+                metric: 'largest_contentful_paint',
+                value: lastEntry.startTime,
+                component: componentName,
+                performance_rating: lastEntry.startTime < 2500 ? 'good' : 
+                                   lastEntry.startTime < 4000 ? 'needs_improvement' : 'poor',
+              },
+            });
+          });
+          
+          lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+        } catch (error) {
+          console.warn('Failed to setup LCP observer:', error);
+        }
+
+        // Track First Input Delay (FID)
+        try {
+          const fidObserver = new PerformanceObserver((list) => {
+            list.getEntries().forEach((entry: any) => {
+              if (coreWebVitalsHistogram?.record) {
+                coreWebVitalsHistogram.record(entry.processingStart - entry.startTime, {
+                  metric: 'fid',
+                  component: componentName,
+                  performance_rating: entry.processingStart - entry.startTime < 100 ? 'good' : 
+                                     entry.processingStart - entry.startTime < 300 ? 'needs_improvement' : 'poor',
+                });
+              }
+              
+              safeLog({
+                severityNumber: (entry.processingStart - entry.startTime) > 300 ? SeverityNumber.WARN : SeverityNumber.INFO,
+                severityText: (entry.processingStart - entry.startTime) > 300 ? 'WARN' : 'INFO',
+                body: `FID measured: ${entry.processingStart - entry.startTime}ms`,
+                attributes: {
+                  metric: 'first_input_delay',
+                  value: entry.processingStart - entry.startTime,
+                  component: componentName,
+                  performance_rating: entry.processingStart - entry.startTime < 100 ? 'good' : 
+                                     entry.processingStart - entry.startTime < 300 ? 'needs_improvement' : 'poor',
+                },
+              });
+            });
+          });
+          
+          fidObserver.observe({ type: 'first-input', buffered: true });
+        } catch (error) {
+          console.warn('Failed to setup FID observer:', error);
+        }
+
+        // Track Cumulative Layout Shift (CLS)
+        try {
+          let clsValue = 0;
+          const clsObserver = new PerformanceObserver((list) => {
+            list.getEntries().forEach((entry: any) => {
+              if (!entry.hadRecentInput) {
+                clsValue += entry.value;
+              }
+            });
+            
+            if (coreWebVitalsHistogram?.record) {
+              coreWebVitalsHistogram.record(clsValue, {
+                metric: 'cls',
+                component: componentName,
+                performance_rating: clsValue < 0.1 ? 'good' : 
+                                   clsValue < 0.25 ? 'needs_improvement' : 'poor',
+              });
+            }
+            
+            if (clsValue > 0) {
+              safeLog({
+                severityNumber: clsValue > 0.25 ? SeverityNumber.WARN : SeverityNumber.INFO,
+                severityText: clsValue > 0.25 ? 'WARN' : 'INFO',
+                body: `CLS measured: ${clsValue}`,
+                attributes: {
+                  metric: 'cumulative_layout_shift',
+                  value: clsValue,
+                  component: componentName,
+                  performance_rating: clsValue < 0.1 ? 'good' : 
+                                     clsValue < 0.25 ? 'needs_improvement' : 'poor',
+                },
+              });
+            }
+          });
+          
+          clsObserver.observe({ type: 'layout-shift', buffered: true });
+        } catch (error) {
+          console.warn('Failed to setup CLS observer:', error);
+        }
+      }
+    }
+  }, [componentName, coreWebVitalsTracked]);
 
   useEffect(() => {
     const span = tracer.startSpan('performance_monitor.component_lifecycle', {
@@ -218,6 +362,77 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
   });
 
   return <>{children}</>;
+}
+
+// Enhanced utility functions for NBA analytics performance tracking
+export function trackNBAOperation(operationName: string, duration: number, dataSize?: number, entityType?: string) {
+  if (nbaSpecificMetricsHistogram?.record) {
+    nbaSpecificMetricsHistogram.record(duration, {
+      operation: operationName,
+      entity_type: entityType || 'unknown',
+      data_size_category: dataSize ? (dataSize < 100 ? 'small' : dataSize < 1000 ? 'medium' : 'large') : 'unknown',
+      performance_rating: duration < 100 ? 'excellent' : duration < 500 ? 'good' : duration < 1000 ? 'acceptable' : 'poor',
+    });
+  }
+
+  safeLog({
+    severityNumber: duration > 1000 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+    severityText: duration > 1000 ? 'WARN' : 'DEBUG',
+    body: `NBA operation: ${operationName}`,
+    attributes: {
+      operation_name: operationName,
+      duration_ms: duration,
+      data_size: dataSize,
+      entity_type: entityType,
+      performance_tier: duration < 100 ? 'excellent' : duration < 500 ? 'good' : duration < 1000 ? 'acceptable' : 'poor',
+    },
+  });
+}
+
+export function trackChartRendering(chartType: string, duration: number, dataPoints?: number, isInteractive?: boolean) {
+  if (chartRenderingHistogram?.record) {
+    chartRenderingHistogram.record(duration, {
+      chart_type: chartType,
+      data_points_category: dataPoints ? (dataPoints < 100 ? 'small' : dataPoints < 1000 ? 'medium' : 'large') : 'unknown',
+      interactive: isInteractive ? 'true' : 'false',
+      performance_rating: duration < 100 ? 'excellent' : duration < 300 ? 'good' : duration < 500 ? 'acceptable' : 'poor',
+    });
+  }
+
+  safeLog({
+    severityNumber: duration > 500 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+    severityText: duration > 500 ? 'WARN' : 'DEBUG',
+    body: `Chart rendering: ${chartType}`,
+    attributes: {
+      chart_type: chartType,
+      duration_ms: duration,
+      data_points: dataPoints,
+      interactive: isInteractive,
+      performance_tier: duration < 100 ? 'excellent' : duration < 300 ? 'good' : duration < 500 ? 'acceptable' : 'poor',
+    },
+  });
+}
+
+export function trackDataVisualization(visualizationType: string, duration: number, complexity?: 'low' | 'medium' | 'high') {
+  if (dataVisualizationHistogram?.record) {
+    dataVisualizationHistogram.record(duration, {
+      visualization_type: visualizationType,
+      complexity: complexity || 'unknown',
+      performance_rating: duration < 200 ? 'excellent' : duration < 500 ? 'good' : duration < 1000 ? 'acceptable' : 'poor',
+    });
+  }
+
+  safeLog({
+    severityNumber: duration > 1000 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+    severityText: duration > 1000 ? 'WARN' : 'DEBUG',
+    body: `Data visualization: ${visualizationType}`,
+    attributes: {
+      visualization_type: visualizationType,
+      duration_ms: duration,
+      complexity: complexity,
+      performance_tier: duration < 200 ? 'excellent' : duration < 500 ? 'good' : duration < 1000 ? 'acceptable' : 'poor',
+    },
+  });
 }
 
 // Utility functions for performance tracking

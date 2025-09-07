@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
-import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { useNBAAnalyticsTracking } from "@/hooks/useNBAAnalyticsTracking";
 import { PerformanceMonitor, trackDataLoading } from "@/components/PerformanceMonitor";
 
 interface EntityShotChartProps {

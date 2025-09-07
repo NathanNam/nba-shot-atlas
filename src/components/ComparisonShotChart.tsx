@@ -3,7 +3,7 @@ import { ShotChart } from "@/components/ui/shot-chart";
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { Card } from "@/components/ui/card";
-import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { useNBAAnalyticsTracking } from "@/hooks/useNBAAnalyticsTracking";
 import { PerformanceMonitor, trackDataLoading } from "@/components/PerformanceMonitor";
 
 interface ComparisonShotChartProps {

@@ -1,10 +1,13 @@
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking } from "@/hooks/useNBAAnalyticsTracking";
+import { useComponentPerformance } from "@/hooks/useComponentPerformance";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useEffect } from "react";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +18,36 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  // Initialize performance and analytics tracking
+  const { startRenderTracking, endRenderTracking, trackComponentError } = useComponentPerformance('ComparisonStatistics', {
+    componentName: 'ComparisonStatistics',
+    props: { entityName, entityName2, season1, season2, viewMode },
+    renderTrigger: 'props_change',
+  });
+  
+  const { trackComparison, trackDataLoad, trackUserEngagement, trackComponentLifecycle } = useNBAAnalyticsTracking();
+
+  // Track component lifecycle
+  useEffect(() => {
+    trackComponentLifecycle('ComparisonStatistics', 'mount', {
+      entityName,
+      entityName2,
+      season1,
+      season2,
+      viewMode,
+      isPlayerVsPlayer: entityName2 && entityName2 !== entityName,
+    });
+    
+    return () => {
+      trackComponentLifecycle('ComparisonStatistics', 'unmount', {
+        entityName,
+        entityName2,
+        season1,
+        season2,
+        viewMode,
+      });
+    };
+  }, [trackComponentLifecycle, entityName, entityName2, season1, season2, viewMode]);
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -53,6 +86,20 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   
   // Always call useMultiSeasonData hook - never conditionally call hooks
   const multiSeasonData = useMultiSeasonData(actualSeason1, actualSeason2, entityId1 || '', entityId2 || '', viewMode);
+  
+  // Track data loading operations
+  useEffect(() => {
+    if (entityId1 && entityId2) {
+      const isPlayerVsPlayer = entityName2 && entityName2 !== entityName;
+      trackDataLoad('comparison_data_load', {
+        entityType: viewMode,
+        season: isPlayerVsPlayer ? actualSeason1 : `${actualSeason1}_${actualSeason2}`,
+        dataSource: 'supabase',
+        recordCount: (multiSeasonData.season1.data?.length || 0) + (multiSeasonData.season2?.data?.length || 0),
+        cacheHit: false, // This could be determined from the hook implementation
+      });
+    }
+  }, [trackDataLoad, viewMode, actualSeason1, actualSeason2, entityId1, entityId2, entityName, entityName2, multiSeasonData.season1.data, multiSeasonData.season2?.data]);
 
   // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
@@ -230,8 +277,11 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   const data1 = multiSeasonData.season1.data;
   const data2 = multiSeasonData.season2?.data || [];
   
-  // Calculate statistics for both seasons
+  // Calculate statistics for both seasons with performance tracking
   const calculateStats = (data: any[]) => {
+    const renderStart = startRenderTracking();
+    
+    try {
     const totalShots = data.length;
     
     // More robust shot result checking
@@ -256,27 +306,49 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     // Analyze zones using the same logic as EntityStatistics
     const zoneAnalysis = analyzeZones(data);
 
-    return {
-      fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
-      twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
-      twoPointMade: made2PT,
-      twoPointAttempted: twoPointers.length,
-      threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
-      threePointMade: made3PT,
-      threePointAttempted: threePointers.length,
-      totalShots,
-      madeShots,
-      hottestZone: zoneAnalysis.hottestZone,
-      hottestZoneStats: zoneAnalysis.hottestZoneStats,
-      coldestZone: zoneAnalysis.coldestZone,
-      coldestZoneStats: zoneAnalysis.coldestZoneStats,
-      favoriteSpot: zoneAnalysis.favoriteSpot,
-      favoriteSpotStats: zoneAnalysis.favoriteSpotStats
-    };
+      const stats = {
+        fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
+        twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
+        twoPointMade: made2PT,
+        twoPointAttempted: twoPointers.length,
+        threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
+        threePointMade: made3PT,
+        threePointAttempted: threePointers.length,
+        totalShots,
+        madeShots,
+        hottestZone: zoneAnalysis.hottestZone,
+        hottestZoneStats: zoneAnalysis.hottestZoneStats,
+        coldestZone: zoneAnalysis.coldestZone,
+        coldestZoneStats: zoneAnalysis.coldestZoneStats,
+        favoriteSpot: zoneAnalysis.favoriteSpot,
+        favoriteSpotStats: zoneAnalysis.favoriteSpotStats
+      };
+      
+      endRenderTracking('stats_calculation');
+      return stats;
+    } catch (error) {
+      trackComponentError(error as Error, { calculateStats: true });
+      endRenderTracking('stats_calculation_error');
+      throw error;
+    }
   };
 
   const stats1 = calculateStats(data1);
   const stats2 = calculateStats(data2);
+  
+  // Track comparison operation
+  useEffect(() => {
+    if (data1.length > 0 || data2.length > 0) {
+      const isPlayerVsPlayer = entityName2 && entityName2 !== entityName;
+      trackComparison('statistics_comparison', {
+        entityType: viewMode,
+        comparisonType: isPlayerVsPlayer ? 'entity' : 'season',
+        entityCount: isPlayerVsPlayer ? 2 : 1,
+        seasonCount: isPlayerVsPlayer ? 1 : 2,
+        dataPointsCompared: data1.length + data2.length,
+      });
+    }
+  }, [trackComparison, data1.length, data2.length, viewMode, entityName, entityName2]);
   
   // Determine chronological order for proper comparison direction
   const getSeasonYear = (season: string) => {
@@ -320,6 +392,16 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     if (Math.abs(diff) < 0.001) return "text-muted-foreground";
     return diff > 0 ? "text-green-500" : "text-red-500";
   };
+
+  // Track user engagement with comparison viewing
+  useEffect(() => {
+    trackUserEngagement({
+      action: 'view',
+      component: 'ComparisonStatistics',
+      entityType: viewMode,
+      duration: 0, // Will be tracked by session duration
+    });
+  }, [trackUserEngagement, viewMode]);
 
   return (
     <div className="space-y-6">
