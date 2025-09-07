@@ -168,7 +168,7 @@ function createProviders() {
   const readers = [
     new PeriodicExportingMetricReader({
       exporter: otlpMetricExporter,
-      exportIntervalMillis: 10000, // Export metrics every 10 seconds
+      exportIntervalMillis: 5000, // Export metrics every 5 seconds (reduced from 10)
     })
   ];
 

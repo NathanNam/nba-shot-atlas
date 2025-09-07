@@ -20,8 +20,11 @@ export class MetricsIntegration {
     // Set up periodic user satisfaction tracking
     this.setupPeriodicTracking();
     
+    // Track a test feature usage to ensure metrics are working
+    this.trackFeature('app_initialization', { environment: 'development' });
+    
     this.initialized = true;
-    console.log('🎯 NBA Analytics Metrics initialized');
+    console.log('🎯 NBA Analytics Metrics initialized with test metrics');
   }
 
   /**
