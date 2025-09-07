@@ -309,6 +309,12 @@ export function setupGlobalPerformanceMonitoring() {
   const span = tracer.startSpan('performance_monitor.setup_global_monitoring');
 
   try {
+    // Setup Core Web Vitals monitoring
+    setupCoreWebVitalsMonitoring();
+    
+    // Setup memory leak detection
+    setupMemoryLeakDetection();
+    
     // Monitor page load performance
     if (typeof window !== 'undefined') {
       window.addEventListener('load', () => {
@@ -455,4 +461,243 @@ export function setupGlobalPerformanceMonitoring() {
   } finally {
     span.end();
   }
+}
+
+// Core Web Vitals metrics
+const coreWebVitalsHistogram = meter.createHistogram('core_web_vitals_score', {
+  description: 'Core Web Vitals performance scores',
+});
+
+const layoutShiftGauge = meter.createUpDownCounter('cumulative_layout_shift_score', {
+  description: 'Cumulative Layout Shift scores',
+});
+
+const inputDelayHistogram = meter.createHistogram('first_input_delay_ms', {
+  description: 'First Input Delay measurements',
+  unit: 'ms',
+});
+
+const largestContentfulPaintHistogram = meter.createHistogram('largest_contentful_paint_ms', {
+  description: 'Largest Contentful Paint measurements',
+  unit: 'ms',
+});
+
+// Memory leak detection
+const memoryLeakCounter = meter.createCounter('memory_leaks_detected_total', {
+  description: 'Total number of potential memory leaks detected',
+});
+
+const memoryGrowthRate = meter.createHistogram('memory_growth_rate_mb_per_minute', {
+  description: 'Rate of memory growth in MB per minute',
+  unit: 'MB/min',
+});
+
+// Core Web Vitals monitoring
+function setupCoreWebVitalsMonitoring() {
+  if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {
+    return;
+  }
+
+  try {
+    // Monitor Largest Contentful Paint (LCP)
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      const lastEntry = entries[entries.length - 1] as PerformanceEntry;
+      
+      if (lastEntry) {
+        const lcp = lastEntry.startTime;
+        
+        largestContentfulPaintHistogram.record(lcp, {
+          performance_grade: lcp <= 2500 ? 'good' : lcp <= 4000 ? 'needs_improvement' : 'poor',
+          page_type: getPageType(),
+        });
+        
+        coreWebVitalsHistogram.record(lcp, {
+          metric: 'lcp',
+          grade: lcp <= 2500 ? 'good' : lcp <= 4000 ? 'needs_improvement' : 'poor',
+        });
+        
+        safeLog({
+          severityNumber: lcp > 4000 ? SeverityNumber.WARN : SeverityNumber.INFO,
+          severityText: lcp > 4000 ? 'WARN' : 'INFO',
+          body: 'Largest Contentful Paint measured',
+          attributes: {
+            lcp_ms: lcp,
+            lcp_grade: lcp <= 2500 ? 'good' : lcp <= 4000 ? 'needs_improvement' : 'poor',
+            page_type: getPageType(),
+            url: window.location.href,
+          },
+        });
+      }
+    });
+    
+    lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+
+    // Monitor First Input Delay (FID)
+    const fidObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      entries.forEach((entry: any) => {
+        const fid = entry.processingStart - entry.startTime;
+        
+        inputDelayHistogram.record(fid, {
+          performance_grade: fid <= 100 ? 'good' : fid <= 300 ? 'needs_improvement' : 'poor',
+          interaction_type: entry.name,
+        });
+        
+        coreWebVitalsHistogram.record(fid, {
+          metric: 'fid',
+          grade: fid <= 100 ? 'good' : fid <= 300 ? 'needs_improvement' : 'poor',
+        });
+        
+        safeLog({
+          severityNumber: fid > 300 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+          severityText: fid > 300 ? 'WARN' : 'DEBUG',
+          body: 'First Input Delay measured',
+          attributes: {
+            fid_ms: fid,
+            fid_grade: fid <= 100 ? 'good' : fid <= 300 ? 'needs_improvement' : 'poor',
+            interaction_type: entry.name,
+            url: window.location.href,
+          },
+        });
+      });
+    });
+    
+    fidObserver.observe({ type: 'first-input', buffered: true });
+
+    // Monitor Cumulative Layout Shift (CLS)
+    let clsValue = 0;
+    let clsEntries: any[] = [];
+    
+    const clsObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      entries.forEach((entry: any) => {
+        if (!entry.hadRecentInput) {
+          clsValue += entry.value;
+          clsEntries.push(entry);
+        }
+      });
+      
+      layoutShiftGauge.add(clsValue, {
+        performance_grade: clsValue <= 0.1 ? 'good' : clsValue <= 0.25 ? 'needs_improvement' : 'poor',
+        page_type: getPageType(),
+      });
+      
+      coreWebVitalsHistogram.record(clsValue, {
+        metric: 'cls',
+        grade: clsValue <= 0.1 ? 'good' : clsValue <= 0.25 ? 'needs_improvement' : 'poor',
+      });
+      
+      if (clsValue > 0.1) {
+        safeLog({
+          severityNumber: clsValue > 0.25 ? SeverityNumber.WARN : SeverityNumber.INFO,
+          severityText: clsValue > 0.25 ? 'WARN' : 'INFO',
+          body: 'Cumulative Layout Shift detected',
+          attributes: {
+            cls_score: clsValue,
+            cls_grade: clsValue <= 0.1 ? 'good' : clsValue <= 0.25 ? 'needs_improvement' : 'poor',
+            shift_count: clsEntries.length,
+            page_type: getPageType(),
+            url: window.location.href,
+          },
+        });
+      }
+    });
+    
+    clsObserver.observe({ type: 'layout-shift', buffered: true });
+    
+  } catch (error) {
+    safeLog({
+      severityNumber: SeverityNumber.WARN,
+      severityText: 'WARN',
+      body: 'Failed to setup Core Web Vitals monitoring',
+      attributes: {
+        error: (error as Error).message,
+      },
+    });
+  }
+}
+
+// Memory leak detection system
+function setupMemoryLeakDetection() {
+  if (typeof window === 'undefined' || !('memory' in performance)) {
+    return;
+  }
+
+  let memoryHistory: Array<{ timestamp: number; used: number; total: number; }> = [];
+  
+  const checkMemoryUsage = () => {
+    try {
+      const memory = (performance as any).memory;
+      if (!memory) return;
+      
+      const now = Date.now();
+      const usedMB = memory.usedJSHeapSize / (1024 * 1024);
+      const totalMB = memory.totalJSHeapSize / (1024 * 1024);
+      const limitMB = memory.jsHeapSizeLimit / (1024 * 1024);
+      
+      memoryHistory.push({ timestamp: now, used: usedMB, total: totalMB });
+      
+      // Keep only last 20 measurements
+      if (memoryHistory.length > 20) {
+        memoryHistory.shift();
+      }
+      
+      // Calculate memory growth rate
+      if (memoryHistory.length >= 2) {
+        const timeDiffMinutes = (now - memoryHistory[0].timestamp) / (1000 * 60);
+        const memoryDiffMB = usedMB - memoryHistory[0].used;
+        const growthRate = timeDiffMinutes > 0 ? memoryDiffMB / timeDiffMinutes : 0;
+        
+        memoryGrowthRate.record(Math.max(0, growthRate), {
+          memory_pressure: usedMB / limitMB > 0.8 ? 'high' : usedMB / limitMB > 0.6 ? 'medium' : 'low',
+          page_type: getPageType(),
+        });
+        
+        // Detect potential memory leaks
+        if (growthRate > 5 || usedMB > limitMB * 0.8) {
+          memoryLeakCounter.add(1, {
+            leak_type: growthRate > 5 ? 'growth_rate' : 'high_usage',
+            severity: usedMB > limitMB * 0.9 ? 'critical' : 'warning',
+          });
+          
+          safeLog({
+            severityNumber: usedMB > limitMB * 0.9 ? SeverityNumber.ERROR : SeverityNumber.WARN,
+            severityText: usedMB > limitMB * 0.9 ? 'ERROR' : 'WARN',
+            body: 'Potential memory leak detected',
+            attributes: {
+              memory_used_mb: usedMB,
+              memory_limit_mb: limitMB,
+              growth_rate_mb_per_min: growthRate,
+              memory_pressure_ratio: usedMB / limitMB,
+            },
+          });
+        }
+      }
+      
+    } catch (error) {
+      safeLog({
+        severityNumber: SeverityNumber.WARN,
+        severityText: 'WARN',
+        body: 'Error in memory leak detection',
+        attributes: {
+          error: (error as Error).message,
+        },
+      });
+    }
+  };
+  
+  checkMemoryUsage();
+  setInterval(checkMemoryUsage, 30000); // Check every 30 seconds
+}
+
+// Helper functions
+function getPageType(): string {
+  if (typeof window === 'undefined') return 'unknown';
+  const path = window.location.pathname;
+  if (path === '/') return 'home';
+  if (path.includes('player')) return 'player';
+  if (path.includes('team')) return 'team';
+  if (path.includes('comparison')) return 'comparison';
+  return 'other';
 }

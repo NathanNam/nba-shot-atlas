@@ -1,10 +1,16 @@
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useComponentPerformance } from "@/hooks/useComponentPerformance";
+import { useErrorTracking } from "@/hooks/useErrorTracking";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BarChart3, Activity } from "lucide-react";
+import { useEffect, useState, useMemo } from 'react';
+import { NBAAnalyticsMetrics } from "@/services/nbaAnalyticsMetrics";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +21,43 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  // Performance and error tracking
+  const {
+    trackRender,
+    startMeasurement,
+    isPerformingPoorly,
+    averageRenderTime,
+    getMetrics
+  } = useComponentPerformance({
+    componentName: 'ComparisonStatistics',
+    trackMemory: true,
+    slowRenderThreshold: 100,
+    enableDetailedTracking: true,
+    customAttributes: {
+      viewMode,
+      entityName,
+      entityName2: entityName2 || 'none',
+      season1,
+      season2,
+    },
+  });
+
+  const { trackError, createErrorBoundary } = useErrorTracking({
+    autoCapture: true,
+    enableRecovery: true,
+    maxRecoveryAttempts: 2,
+  });
+
+  const {
+    trackComparisonView,
+    trackStatisticsView,
+    trackFeatureUsage,
+  } = useNBAAnalyticsTracking();
+
+  // Component state for analytics
+  const [viewStartTime] = useState(Date.now());
+  const [interactionCount, setInteractionCount] = useState(0);
+
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -321,8 +364,24 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     return diff > 0 ? "text-green-500" : "text-red-500";
   };
 
+  // Track user interactions
+  const handleInteraction = (interactionType: string, context?: any) => {
+    setInteractionCount(prev => prev + 1);
+    
+    trackFeatureUsage(`comparison_${interactionType}`, {
+      entity_name: entityName,
+      entity_name2: entityName2,
+      season1,
+      season2,
+      view_mode: viewMode,
+      interaction_count: interactionCount + 1,
+      ...context,
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <PerformanceMonitor componentName={`ComparisonStatistics-${viewMode}`}>
+      <div className="space-y-6" onClick={() => handleInteraction('view_interaction')}>
       {/* Comparison Summary */}
       <Card>
         <CardHeader>
@@ -368,8 +427,9 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
               {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PerformanceMonitor>
   );
 }
