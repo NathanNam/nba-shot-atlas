@@ -19,31 +19,27 @@ initOtel().then(({ tracer, logger, meter }) => {
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
   
-  // Test all NBA metrics to populate Observe
+  // Test NBA metrics directly
   setTimeout(() => {
-    console.log('🧪 Testing all NBA metrics...');
+    console.log('🧪 Testing NBA metrics directly...');
     try {
-      console.log('🧪 Testing trackFeature...');
-      MetricsIntegration.trackFeature('app_initialization_fixed', { timestamp: Date.now() });
-      
-      console.log('🧪 Testing trackContentEngagement...');
-      const startTime = Date.now() - 5000; // 5 seconds ago
-      MetricsIntegration.trackContentEngagement('shot_chart', 'player', 'LeBron James', '2023-24', startTime);
-      
-      console.log('🧪 Testing trackComparison...');
-      MetricsIntegration.trackComparison('player_vs_player', 'LeBron James', 'Stephen Curry', '2023-24');
-      
-      console.log('🧪 Testing trackShotChartInteraction...');
-      MetricsIntegration.trackShotChartInteraction('click', {
-        entityName: 'LeBron James',
-        entityType: 'player',
-        season: '2023-24',
-        shotCount: 1250
+      // Import and call NBAAnalyticsMetrics directly
+      import('./services/nbaAnalyticsMetrics').then(({ NBAAnalyticsMetrics }) => {
+        console.log('🧪 Calling trackFeatureUsage directly...');
+        NBAAnalyticsMetrics.trackFeatureUsage('direct_test_feature', { test: true });
+        
+        console.log('🧪 Calling trackUserSession directly...');
+        NBAAnalyticsMetrics.trackUserSession('new', 'test-agent', '1920x1080');
+        
+        console.log('🧪 Calling trackComparison directly...');
+        NBAAnalyticsMetrics.trackComparison('player_vs_player', 'LeBron', 'Curry', '2023-24', '2023-24', 100);
+        
+        console.log('🧪 All direct NBA metrics calls completed');
+      }).catch(error => {
+        console.error('🧪 Error importing NBA metrics:', error);
       });
-      
-      console.log('🧪 All NBA metrics tests completed');
     } catch (error) {
-      console.error('🧪 Error with NBA metrics:', error);
+      console.error('🧪 Error with direct NBA metrics:', error);
     }
   }, 1500);
 }).catch(error => {
