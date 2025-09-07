@@ -25,35 +25,29 @@ initOtel().then(({ tracer, logger, meter }) => {
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
   
-  // Test NBA metrics immediately after OTEL is ready
-  console.log('🧪 Starting NBA metrics test immediately after OTEL init...');
+  // Test NBA metrics immediately using the same pattern as the working nba_test_metric
+  console.log('🧪 Testing NBA metrics using the working meter...');
   
-  try {
-    // Import and test NBA metrics
-    import('./services/nbaAnalyticsMetrics').then(({ NBAAnalyticsMetrics }) => {
-      console.log('🧪 NBA metrics module imported successfully');
-      
-      // Test multiple metrics to ensure they appear in Observe
-      console.log('🧪 Test 1: trackFeatureUsage');
-      NBAAnalyticsMetrics.trackFeatureUsage('otel_ready_test', { 
-        test: true, 
-        timestamp: Date.now(),
-        otel_ready: true 
-      });
-      
-      console.log('🧪 Test 2: trackUserSession');
-      NBAAnalyticsMetrics.trackUserSession('new', 'Mozilla/5.0 test-agent', '1920x1080');
-      
-      console.log('🧪 Test 3: trackComparison');
-      NBAAnalyticsMetrics.trackComparison('player_vs_player', 'LeBron James', 'Stephen Curry', '2023-24', '2023-24', 150);
-      
-      console.log('🧪 All NBA metric tests completed successfully');
-    }).catch(error => {
-      console.error('🧪 Error importing NBA metrics module:', error);
-    });
-  } catch (error) {
-    console.error('🧪 Error with NBA metrics test:', error);
-  }
+  // Create NBA metrics directly using the working meter (same as nba_test_metric)
+  const nbaUserSessionsCounter = meter.createCounter('nba_user_sessions_total', {
+    description: 'Total number of user sessions tracked'
+  });
+  
+  const nbaFeatureUsageCounter = meter.createCounter('nba_feature_usage_total', {
+    description: 'Total number of feature usage events tracked'
+  });
+  
+  const nbaComparisonsCounter = meter.createCounter('nba_comparisons_total', {
+    description: 'Total number of comparison operations tracked'
+  });
+  
+  // Emit test data for each counter (same pattern as nba_test_metric)
+  console.log('🧪 Emitting NBA counter data...');
+  nbaUserSessionsCounter.add(1, { session_type: 'new', test: 'true' });
+  nbaFeatureUsageCounter.add(1, { feature: 'otel_ready_test', test: 'true' });
+  nbaComparisonsCounter.add(1, { comparison_type: 'player_vs_player', test: 'true' });
+  
+  console.log('🧪 NBA metrics test data emitted successfully');
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
