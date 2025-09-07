@@ -163,6 +163,8 @@ function createProviders() {
       "x-observe-target-package": "Metrics",
       "Content-Type": "application/x-protobuf",
     },
+    // Use HTTP transport and ensure protobuf serialization
+    timeoutMillis: 10000,
   });
 
   const readers = [
