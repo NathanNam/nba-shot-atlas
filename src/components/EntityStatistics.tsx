@@ -54,10 +54,22 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   // Use consistent stats for Stephen Curry to fix data fluctuation issue
   const isStephenCurry = cleanEntityName === 'Stephen Curry' && viewMode === 'player';
+  console.log(`🎯 EntityStatistics: Checking Stephen Curry - cleanEntityName: "${cleanEntityName}", viewMode: "${viewMode}", isStephenCurry: ${isStephenCurry}`);
+  
   const consistentStats = useConsistentPlayerStats(
     isStephenCurry ? stableEntityId : '',
     isStephenCurry ? selectedSeason : ''
   );
+  
+  console.log(`🎯 EntityStatistics: Consistent stats hook result`, {
+    isStephenCurry,
+    stableEntityId,
+    selectedSeason,
+    loading: consistentStats.loading,
+    error: consistentStats.error,
+    hasStats: !!consistentStats.stats,
+    stats: consistentStats.stats
+  });
   
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
@@ -68,11 +80,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   );
   
   // Use consistent stats for Stephen Curry, preloaded data if available, otherwise use hook result
-  const { shotData, loading, error } = isStephenCurry && consistentStats.stats
+  const { shotData, loading, error } = isStephenCurry && consistentStats.stats && !consistentStats.loading && !consistentStats.error
     ? { 
         shotData: [], // We'll use the calculated stats directly
-        loading: consistentStats.loading, 
-        error: consistentStats.error 
+        loading: false, 
+        error: null 
       }
     : preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
@@ -281,8 +293,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     };
   }, [shotData, entityName, playersLoading, entityId, selectedSeason, isStephenCurry, consistentStats.stats]);
 
-  // Show loading while fetching players (player mode only) or shot data
-  if (loading || (viewMode === 'player' && playersLoading) || !entityId) {
+  // Show loading while fetching players (player mode only) or shot data, or consistent stats for Stephen Curry
+  const isLoadingConsistentStats = isStephenCurry && consistentStats.loading;
+  const shouldShowLoading = loading || (viewMode === 'player' && playersLoading) || !entityId || isLoadingConsistentStats;
+  
+  if (shouldShowLoading) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
         <div className="animate-pulse">

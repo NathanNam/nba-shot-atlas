@@ -41,19 +41,31 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
 
   useEffect(() => {
     async function fetchConsistentStats() {
-      if (!playerId || !season) return;
+      if (!playerId || !season) {
+        console.log(`🎯 useConsistentPlayerStats: Skipping fetch - playerId: "${playerId}", season: "${season}"`);
+        setLoading(false);
+        setStats(null);
+        setError(null);
+        return;
+      }
 
       try {
         setLoading(true);
         setError(null);
 
         console.log(`🎯 Direct database query for player ${playerId} season ${season}`);
+        console.log(`🎯 Player ID type: ${typeof playerId}, value: "${playerId}"`);
+
+        const numericPlayerId = parseInt(playerId);
+        if (isNaN(numericPlayerId)) {
+          throw new Error(`Invalid player ID: ${playerId}`);
+        }
 
         // Direct database query with no caching
         const { data: shots, error: dbError } = await (supabase as any)
           .from(`shots_${season}`)
           .select('*')
-          .eq('personId', parseInt(playerId));
+          .eq('personId', numericPlayerId);
 
         if (dbError) {
           throw new Error(`Database error: ${dbError.message}`);
