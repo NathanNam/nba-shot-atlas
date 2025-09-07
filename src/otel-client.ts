@@ -244,6 +244,19 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
       },
     });
 
+    // Create a simple test metric to verify the pipeline
+    const testCounter = meter.createCounter('app_initialized', {
+      description: 'Counter to verify metrics pipeline is working',
+    });
+    
+    testCounter.add(1, { 
+      environment: import.meta.env.MODE,
+      service: serviceName,
+      timestamp: Date.now().toString()
+    });
+    
+    console.log('✅ Basic test metric emitted');
+
     return { tracer, logger, meter };
   } catch (error) {
     const fallbackLogger = loggerProvider.getLogger(serviceName);

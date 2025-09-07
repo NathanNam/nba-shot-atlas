@@ -21,15 +21,18 @@ initOtel().then(({ tracer, logger, meter }) => {
   
   // Force trigger NBA metrics to test them
   setTimeout(() => {
-    console.log('🧪 Force triggering NBA metrics...');
+    console.log('🧪 Testing NBA metrics after OTEL init...');
     try {
       MetricsIntegration.trackFeature('app_initialization', { timestamp: Date.now() });
+      console.log('🧪 NBA feature metric triggered');
+      
+      // Track a test page view
       MetricsIntegration.trackPageView();
-      console.log('🧪 NBA metrics triggered successfully');
+      console.log('🧪 NBA page view tracked');
     } catch (error) {
       console.error('🧪 Error triggering NBA metrics:', error);
     }
-  }, 500);
+  }, 1000); // Wait 1 second to ensure OTEL is fully ready
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
