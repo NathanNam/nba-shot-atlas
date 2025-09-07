@@ -80,11 +80,11 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   );
   
   // Use consistent stats for Stephen Curry, preloaded data if available, otherwise use hook result
-  const { shotData, loading, error } = isStephenCurry && consistentStats.stats && !consistentStats.loading && !consistentStats.error
+  const { shotData, loading, error } = isStephenCurry 
     ? { 
-        shotData: [], // We'll use the calculated stats directly
-        loading: false, 
-        error: null 
+        shotData: [], // Force empty - we'll use consistent stats directly
+        loading: consistentStats.loading, 
+        error: consistentStats.error 
       }
     : preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
