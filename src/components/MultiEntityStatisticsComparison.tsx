@@ -1,8 +1,7 @@
-import { useSupabaseShotData } from "@/hooks/useSupabaseShotData";
-import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Target, Zap, Heart } from "lucide-react";
+import { TrendingDown, Zap, Heart } from "lucide-react";
+import { useEntityComparisonData } from "@/hooks/useEntityComparisonData";
 
 interface MultiEntityStatisticsComparisonProps {
   entities: string[];
@@ -10,183 +9,18 @@ interface MultiEntityStatisticsComparisonProps {
   viewMode: "player" | "team" | "league";
 }
 
-export function MultiEntityStatisticsComparison({ entities, selectedSeason, viewMode }: MultiEntityStatisticsComparisonProps) {
-  // Always call hook but only use results in player mode
-  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
-  
-  const players = viewMode === "player" ? rawPlayers : [];
-  const playersLoading = viewMode === "player" ? rawLoading : false;
-  
-  // Get entity data for all entities
-  const entityData = entities.map(entityName => {
-    const getEntityId = () => {
-      if (viewMode === 'player') {
-        if (playersLoading || !players.length) return undefined;
-        const player = players.find(p => p.name === entityName);
-        return player?.id || entityName;
-      }
-      return entityName;
-    };
+export function MultiEntityStatisticsComparison({
+  entities,
+  selectedSeason,
+  viewMode,
+}: MultiEntityStatisticsComparisonProps) {
+  const { statsData, isLoading, isError } = useEntityComparisonData(
+    entities,
+    selectedSeason,
+    viewMode
+  );
 
-    const entityId = getEntityId();
-    const { shotData, loading, error } = useSupabaseShotData(selectedSeason, entityId || '', viewMode);
-    
-    return {
-      name: entityName,
-      entityId,
-      shotData,
-      loading,
-      error
-    };
-  });
-
-  // Helper function to analyze shooting zones
-  const analyzeZones = (shotData: any[]) => {
-    const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
-    
-    if (shotData.length === 0) {
-      return {
-        hottestZone: "No data",
-        hottestZoneStats: { made: 0, total: 0, percentage: 0 },
-        coldestZone: "No data", 
-        coldestZoneStats: { made: 0, total: 0, percentage: 0 },
-        favoriteSpot: "No data",
-        favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
-      };
-    }
-    
-    // Define zones based on NBA court coordinates
-    shotData.forEach(shot => {
-      let zone = "Unknown";
-      
-      const distance = shot.shotDistance;
-      const x = shot.xLegacy;
-      const y = shot.yLegacy;
-      
-      if (distance <= 3) {
-        zone = "Restricted Area";
-      } else if (distance <= 8) {
-        zone = "Paint";
-      } else if (distance <= 16) {
-        if (Math.abs(x) <= 80) {
-          zone = "Mid Range Center";
-        } else {
-          zone = Math.abs(x) > 150 ? "Mid Range Wing" : "Mid Range";
-        }
-      } else if (shot.shotValue === 3) {
-        if (y <= 100 && Math.abs(x) >= 220) {
-          zone = x < 0 ? "Left Corner 3" : "Right Corner 3";
-        } else if (Math.abs(x) <= 80) {
-          zone = "Above Break 3 Center";
-        } else if (Math.abs(x) <= 160) {
-          zone = x < 0 ? "Above Break 3 Left" : "Above Break 3 Right";
-        } else {
-          zone = x < 0 ? "Left Wing 3" : "Right Wing 3";
-        }
-      } else {
-        if (Math.abs(x) <= 80) {
-          zone = "Long 2 Center";
-        } else {
-          zone = x < 0 ? "Left Elbow" : "Right Elbow";
-        }
-      }
-      
-      if (!zoneStats.has(zone)) {
-        zoneStats.set(zone, { made: 0, total: 0, percentage: 0 });
-      }
-      
-      const zoneData = zoneStats.get(zone)!;
-      zoneData.total += 1;
-      
-      const result = shot.shotResult;
-      if (result === 'Made' || result === 'MADE' || result === '1') {
-        zoneData.made += 1;
-      }
-      zoneData.percentage = zoneData.total > 0 ? zoneData.made / zoneData.total : 0;
-    });
-    
-    let hottestZone = "No data";
-    let hottestZoneStats = { made: 0, total: 0, percentage: 0 };
-    let coldestZone = "No data";
-    let coldestZoneStats = { made: 0, total: 0, percentage: 0 };
-    let favoriteSpot = "No data";
-    let favoriteSpotStats = { made: 0, total: 0, percentage: 0 };
-    
-    let highestPercentage = 0;
-    let lowestPercentage = 1;
-    let mostAttempts = 0;
-    
-    zoneStats.forEach((stats, zone) => {
-      if (stats.total >= 3) {
-        if (stats.percentage > highestPercentage) {
-          highestPercentage = stats.percentage;
-          hottestZone = zone;
-          hottestZoneStats = { ...stats };
-        }
-        if (stats.percentage < lowestPercentage) {
-          lowestPercentage = stats.percentage;
-          coldestZone = zone;
-          coldestZoneStats = { ...stats };
-        }
-      }
-      
-      if (stats.total > mostAttempts) {
-        mostAttempts = stats.total;
-        favoriteSpot = zone;
-        favoriteSpotStats = { ...stats };
-      }
-    });
-    
-    return {
-      hottestZone,
-      hottestZoneStats,
-      coldestZone,
-      coldestZoneStats,
-      favoriteSpot,
-      favoriteSpotStats
-    };
-  };
-
-  // Calculate statistics for each entity
-  const calculateStats = (data: any[]) => {
-    const totalShots = data.length;
-    
-    const madeShots = data.filter(shot => {
-      const result = shot.shotResult;
-      return result === 'Made' || result === 'MADE' || result === '1';
-    }).length;
-    
-    const threePointers = data.filter(shot => shot.shotValue === 3);
-    const twoPointers = data.filter(shot => shot.shotValue === 2);
-    
-    const made3PT = threePointers.filter(shot => {
-      const result = shot.shotResult;
-      return result === 'Made' || result === 'MADE' || result === '1';
-    }).length;
-    
-    const made2PT = twoPointers.filter(shot => {
-      const result = shot.shotResult;
-      return result === 'Made' || result === 'MADE' || result === '1';
-    }).length;
-
-    const zoneAnalysis = analyzeZones(data);
-
-    return {
-      fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
-      twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
-      twoPointMade: made2PT,
-      twoPointAttempted: twoPointers.length,
-      threePointPercentage: threePointers.length > 0 ? (made3PT / threePointers.length) : 0,
-      threePointMade: made3PT,
-      threePointAttempted: threePointers.length,
-      totalShots,
-      madeShots,
-      ...zoneAnalysis
-    };
-  };
-
-  // Check if still loading
-  if (entityData.some(entity => entity.loading) || (viewMode === 'player' && playersLoading)) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -199,8 +33,7 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
     );
   }
 
-  // Check for errors
-  if (entityData.some(entity => entity.error)) {
+  if (isError) {
     return (
       <Card>
         <CardHeader>
@@ -212,11 +45,6 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
       </Card>
     );
   }
-
-  const statsData = entityData.map(entity => ({
-    name: entity.name,
-    stats: calculateStats(entity.shotData)
-  }));
 
   if (statsData.length === 0) {
     return (
@@ -230,18 +58,6 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
       </Card>
     );
   }
-
-  const getComparisonIcon = (value1: number, value2: number) => {
-    const diff = Math.abs(value1 - value2);
-    if (diff < 0.001) return <Minus className="h-4 w-4" />;
-    return value1 > value2 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
-  };
-
-  const getComparisonColor = (value1: number, value2: number) => {
-    const diff = Math.abs(value1 - value2);
-    if (diff < 0.001) return "text-muted-foreground";
-    return value1 > value2 ? "text-green-500" : "text-red-500";
-  };
 
   return (
     <div className="space-y-6">
@@ -260,7 +76,7 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
             {/* Field Goal Percentage */}
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">Field Goal %</div>
-              {statsData.map((entity, index) => (
+              {statsData.map(entity => (
                 <div key={entity.name} className="space-y-1">
                   <div className="font-semibold text-lg">
                     {(entity.stats.fieldGoalPercentage * 100).toFixed(1)}%
@@ -278,7 +94,7 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
             {/* Two Point Percentage */}
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">2PT %</div>
-              {statsData.map((entity, index) => (
+              {statsData.map(entity => (
                 <div key={entity.name} className="space-y-1">
                   <div className="font-semibold text-lg">
                     {(entity.stats.twoPointPercentage * 100).toFixed(1)}%
@@ -296,7 +112,7 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
             {/* Three Point Percentage */}
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">3PT %</div>
-              {statsData.map((entity, index) => (
+              {statsData.map(entity => (
                 <div key={entity.name} className="space-y-1">
                   <div className="font-semibold text-lg">
                     {(entity.stats.threePointPercentage * 100).toFixed(1)}%
@@ -314,14 +130,12 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
             {/* Total Shots */}
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground">Total Shots</div>
-              {statsData.map((entity, index) => (
+              {statsData.map(entity => (
                 <div key={entity.name} className="space-y-1">
                   <div className="font-semibold text-lg">
                     {entity.stats.totalShots.toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    This Season
-                  </div>
+                  <div className="text-xs text-muted-foreground">This Season</div>
                   <div className="text-xs font-medium text-foreground">
                     {entity.name}
                   </div>
@@ -334,7 +148,7 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
 
       {/* Zone Analysis Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {statsData.map((entity) => (
+        {statsData.map(entity => (
           <Card key={entity.name}>
             <CardHeader>
               <CardTitle className="text-lg">
@@ -353,7 +167,9 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
                     {entity.stats.hottestZone}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {entity.stats.hottestZoneStats.made}/{entity.stats.hottestZoneStats.total} ({(entity.stats.hottestZoneStats.percentage * 100).toFixed(1)}%)
+                    {entity.stats.hottestZoneStats.made}/{entity.stats.hottestZoneStats.total} ({
+                      (entity.stats.hottestZoneStats.percentage * 100).toFixed(1)
+                    }%)
                   </div>
                 </div>
 
@@ -367,7 +183,9 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
                     {entity.stats.coldestZone}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {entity.stats.coldestZoneStats.made}/{entity.stats.coldestZoneStats.total} ({(entity.stats.coldestZoneStats.percentage * 100).toFixed(1)}%)
+                    {entity.stats.coldestZoneStats.made}/{entity.stats.coldestZoneStats.total} ({
+                      (entity.stats.coldestZoneStats.percentage * 100).toFixed(1)
+                    }%)
                   </div>
                 </div>
 
@@ -381,7 +199,9 @@ export function MultiEntityStatisticsComparison({ entities, selectedSeason, view
                     {entity.stats.favoriteSpot}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {entity.stats.favoriteSpotStats.made}/{entity.stats.favoriteSpotStats.total} ({(entity.stats.favoriteSpotStats.percentage * 100).toFixed(1)}%)
+                    {entity.stats.favoriteSpotStats.made}/{entity.stats.favoriteSpotStats.total} ({
+                      (entity.stats.favoriteSpotStats.percentage * 100).toFixed(1)
+                    }%)
                   </div>
                 </div>
               </div>
