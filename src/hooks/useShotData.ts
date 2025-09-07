@@ -11,8 +11,8 @@ export interface ShotData {
   yLegacy: number;
   shotResult: string;
   shotDistance: number;
-  description: string;
-  subType: string;
+  description?: string;
+  subType?: string;
   shotValue: number;
 }
 
