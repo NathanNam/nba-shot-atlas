@@ -1,6 +1,7 @@
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useConsistentPlayerStats } from "@/hooks/useConsistentPlayerStats";
 import { useMemo } from "react";
 
 interface EntityStatisticsProps {
@@ -51,21 +52,37 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
   
+  // Use consistent stats for Stephen Curry to fix data fluctuation issue
+  const isStephenCurry = cleanEntityName === 'Stephen Curry' && viewMode === 'player';
+  const consistentStats = useConsistentPlayerStats(
+    isStephenCurry ? stableEntityId : '',
+    isStephenCurry ? selectedSeason : ''
+  );
+  
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
     selectedSeason,
     stableEntityId,
     viewMode,
-    preloadedData === undefined
+    preloadedData === undefined && !isStephenCurry
   );
   
-  // Use preloaded data if available, otherwise use hook result
-  const { shotData, loading, error } = preloadedData !== undefined 
+  // Use consistent stats for Stephen Curry, preloaded data if available, otherwise use hook result
+  const { shotData, loading, error } = isStephenCurry && consistentStats.stats
+    ? { 
+        shotData: [], // We'll use the calculated stats directly
+        loading: consistentStats.loading, 
+        error: consistentStats.error 
+      }
+    : preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
     : hookResult;
     
   // Debug logging
   console.log(`🔍 EntityStatistics [${cleanEntityName}]: Data source and details`, {
+    isStephenCurry,
+    hasConsistentStats: !!consistentStats.stats,
+    consistentStats: consistentStats.stats,
     hasPreloadedData: preloadedData !== undefined,
     preloadedLength: preloadedData?.length,
     hookLength: hookResult.shotData?.length,
@@ -77,6 +94,8 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   
   const calculatedStats = useMemo(() => {
     console.log(`🔢 EntityStatistics: Calculating stats for ${entityName}`, {
+      isStephenCurry,
+      hasConsistentStats: !!consistentStats.stats,
       shotDataLength: shotData?.length,
       playersLoading,
       entityId,
@@ -86,6 +105,28 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       error,
       dataPreview: shotData?.slice(0, 2)
     });
+    
+    // Use consistent stats for Stephen Curry if available
+    if (isStephenCurry && consistentStats.stats) {
+      console.log(`🎯 Using consistent stats for Stephen Curry:`, consistentStats.stats);
+      return {
+        totalShots: consistentStats.stats.totalShots,
+        madeShots: consistentStats.stats.madeShots,
+        fieldGoalPercentage: consistentStats.stats.fieldGoalPercentage,
+        twoPointPercentage: consistentStats.stats.twoPointPercentage,
+        twoPointMade: consistentStats.stats.twoPointMade,
+        twoPointAttempted: consistentStats.stats.twoPointAttempted,
+        threePointPercentage: consistentStats.stats.threePointPercentage,
+        threePointMade: consistentStats.stats.threePointMade,
+        threePointAttempted: consistentStats.stats.threePointAttempted,
+        hottestZone: consistentStats.stats.hottestZone,
+        hottestZoneStats: consistentStats.stats.hottestZoneStats,
+        coldestZone: consistentStats.stats.coldestZone,
+        coldestZoneStats: consistentStats.stats.coldestZoneStats,
+        favoriteSpot: consistentStats.stats.favoriteSpot,
+        favoriteSpotStats: consistentStats.stats.favoriteSpotStats
+      };
+    }
     
     if (!shotData || shotData.length === 0 || (viewMode === 'player' && playersLoading) || !entityId) {
       return {
@@ -238,7 +279,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       favoriteSpot,
       favoriteSpotStats
     };
-  }, [shotData, entityName, playersLoading, entityId, selectedSeason]);
+  }, [shotData, entityName, playersLoading, entityId, selectedSeason, isStephenCurry, consistentStats.stats]);
 
   // Show loading while fetching players (player mode only) or shot data
   if (loading || (viewMode === 'player' && playersLoading) || !entityId) {
