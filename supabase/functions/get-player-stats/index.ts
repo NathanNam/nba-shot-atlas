@@ -52,11 +52,12 @@ Deno.serve(async (req) => {
 
     console.log('📊 Supabase client created, fetching data...');
 
-    // Get ALL shots for accurate stats calculation
+    // Get ALL shots for accurate stats calculation - explicitly set limit to ensure we get all shots
     const { data: shots, error: dbError } = await supabase
       .from(`shots_${season}`)
       .select('shotResult, shotValue, shotDistance, xLegacy, yLegacy')
-      .eq('personId', parseInt(playerId));
+      .eq('personId', parseInt(playerId))
+      .limit(10000);
 
     if (dbError) {
       console.error('📊 Database error:', dbError);
