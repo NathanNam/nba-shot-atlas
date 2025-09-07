@@ -1,7 +1,7 @@
 import { Meter, metrics, trace, Tracer } from "@opentelemetry/api";
 import { logs, Logger, SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { DocumentLoadInstrumentation } from "@opentelemetry/instrumentation-document-load";
@@ -154,13 +154,13 @@ function createProviders() {
     ],
   });
 
-  // Initialize Metrics Provider with OTLP exporter
-  // Browser OTLP exporters use JSON format, not protobuf
+  // Initialize Metrics Provider with OTLP exporter (protobuf)
   const otlpMetricExporter = new OTLPMetricExporter({
     url: `${otlpEndpoint}/v1/metrics`,
     headers: {
       ...authHeader,
       "x-observe-target-package": "Metrics",
+      "Content-Type": "application/x-protobuf",
     },
     timeoutMillis: 10000,
   });
