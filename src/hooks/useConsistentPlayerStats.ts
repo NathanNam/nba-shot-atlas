@@ -130,7 +130,8 @@ function calculateStatsFromRawData(shots: any[]): FullPlayerStats {
     const made = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1';
     if (made) madeShots++;
 
-    const shotValue = parseInt(shot.shotValue) || 2;
+    // Use exact shotValue comparison to match database query
+    const shotValue = shot.shotValue;
     if (shotValue === 3) {
       threePointAttempted++;
       if (made) threePointMade++;
