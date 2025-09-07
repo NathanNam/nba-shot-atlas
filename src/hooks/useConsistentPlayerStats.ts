@@ -64,39 +64,22 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
           throw new Error(`Invalid player ID: ${playerId}`);
         }
 
-        // Supabase limits responses to 1000 rows per request, so fetch in
-        // batches to ensure we retrieve all available shots. Use a safety
-        // upper bound of 50k records to prevent runaway loops.
-        const batchSize = 1000;
-        const maxRecords = 50000;
-        let from = 0;
-        let allShots: any[] = [];
+        // Instead of complex batching, use a single query with a high limit
+        // This matches exactly what the direct SQL query does
+        const { data: shotData, error: dbError } = await (supabase as any)
+          .from(`shots_${season}`)
+          .select('*')
+          .eq('personId', numericPlayerId)
+          .limit(50000); // High limit to ensure we get all shots
 
-        while (from < maxRecords) {
-          const { data: batch, error: dbError } = await (supabase as any)
-            .from(`shots_${season}`)
-            .select('*')
-            .eq('personId', numericPlayerId)
-            .range(from, from + batchSize - 1);
-
-          if (dbError) {
-            throw new Error(`Database error: ${dbError.message}`);
-          }
-
-          if (!batch || batch.length === 0) {
-            break;
-          }
-
-          allShots = allShots.concat(batch);
-          from += batchSize;
-
-          if (batch.length < batchSize) {
-            break;
-          }
+        if (dbError) {
+          throw new Error(`Database error: ${dbError.message}`);
         }
 
+        const allShots = shotData || [];
+
         console.log(
-          `🎯 Direct query returned ${allShots.length} shots for consistency check`
+          `🎯 CONSISTENT HOOK: Single query returned ${allShots.length} shots for consistency check`
         );
 
         // Calculate stats directly from raw data
