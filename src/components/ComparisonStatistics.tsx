@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
@@ -5,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useNBAAnalyticsTracking } from "./UserInteractionTracker";
+import { PerformanceMonitor, trackDataLoading } from "./PerformanceMonitor";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +18,14 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  const componentStartTime = useRef<number>(Date.now());
+  const {
+    trackComparisonView,
+    trackStatisticsView,
+    trackPlayerSelection,
+    trackTeamSelection,
+    trackShotChartInteraction,
+  } = useNBAAnalyticsTracking();
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -53,6 +64,77 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   
   // Always call useMultiSeasonData hook - never conditionally call hooks
   const multiSeasonData = useMultiSeasonData(actualSeason1, actualSeason2, entityId1 || '', entityId2 || '', viewMode);
+
+  // Track component initialization and data loading performance
+  useEffect(() => {
+    const initTime = Date.now() - componentStartTime.current;
+    
+    // Track initial comparison view
+    trackComparisonView(actualSeason1, actualSeason2, viewMode, entityId1, entityId2);
+    
+    // Track specific entity views
+    if (viewMode === 'player' && entityId1) {
+      trackPlayerSelection(entityId1, entityName, actualSeason1);
+      if (entityId2 && entityName2) {
+        trackPlayerSelection(entityId2, entityName2, actualSeason2);
+      }
+    } else if (viewMode === 'team' && entityId1) {
+      trackTeamSelection(entityId1, entityName, actualSeason1);
+      if (entityId2 && entityName2) {
+        trackTeamSelection(entityId2, entityName2, actualSeason2);
+      }
+    }
+
+    // Track component initialization performance
+    trackDataLoading(
+      `comparison_statistics_init_${viewMode}`,
+      initTime,
+      false,
+      0
+    );
+  }, [entityName, entityName2, actualSeason1, actualSeason2, viewMode, entityId1, entityId2, trackComparisonView, trackPlayerSelection, trackTeamSelection]);
+
+  // Track data loading performance
+  useEffect(() => {
+    if (!multiSeasonData.season1.loading && !multiSeasonData.season2?.loading) {
+      const dataLoadTime = Date.now() - componentStartTime.current;
+      const season1DataSize = multiSeasonData.season1.data?.length || 0;
+      const season2DataSize = multiSeasonData.season2?.data?.length || 0;
+      const totalDataSize = season1DataSize + season2DataSize;
+
+      trackDataLoading(
+        `comparison_data_load_${viewMode}`,
+        dataLoadTime,
+        false,
+        totalDataSize
+      );
+
+      // Track successful comparison load
+      trackShotChartInteraction('comparison_loaded', {
+        entity_name: entityName,
+        entity_type: viewMode,
+        season: actualSeason1,
+        shots_count: totalDataSize,
+        comparison_type: isPlayerVsPlayer ? 'player_vs_player' : 'season_vs_season',
+        filter_applied: false,
+      });
+    }
+  }, [multiSeasonData.season1.loading, multiSeasonData.season2?.loading, multiSeasonData.season1.data, multiSeasonData.season2?.data]);
+
+  // Track errors
+  useEffect(() => {
+    if (multiSeasonData.season1.error || multiSeasonData.season2?.error) {
+      trackShotChartInteraction('comparison_error', {
+        entity_name: entityName,
+        entity_type: viewMode,
+        season: actualSeason1,
+        shots_count: 0,
+        comparison_type: isPlayerVsPlayer ? 'player_vs_player' : 'season_vs_season',
+        filter_applied: false,
+        error: multiSeasonData.season1.error || multiSeasonData.season2?.error || 'Unknown error',
+      });
+    }
+  }, [multiSeasonData.season1.error, multiSeasonData.season2?.error]);
 
   // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
@@ -230,8 +312,9 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   const data1 = multiSeasonData.season1.data;
   const data2 = multiSeasonData.season2?.data || [];
   
-  // Calculate statistics for both seasons
-  const calculateStats = (data: any[]) => {
+  // Calculate statistics for both seasons with performance tracking
+  const calculateStats = (data: any[], season: string) => {
+    const calculationStartTime = Date.now();
     const totalShots = data.length;
     
     // More robust shot result checking
@@ -256,6 +339,15 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     // Analyze zones using the same logic as EntityStatistics
     const zoneAnalysis = analyzeZones(data);
 
+    // Track calculation performance
+    const calculationTime = Date.now() - calculationStartTime;
+    trackDataLoading(
+      `comparison_stats_calculation_${viewMode}_${season}`,
+      calculationTime,
+      false,
+      data.length
+    );
+
     return {
       fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
       twoPointPercentage: twoPointers.length > 0 ? (made2PT / twoPointers.length) : 0,
@@ -275,8 +367,8 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     };
   };
 
-  const stats1 = calculateStats(data1);
-  const stats2 = calculateStats(data2);
+  const stats1 = calculateStats(data1, actualSeason1);
+  const stats2 = calculateStats(data2, actualSeason2);
   
   // Determine chronological order for proper comparison direction
   const getSeasonYear = (season: string) => {
@@ -322,7 +414,8 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   };
 
   return (
-    <div className="space-y-6">
+    <PerformanceMonitor componentName={`ComparisonStatistics_${viewMode}_${isPlayerVsPlayer ? 'player_vs_player' : 'season_comparison'}`}>
+      <div className="space-y-6">
       {/* Comparison Summary */}
       <Card>
         <CardHeader>
@@ -370,6 +463,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PerformanceMonitor>
   );
 }

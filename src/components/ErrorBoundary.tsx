@@ -4,6 +4,7 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { PerformanceMonitor, trackComponentError } from './PerformanceMonitor';
 
 interface Props {
   children: ReactNode;
@@ -37,7 +38,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const span = tracer.startSpan('error_boundary.component_error', {
+    const span = tracer.startSpan('error_boundary.enhanced_component_error', {
       attributes: {
         'error.type': 'react_component_error',
         'error.name': error.name,
@@ -48,63 +49,138 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     try {
-      // Record error metrics
+      // Enhanced session context
+      const sessionContext = {
+        url: window.location.href,
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+        timestamp: new Date().toISOString(),
+        session_storage_length: sessionStorage.length,
+        local_storage_length: localStorage.length,
+        document_title: document.title,
+        referrer: document.referrer,
+        connection: (navigator as any).connection ? {
+          effective_type: (navigator as any).connection.effectiveType,
+          downlink: (navigator as any).connection.downlink,
+          rtt: (navigator as any).connection.rtt,
+        } : 'not_available',
+      };
+
+      // Enhanced error metrics with more context
+      const enhancedErrorCounter = meter.createCounter('enhanced_react_errors_total', {
+        description: 'Enhanced React errors with full session context',
+      });
+
+      // Record enhanced error metrics
       errorCounter.add(1, {
         error_name: error.name,
         error_type: 'component_error',
       });
 
-      // Log detailed error information
+      enhancedErrorCounter.add(1, {
+        error_name: error.name,
+        error_type: 'enhanced_component_error',
+        url_pathname: window.location.pathname,
+        user_agent_platform: navigator.platform,
+        has_component_stack: errorInfo.componentStack ? 'true' : 'false',
+      });
+
+      // Enhanced logging with comprehensive context
       logger.emit({
         severityNumber: SeverityNumber.ERROR,
         severityText: 'ERROR',
-        body: 'React component error caught by error boundary',
+        body: 'Enhanced React component error caught by error boundary',
         attributes: {
           error_name: error.name,
           error_message: error.message,
           error_stack: error.stack,
           component_stack: errorInfo.componentStack,
-          user_agent: navigator.userAgent,
-          url: window.location.href,
-          timestamp: new Date().toISOString(),
+          session_context: JSON.stringify(sessionContext),
+          memory_usage: (performance as any).memory ? {
+            used_heap_size: (performance as any).memory.usedJSHeapSize,
+            total_heap_size: (performance as any).memory.totalJSHeapSize,
+            heap_size_limit: (performance as any).memory.jsHeapSizeLimit,
+          } : 'not_available',
+          performance_entries: JSON.stringify({
+            navigation: performance.getEntriesByType('navigation')[0] || 'not_available',
+            resource_count: performance.getEntriesByType('resource').length,
+          }),
         },
       });
 
+      // Use the performance monitor's error tracking
+      trackComponentError('ErrorBoundary', error.message, error.stack);
+
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: `React error: ${error.message}`,
+        message: `Enhanced React error: ${error.message}`,
+      });
+
+      span.setAttributes({
+        'error.session_context': JSON.stringify(sessionContext),
+        'error.enhanced_tracking': true,
+        'error.component_tree_depth': (errorInfo.componentStack.match(/\n/g) || []).length,
       });
 
       // Store error info in state for display
       this.setState({ errorInfo });
 
-      // Log to console for development
-      console.error('Error Boundary caught an error:', error, errorInfo);
+      // Log to console for development with enhanced context
+      console.error('Enhanced Error Boundary caught an error:', error, errorInfo, sessionContext);
     } finally {
       span.end();
     }
   }
 
   handleRetry = () => {
-    const span = tracer.startSpan('error_boundary.retry', {
+    const span = tracer.startSpan('error_boundary.enhanced_retry', {
       attributes: {
         'error.recovery_action': 'user_retry',
+        'error.previous_message': this.state.error?.message || 'Unknown',
+        'error.recovery_timestamp': Date.now(),
       },
     });
 
     try {
+      const enhancedRecoveryCounter = meter.createCounter('enhanced_error_recovery_total', {
+        description: 'Enhanced error recovery with context',
+      });
+
       errorRecoveryCounter.add(1, {
         recovery_type: 'user_retry',
+      });
+
+      enhancedRecoveryCounter.add(1, {
+        recovery_type: 'user_retry_enhanced',
+        previous_error_type: this.state.error?.name || 'unknown',
+        url_pathname: window.location.pathname,
       });
 
       logger.emit({
         severityNumber: SeverityNumber.INFO,
         severityText: 'INFO',
-        body: 'User initiated error boundary retry',
+        body: 'Enhanced user initiated error boundary retry',
         attributes: {
           previous_error: this.state.error?.message || 'Unknown error',
+          previous_error_name: this.state.error?.name || 'Unknown',
+          previous_error_stack: this.state.error?.stack || 'No stack',
+          component_stack: this.state.errorInfo?.componentStack || 'No component stack',
           url: window.location.href,
+          recovery_timestamp: new Date().toISOString(),
+          session_duration: Date.now(),
         },
+      });
+
+      span.setAttributes({
+        'error.recovery_success': true,
+        'error.recovery_context': JSON.stringify({
+          previous_error: this.state.error?.message,
+          component_stack_depth: (this.state.errorInfo?.componentStack.match(/\n/g) || []).length,
+        }),
       });
 
       // Reset error state
@@ -115,25 +191,53 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReload = () => {
-    const span = tracer.startSpan('error_boundary.reload', {
+    const span = tracer.startSpan('error_boundary.enhanced_reload', {
       attributes: {
         'error.recovery_action': 'page_reload',
+        'error.previous_message': this.state.error?.message || 'Unknown',
+        'error.reload_timestamp': Date.now(),
       },
     });
 
     try {
+      const enhancedRecoveryCounter = meter.createCounter('enhanced_error_recovery_total', {
+        description: 'Enhanced error recovery with context',
+      });
+
       errorRecoveryCounter.add(1, {
         recovery_type: 'page_reload',
       });
 
+      enhancedRecoveryCounter.add(1, {
+        recovery_type: 'page_reload_enhanced',
+        previous_error_type: this.state.error?.name || 'unknown',
+        url_pathname: window.location.pathname,
+      });
+
       logger.emit({
-        severityNumber: SeverityNumber.INFO,
-        severityText: 'INFO',
-        body: 'User initiated page reload from error boundary',
+        severityNumber: SeverityNumber.WARN, // Elevated severity for page reload
+        severityText: 'WARN',
+        body: 'Enhanced user initiated page reload from error boundary',
         attributes: {
           previous_error: this.state.error?.message || 'Unknown error',
+          previous_error_name: this.state.error?.name || 'Unknown',
+          previous_error_stack: this.state.error?.stack || 'No stack',
+          component_stack: this.state.errorInfo?.componentStack || 'No component stack',
           url: window.location.href,
+          reload_timestamp: new Date().toISOString(),
+          recovery_type: 'full_page_reload',
+          session_context: JSON.stringify({
+            pathname: window.location.pathname,
+            search: window.location.search,
+            user_agent: navigator.userAgent,
+          }),
         },
+      });
+
+      span.setAttributes({
+        'error.recovery_type': 'full_page_reload',
+        'error.recovery_severity': 'high',
+        'error.requires_full_reset': true,
       });
 
       window.location.reload();
@@ -151,7 +255,8 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <Card className="m-4 border-destructive">
+        <PerformanceMonitor componentName="ErrorBoundary_ErrorState">
+          <Card className="m-4 border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">
               🏀 Something went wrong with the NBA Analytics
@@ -185,11 +290,16 @@ class ErrorBoundary extends Component<Props, State> {
               </details>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </PerformanceMonitor>
       );
     }
 
-    return this.props.children;
+    return (
+      <PerformanceMonitor componentName="ErrorBoundary_NormalState">
+        {this.props.children}
+      </PerformanceMonitor>
+    );
   }
 }
 

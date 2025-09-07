@@ -315,3 +315,151 @@ export function useNBAAnalyticsTracking() {
     trackComparisonView,
   };
 }
+
+// Enhanced error tracking hook
+export function useErrorTracking() {
+  const { trackAction } = useUserActionTracking();
+  
+  const trackError = (error: Error, errorInfo?: any, componentContext?: Record<string, any>) => {
+    const span = tracer.startSpan('error_tracking.component_error', {
+      attributes: {
+        'error.type': 'application_error',
+        'error.name': error.name,
+        'error.message': error.message,
+        'error.stack': error.stack || 'No stack trace available',
+        'error.component_stack': errorInfo?.componentStack || 'No component stack available',
+        'error.timestamp': Date.now(),
+        ...componentContext,
+      },
+    });
+
+    try {
+      // Gather comprehensive session context
+      const sessionContext = {
+        url: window.location.href,
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+        timestamp: new Date().toISOString(),
+        session_storage_length: sessionStorage.length,
+        local_storage_length: localStorage.length,
+        document_title: document.title,
+        referrer: document.referrer,
+        connection: (navigator as any).connection ? {
+          effective_type: (navigator as any).connection.effectiveType,
+          downlink: (navigator as any).connection.downlink,
+          rtt: (navigator as any).connection.rtt,
+        } : undefined,
+      };
+
+      // Enhanced error counter
+      const errorMetrics = meter.createCounter('enhanced_error_tracking_total', {
+        description: 'Enhanced error tracking with full context',
+      });
+
+      errorMetrics.add(1, {
+        error_name: error.name,
+        error_type: 'enhanced_component_error',
+        component_context: componentContext?.component_name || 'unknown',
+        url_pathname: window.location.pathname,
+      });
+
+      logger.emit({
+        severityNumber: SeverityNumber.ERROR,
+        severityText: 'ERROR',
+        body: 'Enhanced component error with full session context',
+        attributes: {
+          error_name: error.name,
+          error_message: error.message,
+          error_stack: error.stack,
+          component_stack: errorInfo?.componentStack,
+          session_context: JSON.stringify(sessionContext),
+          component_context: JSON.stringify(componentContext || {}),
+          memory_usage: (performance as any).memory ? {
+            used_heap_size: (performance as any).memory.usedJSHeapSize,
+            total_heap_size: (performance as any).memory.totalJSHeapSize,
+            heap_size_limit: (performance as any).memory.jsHeapSizeLimit,
+          } : 'not_available',
+        },
+      });
+
+      // Track as user action for journey mapping
+      trackAction('error_occurred', {
+        error_type: error.name,
+        error_message: error.message.substring(0, 100), // Truncate for metrics
+        component_name: componentContext?.component_name,
+        route: window.location.pathname,
+      });
+
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: `Enhanced error tracking: ${error.message}`,
+      });
+
+      span.setAttributes({
+        'error.session_context': JSON.stringify(sessionContext),
+        'error.component_context': JSON.stringify(componentContext || {}),
+        'error.enhanced_tracking': true,
+      });
+
+    } catch (trackingError) {
+      console.error('Error in error tracking:', trackingError);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: 'Failed to track error completely',
+      });
+    } finally {
+      span.end();
+    }
+  };
+
+  const trackErrorRecovery = (recoveryType: 'retry' | 'reload' | 'fallback', previousError: string) => {
+    const span = tracer.startSpan('error_tracking.error_recovery', {
+      attributes: {
+        'recovery.type': recoveryType,
+        'recovery.previous_error': previousError,
+        'recovery.timestamp': Date.now(),
+      },
+    });
+
+    try {
+      const recoveryMetrics = meter.createCounter('error_recovery_total', {
+        description: 'Error recovery attempts by type',
+      });
+
+      recoveryMetrics.add(1, {
+        recovery_type: recoveryType,
+        url_pathname: window.location.pathname,
+      });
+
+      logger.emit({
+        severityNumber: SeverityNumber.INFO,
+        severityText: 'INFO',
+        body: 'Error recovery attempt initiated',
+        attributes: {
+          recovery_type: recoveryType,
+          previous_error: previousError,
+          url: window.location.href,
+          user_agent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      trackAction('error_recovery_attempt', {
+        recovery_type: recoveryType,
+        previous_error: previousError.substring(0, 100),
+      });
+
+    } finally {
+      span.end();
+    }
+  };
+
+  return {
+    trackError,
+    trackErrorRecovery,
+  };
+}

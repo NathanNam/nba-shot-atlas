@@ -35,27 +35,57 @@ let otlpEndpoint = "http://localhost:4318";
 let otlpEndpointBearerToken: string | undefined;
 let authHeader = {};
 
-// Sampling configuration
+// Enhanced sampling configuration with performance considerations
 const getSampler = () => {
   const environment = import.meta.env.MODE;
-  const samplingRate = parseFloat(import.meta.env.VITE_OTEL_SAMPLING_RATE || '1.0');
+  const userSamplingRate = parseFloat(import.meta.env.VITE_OTEL_SAMPLING_RATE || '0');
+  const enableTelemetry = import.meta.env.VITE_ENABLE_TELEMETRY === 'true';
+  const otelConfig = (window as any).__OTEL_CONFIG__;
   
-  // Production sampling strategy - reduce load while maintaining visibility
+  // Check for instrumentation toggle from main.tsx
+  if (otelConfig && !otelConfig.enableInstrumentation) {
+    console.log('🔧 OpenTelemetry instrumentation disabled by configuration');
+    return new AlwaysOffSampler();
+  }
+  
+  // Production sampling strategy - optimized for performance and cost
   if (environment === 'production') {
-    // Parent-based sampling with 10% rate for root spans, but keep all child spans
+    const productionRate = userSamplingRate > 0 ? Math.min(userSamplingRate, 0.1) : 0.05; // Max 10%, default 5%
+    
+    // Use parent-based sampling to maintain trace integrity
     return new ParentBasedSampler({
-      root: new TraceIdRatioBasedSampler(Math.min(samplingRate, 0.1)), // Max 10% in production
+      root: new TraceIdRatioBasedSampler(productionRate),
+      // Keep child spans when parent is sampled to maintain complete traces
+      remoteParentSampled: new AlwaysOnSampler(),
+      remoteParentNotSampled: new AlwaysOffSampler(),
+      localParentSampled: new AlwaysOnSampler(),
+      localParentNotSampled: new AlwaysOffSampler(),
     });
   }
   
-  // Development and preview - sample more aggressively for debugging
+  // Development - high sampling for debugging but with performance control
   if (environment === 'development') {
-    return new AlwaysOnSampler(); // Sample everything in development
+    // Allow override for development debugging
+    if (enableTelemetry || userSamplingRate > 0) {
+      const devRate = userSamplingRate > 0 ? userSamplingRate : 1.0;
+      return new TraceIdRatioBasedSampler(devRate);
+    }
+    // Default to moderate sampling in development to avoid performance issues
+    return new TraceIdRatioBasedSampler(0.3);
   }
   
-  // Default fallback - moderate sampling
+  // Preview/staging - balanced approach
+  if (environment === 'preview' || environment === 'staging') {
+    const previewRate = userSamplingRate > 0 ? Math.min(userSamplingRate, 0.5) : 0.2;
+    return new ParentBasedSampler({
+      root: new TraceIdRatioBasedSampler(previewRate),
+    });
+  }
+  
+  // Default fallback - conservative sampling
+  const fallbackRate = userSamplingRate > 0 ? Math.min(userSamplingRate, 0.1) : 0.1;
   return new ParentBasedSampler({
-    root: new TraceIdRatioBasedSampler(samplingRate),
+    root: new TraceIdRatioBasedSampler(fallbackRate),
   });
 };
 
@@ -114,61 +144,132 @@ let loggerProvider: LoggerProvider;
 let meterProvider: MeterProvider;
 
 function createProviders() {
-  // Initialize Tracer Provider with batching and sampling for performance
+  const environment = import.meta.env.MODE;
+  const otelConfig = (window as any).__OTEL_CONFIG__;
+  
+  // Environment-aware batch processing configuration
+  const getBatchConfig = () => {
+    if (environment === 'production') {
+      return {
+        // Production: Optimize for efficiency and reduced resource usage
+        maxQueueSize: 200,
+        maxExportBatchSize: 50,
+        scheduledDelayMillis: 2000, // Wait longer to collect more spans
+        exportTimeoutMillis: 30000,
+      };
+    } else if (environment === 'development') {
+      return {
+        // Development: Faster feedback for debugging
+        maxQueueSize: 50,
+        maxExportBatchSize: 10,
+        scheduledDelayMillis: 500,
+        exportTimeoutMillis: 10000,
+      };
+    } else {
+      return {
+        // Default/staging: Balanced approach
+        maxQueueSize: 100,
+        maxExportBatchSize: 25,
+        scheduledDelayMillis: 1000,
+        exportTimeoutMillis: 20000,
+      };
+    }
+  };
+
+  const getMetricsConfig = () => {
+    if (environment === 'production') {
+      return {
+        exportIntervalMillis: 60000, // 1 minute in production
+      };
+    } else if (environment === 'development') {
+      return {
+        exportIntervalMillis: 5000, // 5 seconds in development for quick feedback
+      };
+    } else {
+      return {
+        exportIntervalMillis: 15000, // 15 seconds for staging/preview
+      };
+    }
+  };
+
+  const batchConfig = getBatchConfig();
+  const metricsConfig = getMetricsConfig();
+
+  // Create span processor based on environment and configuration
+  const createSpanProcessor = () => {
+    const traceExporter = new OTLPTraceExporter({
+      url: `${otlpEndpoint}/v1/traces`,
+      headers: {
+        ...authHeader,
+        "x-observe-target-package": "Tracing",
+        "Content-Type": "application/x-protobuf",
+        "x-environment": environment,
+        "x-nba-analytics-version": "1.0.0",
+      },
+    });
+
+    // Use batch processing for efficiency, unless disabled
+    if (otelConfig?.enableBatchProcessing !== false) {
+      return new BatchSpanProcessor(traceExporter, batchConfig);
+    } else {
+      // Fallback to simple processor (immediate export) - not recommended for production
+      return new SimpleSpanProcessor(traceExporter);
+    }
+  };
+
+  // Initialize Tracer Provider with enhanced configuration
   provider = new WebTracerProvider({
     resource: resource,
     sampler: getSampler(),
-    spanProcessors: [
-      new BatchSpanProcessor(
-        new OTLPTraceExporter({
-          url: `${otlpEndpoint}/v1/traces`,
-          headers: {
-            ...authHeader,
-            "x-observe-target-package": "Tracing",
-            "Content-Type": "application/x-protobuf",
-          },
-        }),
-        {
-          maxQueueSize: 100,
-          maxExportBatchSize: 10,
-          scheduledDelayMillis: 500,
-          exportTimeoutMillis: 30000, // 30s timeout
-        }
-      ),
-    ],
+    spanProcessors: [createSpanProcessor()],
   });
 
-  // Initialize Logger Provider
+  // Initialize Logger Provider with environment-aware configuration
+  const createLogProcessor = () => {
+    const logExporter = new OTLPLogExporter({
+      url: `${otlpEndpoint}/v1/logs`,
+      headers: {
+        ...authHeader,
+        "x-observe-target-package": "Logs",
+        "Content-Type": "application/x-protobuf",
+        "x-environment": environment,
+        "x-nba-analytics-version": "1.0.0",
+      },
+    });
+
+    // Use batch processing with environment-specific configuration
+    return new BatchLogRecordProcessor(logExporter, {
+      maxQueueSize: batchConfig.maxQueueSize,
+      maxExportBatchSize: batchConfig.maxExportBatchSize,
+      scheduledDelayMillis: batchConfig.scheduledDelayMillis,
+      exportTimeoutMillis: batchConfig.exportTimeoutMillis,
+    });
+  };
+
   loggerProvider = new LoggerProvider({
     resource: resource,
-    processors: [
-      new BatchLogRecordProcessor(
-        new OTLPLogExporter({
-          url: `${otlpEndpoint}/v1/logs`,
-          headers: {
-            ...authHeader,
-            "x-observe-target-package": "Logs",
-            "Content-Type": "application/x-protobuf",
-          },
-        })
-      ),
-    ],
+    processors: [createLogProcessor()],
   });
 
-  // Initialize Metrics Provider with OTLP exporter
-  const otlpMetricExporter = new OTLPMetricExporter({
-    url: `${otlpEndpoint}/v1/metrics`,
-    headers: {
-      ...authHeader,
-      "x-observe-target-package": "Metrics",
-      "Content-Type": "application/x-protobuf",
-    },
-  });
+  // Initialize Metrics Provider with enhanced environment-aware configuration
+  const createMetricExporter = () => {
+    return new OTLPMetricExporter({
+      url: `${otlpEndpoint}/v1/metrics`,
+      headers: {
+        ...authHeader,
+        "x-observe-target-package": "Metrics",
+        "Content-Type": "application/x-protobuf",
+        "x-environment": environment,
+        "x-nba-analytics-version": "1.0.0",
+      },
+    });
+  };
 
   const readers = [
     new PeriodicExportingMetricReader({
-      exporter: otlpMetricExporter,
-      exportIntervalMillis: 10000, // Export metrics every 10 seconds
+      exporter: createMetricExporter(),
+      exportIntervalMillis: metricsConfig.exportIntervalMillis,
+      exportTimeoutMillis: batchConfig.exportTimeoutMillis,
     })
   ];
 
@@ -178,6 +279,24 @@ function createProviders() {
   meterProvider = new MeterProvider({
     resource: resource,
     readers: readers,
+  });
+
+  // Log configuration summary
+  console.log('🔧 OpenTelemetry providers configured:', {
+    environment,
+    sampling: {
+      enabled: !(getSampler() instanceof AlwaysOffSampler),
+      type: getSampler().constructor.name,
+    },
+    batching: {
+      enabled: otelConfig?.enableBatchProcessing !== false,
+      traces: batchConfig,
+      metrics: metricsConfig,
+    },
+    instrumentation: {
+      enabled: otelConfig?.enableInstrumentation !== false,
+    },
+    endpoint: otlpEndpoint,
   });
 }
 
