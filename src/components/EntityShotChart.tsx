@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
@@ -56,18 +56,33 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   );
   
   // Use preloaded data if available, otherwise use hook result
-  const { shotData, loading, error, progress } = preloadedData !== undefined 
+  const { shotData, loading, error, progress } = preloadedData !== undefined
     ? { shotData: preloadedData, loading: false, error: null, progress: null }
     : hookResult;
 
   // Track data loading performance
+  const startTimeRef = useRef<number | null>(preloadedData !== undefined ? Date.now() : null);
+  const hasTrackedRef = useRef(false);
+
+  // Reset timer when preloaded data changes
   useEffect(() => {
-    const startTime = Date.now();
-    
-    if (!loading && shotData && shotData.length > 0) {
-      const loadDuration = Date.now() - startTime;
+    if (preloadedData !== undefined) {
+      startTimeRef.current = Date.now();
+      hasTrackedRef.current = false;
+    }
+  }, [preloadedData]);
+
+  useEffect(() => {
+    if (loading && startTimeRef.current === null) {
+      startTimeRef.current = Date.now();
+      hasTrackedRef.current = false;
+      return;
+    }
+
+    if (!loading && shotData && shotData.length > 0 && !hasTrackedRef.current) {
+      const loadDuration = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
       const isPreloaded = preloadedData !== undefined;
-      
+
       trackDataLoading(
         `shot_chart_${viewMode}_${cleanEntityName}`,
         loadDuration,
@@ -81,10 +96,13 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
       } else if (viewMode === 'team') {
         trackTeamSelection(entityId || 'unknown', cleanEntityName, selectedSeason);
       }
-      
+
       trackStatisticsView(viewMode, entityId || 'unknown', selectedSeason);
+
+      hasTrackedRef.current = true;
+      startTimeRef.current = null;
     }
-  }, [loading, shotData, viewMode, entityId, cleanEntityName, selectedSeason, preloadedData]);
+  }, [loading, shotData, viewMode, entityId, cleanEntityName, selectedSeason, preloadedData, trackPlayerSelection, trackTeamSelection, trackStatisticsView]);
 
   // Track shot chart interactions
   useEffect(() => {
