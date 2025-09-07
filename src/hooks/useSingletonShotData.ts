@@ -4,8 +4,8 @@ import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 // Singleton data manager to prevent duplicate fetches
-export class ShotDataManager {
-  private static instance: ShotDataManager | null;
+class ShotDataManager {
+  private static instance: ShotDataManager;
   private cache = new Map<string, {
     data: ShotData[];
     loading: boolean;
@@ -17,25 +17,16 @@ export class ShotDataManager {
   }>();
   private cleanupInterval: ReturnType<typeof setInterval>;
   private static readonly TTL = 10 * 60 * 1000; // 10 minutes
-  private disposed = false;
 
   private constructor() {
     this.cleanupInterval = setInterval(() => this.cleanup(), ShotDataManager.TTL);
   }
 
   static getInstance(): ShotDataManager {
-    if (!ShotDataManager.instance || ShotDataManager.instance.disposed) {
+    if (!ShotDataManager.instance) {
       ShotDataManager.instance = new ShotDataManager();
     }
     return ShotDataManager.instance;
-  }
-
-  dispose() {
-    if (!this.disposed) {
-      clearInterval(this.cleanupInterval);
-      this.disposed = true;
-      ShotDataManager.instance = null;
-    }
   }
 
   private getKey(season: string, entityId: string, viewMode: string): string {

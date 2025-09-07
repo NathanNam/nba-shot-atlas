@@ -1,15 +1,13 @@
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
-import { usePlayerStats } from "@/hooks/usePlayerStats";
-import { ShotData } from "@/hooks/useShotData";
 import { useMemo } from "react";
 
 interface EntityStatisticsProps {
   entityName: string;
   selectedSeason: string;
   viewMode: "player" | "team" | "league";
-  preloadedData?: ShotData[]; // Optional preloaded shot data
+  preloadedData?: any[]; // Optional preloaded shot data
 }
 
 export function EntityStatistics({ entityName, selectedSeason, viewMode, preloadedData }: EntityStatisticsProps) {
@@ -52,12 +50,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
   const stableEntityId = entityId && (viewMode !== 'player' || !playersLoading) ? String(entityId) : '';
   
   console.log(`🔍 EntityStatistics: Component state - viewMode: ${viewMode}, entityName: ${entityName}, entityId: ${entityId}, stableEntityId: ${stableEntityId}, playersLoading: ${playersLoading}`);
-
-  const serverStats = usePlayerStats(
-    viewMode === 'player' ? stableEntityId : '',
-    viewMode === 'player' ? selectedSeason : ''
-  );
-
+  
   // Always call the hook (rules of hooks), but use preloaded data if available
   const hookResult = useSingletonShotData(
     selectedSeason,
@@ -65,15 +58,14 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     viewMode,
     preloadedData === undefined
   );
-
-  const { shotData, loading, error } = preloadedData !== undefined
+  
+  // Use preloaded data if available, otherwise use hook result
+  const { shotData, loading, error } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null }
     : hookResult;
-
+    
   // Debug logging
   console.log(`🔍 EntityStatistics [${cleanEntityName}]: Data source and details`, {
-    hasServerStats: !!serverStats.stats,
-    serverStats: serverStats.stats,
     hasPreloadedData: preloadedData !== undefined,
     preloadedLength: preloadedData?.length,
     hookLength: hookResult.shotData?.length,
@@ -92,54 +84,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       selectedSeason,
       loading,
       error,
-      serverStats: serverStats.stats
+      dataPreview: shotData?.slice(0, 2)
     });
-
-    if (viewMode === 'player') {
-      if (serverStats.loading) {
-        return {
-          totalShots: 0,
-          madeShots: 0,
-          fieldGoalPercentage: 0,
-          twoPointPercentage: 0,
-          twoPointMade: 0,
-          twoPointAttempted: 0,
-          threePointPercentage: 0,
-          threePointMade: 0,
-          threePointAttempted: 0,
-          hottestZone: "Loading...",
-          hottestZoneStats: { made: 0, total: 0, percentage: 0 },
-          coldestZone: "Loading...",
-          coldestZoneStats: { made: 0, total: 0, percentage: 0 },
-          favoriteSpot: "Loading...",
-          favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
-        };
-      }
-
-      if (serverStats.stats) {
-        return serverStats.stats;
-      }
-
-      return {
-        totalShots: 0,
-        madeShots: 0,
-        fieldGoalPercentage: 0,
-        twoPointPercentage: 0,
-        twoPointMade: 0,
-        twoPointAttempted: 0,
-        threePointPercentage: 0,
-        threePointMade: 0,
-        threePointAttempted: 0,
-        hottestZone: "No data",
-        hottestZoneStats: { made: 0, total: 0, percentage: 0 },
-        coldestZone: "No data",
-        coldestZoneStats: { made: 0, total: 0, percentage: 0 },
-        favoriteSpot: "No data",
-        favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
-      };
-    }
-
-    if (!shotData || shotData.length === 0 || !entityId) {
+    
+    if (!shotData || shotData.length === 0 || (viewMode === 'player' && playersLoading) || !entityId) {
       return {
         totalShots: 0,
         madeShots: 0,
@@ -168,6 +116,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
 
     // Process each shot
     shotData.forEach(shot => {
+      // Determine if the shot was made
       const result = shot.shotResult;
       const made = result === 'Made' || result === 'MADE' || result === '1';
 
@@ -175,6 +124,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         madeShots += 1;
       }
 
+      // Count 2PT/3PT attempts and makes
       if (shot.shotValue === 2) {
         twoPointAttempted += 1;
         if (made) twoPointMade += 1;
@@ -183,6 +133,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         if (made) threePointMade += 1;
       }
 
+      // Zone classification (formerly analyzeZones)
       let zone = "Unknown";
       const distance = shot.shotDistance;
       const x = shot.xLegacy;
@@ -229,6 +180,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     const threePointPercentage =
       threePointAttempted > 0 ? threePointMade / threePointAttempted : 0;
 
+    // Debug output for 3PT calculation
     console.log(`🏀 3PT Analysis for ${entityName}:`, {
       threePointMade: threePointMade,
       threePointAttempted: threePointAttempted,
@@ -236,6 +188,7 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       calculation: `${threePointMade}/${threePointAttempted} = ${(threePointPercentage * 100).toFixed(1)}%`
     });
 
+    // Determine hottest, coldest and favorite zones from accumulated stats
     let hottestZone = "No data";
     let hottestZoneStats = { made: 0, total: 0, percentage: 0 };
     let coldestZone = "No data";
@@ -285,15 +238,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       favoriteSpot,
       favoriteSpotStats
     };
-  }, [shotData, entityName, playersLoading, entityId, selectedSeason, viewMode, serverStats.stats, serverStats.loading, loading, error]);
+  }, [shotData, entityName, playersLoading, entityId, selectedSeason]);
 
-  // Show loading while fetching players (player mode only), shot data, or server-calculated stats
-  const shouldShowLoading =
-    loading ||
-    (viewMode === 'player' && (playersLoading || serverStats.loading)) ||
-    !entityId;
-  
-  if (shouldShowLoading) {
+  // Show loading while fetching players (player mode only) or shot data
+  if (loading || (viewMode === 'player' && playersLoading) || !entityId) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
         <div className="animate-pulse">
@@ -308,10 +256,10 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     );
   }
 
-  if (error || serverStats.error) {
+  if (error) {
     return (
       <div className="p-6 bg-card border-border shadow-card rounded-lg">
-        <p className="text-destructive text-center">Error loading statistics: {error || serverStats.error}</p>
+        <p className="text-destructive text-center">Error loading statistics: {error}</p>
       </div>
     );
   }
