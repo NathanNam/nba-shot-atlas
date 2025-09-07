@@ -257,6 +257,19 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
     
     console.log('✅ Basic test metric emitted');
 
+    // Create NBA metric using the same meter to test if it works
+    const nbaTestCounter = meter.createCounter('nba_test_metric', {
+      description: 'Direct NBA test metric to verify NBA metrics work',
+    });
+    
+    nbaTestCounter.add(1, {
+      test_type: 'direct_meter_test',
+      environment: import.meta.env.MODE,
+      service: serviceName
+    });
+    
+    console.log('✅ NBA test metric emitted directly');
+
     return { tracer, logger, meter };
   } catch (error) {
     const fallbackLogger = loggerProvider.getLogger(serviceName);
