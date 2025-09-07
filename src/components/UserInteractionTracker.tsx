@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
+import { NBAAnalyticsMetrics } from '../services/nbaAnalyticsMetrics';
 
 // User interaction metrics
 const userActionCounter = meter.createCounter('user_actions_total', {
@@ -42,6 +43,13 @@ export function UserInteractionTracker({ children }: UserInteractionTrackerProps
           viewport_size: `${window.innerWidth}x${window.innerHeight}`,
         },
       });
+
+      // Track NBA-specific user session
+      NBAAnalyticsMetrics.trackUserSession(
+        'new', // Could be enhanced to detect returning users
+        navigator.userAgent,
+        `${window.innerWidth}x${window.innerHeight}`
+      );
 
       span.setAttributes({
         'session.start_time': sessionStartTime,
@@ -251,6 +259,20 @@ export function useNBAAnalyticsTracking() {
       interaction_type: interactionType,
       shot_count: shotData?.length || 0,
     });
+
+    // Enhanced NBA-specific shot chart interaction tracking
+    if (shotData?.entity_name && shotData?.entity_type && shotData?.season) {
+      NBAAnalyticsMetrics.trackShotChartInteraction(
+        interactionType as 'hover' | 'click' | 'filter' | 'zoom' | 'export',
+        {
+          entityName: shotData.entity_name,
+          entityType: shotData.entity_type,
+          season: shotData.season,
+          shotCount: shotData.shots_count || shotData.length,
+          filterApplied: shotData.filter_applied,
+        }
+      );
+    }
   };
 
   const trackStatisticsView = (entityType: string, entityId: string, season: string) => {
@@ -261,12 +283,26 @@ export function useNBAAnalyticsTracking() {
     });
   };
 
-  const trackComparisonView = (season1: string, season2: string, entityType: string) => {
+  const trackComparisonView = (season1: string, season2: string, entityType: string, entity1?: string, entity2?: string) => {
     trackFeatureUsage('comparison_view', {
       season1: season1,
       season2: season2,
       entity_type: entityType,
     });
+
+    // Enhanced NBA-specific comparison tracking
+    if (entity1 && entity2) {
+      const comparisonType = season1 !== season2 ? 'season_vs_season' : 
+        (entityType === 'player' ? 'player_vs_player' : 'team_vs_team') as 'player_vs_player' | 'season_vs_season' | 'team_vs_team';
+      
+      NBAAnalyticsMetrics.trackComparison(
+        comparisonType,
+        entity1,
+        entity2,
+        season1,
+        season2
+      );
+    }
   };
 
   return {

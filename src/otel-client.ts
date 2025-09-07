@@ -1,6 +1,8 @@
 import { Meter, metrics, trace, Tracer } from "@opentelemetry/api";
 import { logs, Logger, SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { DocumentLoadInstrumentation } from "@opentelemetry/instrumentation-document-load";
@@ -12,8 +14,17 @@ import {
   LoggerProvider,
 } from "@opentelemetry/sdk-logs";
 import {
+  PeriodicExportingMetricReader,
+  MeterProvider,
+} from "@opentelemetry/sdk-metrics";
+import {
   SimpleSpanProcessor,
   WebTracerProvider,
+  BatchSpanProcessor,
+  TraceIdRatioBasedSampler,
+  ParentBasedSampler,
+  AlwaysOnSampler,
+  AlwaysOffSampler,
 } from "@opentelemetry/sdk-trace-web";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
@@ -24,6 +35,30 @@ const serviceName = "hoops-analytics-viz"; // NBA analytics visualization app
 let otlpEndpoint = "http://localhost:4318";
 let otlpEndpointBearerToken: string | undefined;
 let authHeader = {};
+
+// Sampling configuration
+const getSampler = () => {
+  const environment = import.meta.env.MODE;
+  const samplingRate = parseFloat(import.meta.env.VITE_OTEL_SAMPLING_RATE || '1.0');
+  
+  // Production sampling strategy - reduce load while maintaining visibility
+  if (environment === 'production') {
+    // Parent-based sampling with 10% rate for root spans, but keep all child spans
+    return new ParentBasedSampler({
+      root: new TraceIdRatioBasedSampler(Math.min(samplingRate, 0.1)), // Max 10% in production
+    });
+  }
+  
+  // Development and preview - sample more aggressively for debugging
+  if (environment === 'development') {
+    return new AlwaysOnSampler(); // Sample everything in development
+  }
+  
+  // Default fallback - moderate sampling
+  return new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(samplingRate),
+  });
+};
 
 // Function to fetch OTEL configuration from Supabase Edge Function
 async function fetchOtelConfig() {
@@ -77,12 +112,15 @@ const resource = resourceFromAttributes({
 // These will be initialized after fetching config
 let provider: WebTracerProvider;
 let loggerProvider: LoggerProvider;
+let meterProvider: MeterProvider;
 
 function createProviders() {
+  // Initialize Tracer Provider with batching and sampling for performance
   provider = new WebTracerProvider({
     resource: resource,
+    sampler: getSampler(),
     spanProcessors: [
-      new SimpleSpanProcessor(
+      new BatchSpanProcessor(
         new OTLPTraceExporter({
           url: `${otlpEndpoint}/v1/traces`,
           headers: {
@@ -90,7 +128,13 @@ function createProviders() {
             "x-observe-target-package": "Tracing",
             "Content-Type": "application/x-protobuf",
           },
-        })
+        }),
+        {
+          maxQueueSize: 100,
+          maxExportBatchSize: 10,
+          scheduledDelayMillis: 500,
+          exportTimeoutMillis: 30000, // 30s timeout
+        }
       ),
     ],
   });
@@ -110,6 +154,39 @@ function createProviders() {
         })
       ),
     ],
+  });
+
+  // Initialize Metrics Provider with OTLP and Prometheus exporters
+  const metricExporters = [
+    new OTLPMetricExporter({
+      url: `${otlpEndpoint}/v1/metrics`,
+      headers: {
+        ...authHeader,
+        "x-observe-target-package": "Metrics",
+        "Content-Type": "application/x-protobuf",
+      },
+    })
+  ];
+
+  // Add Prometheus exporter for development/debugging (optional)
+  if (import.meta.env.MODE === 'development') {
+    try {
+      metricExporters.push(new PrometheusExporter({
+        port: 9464, // Default Prometheus metrics port
+      }));
+    } catch (error) {
+      console.warn('Failed to initialize Prometheus exporter:', error);
+    }
+  }
+
+  meterProvider = new MeterProvider({
+    resource: resource,
+    readers: metricExporters.map(exporter => 
+      new PeriodicExportingMetricReader({
+        exporter,
+        exportIntervalMillis: 10000, // Export metrics every 10 seconds
+      })
+    ),
   });
 }
 
@@ -151,6 +228,9 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
 
     provider.register({});
 
+    // Register the metrics provider
+    metrics.setGlobalMeterProvider(meterProvider);
+
     // Initialize tracer, logger, and meter after SDK is started
     tracer = trace.getTracer(serviceName);
     logger = loggerProvider.getLogger(serviceName);
@@ -165,6 +245,10 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
       attributes: {
         service: serviceName,
         endpoint: otlpEndpoint,
+        environment: import.meta.env.MODE,
+        sampling_strategy: import.meta.env.MODE === 'production' ? 'parent_based_10pct' : 
+                          import.meta.env.MODE === 'development' ? 'always_on' : 'parent_based_configurable',
+        sampling_rate: import.meta.env.VITE_OTEL_SAMPLING_RATE || '1.0',
       },
     });
 

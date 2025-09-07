@@ -16,16 +16,39 @@ let componentRenderDuration: any;
 let userInteractionCounter: any;
 let performanceObservationCounter: any;
 let memoryUsageGauge: any;
+let dataLoadingDuration: any;
+let apiCallDuration: any;
+let cacheHitCounter: any;
+let errorCounter: any;
+let componentMountCounter: any;
+let renderPerformanceHistogram: any;
 
 // Initialize metrics safely
 const initMetrics = () => {
   if (meter?.createHistogram) {
     pageLoadDuration = meter.createHistogram('page_load_duration_ms', {
       description: 'Duration of page load events',
+      unit: 'ms',
     });
 
     componentRenderDuration = meter.createHistogram('component_render_duration_ms', {
       description: 'Duration of component render cycles',
+      unit: 'ms',
+    });
+
+    renderPerformanceHistogram = meter.createHistogram('component_render_performance', {
+      description: 'Component render performance metrics with percentiles',
+      unit: 'ms',
+    });
+
+    dataLoadingDuration = meter.createHistogram('data_loading_duration_ms', {
+      description: 'Time taken to load NBA data (API calls, caching, processing)',
+      unit: 'ms',
+    });
+
+    apiCallDuration = meter.createHistogram('api_call_duration_ms', {
+      description: 'Duration of external API calls',
+      unit: 'ms',
     });
 
     userInteractionCounter = meter.createCounter('user_interactions_total', {
@@ -36,8 +59,21 @@ const initMetrics = () => {
       description: 'Total number of performance observations',
     });
 
+    cacheHitCounter = meter.createCounter('cache_operations_total', {
+      description: 'Cache hits and misses for data operations',
+    });
+
+    errorCounter = meter.createCounter('errors_total', {
+      description: 'Total number of errors by type and component',
+    });
+
+    componentMountCounter = meter.createCounter('component_mounts_total', {
+      description: 'Total number of component mounts by component type',
+    });
+
     memoryUsageGauge = meter.createUpDownCounter('memory_usage_mb', {
       description: 'Current memory usage in megabytes',
+      unit: 'MB',
     });
   }
 };
@@ -70,6 +106,21 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
         componentRenderDuration.record(mountDuration, {
           component_name: componentName,
           lifecycle_event: 'mount',
+        });
+      }
+
+      if (componentMountCounter?.add) {
+        componentMountCounter.add(1, {
+          component_name: componentName,
+          mount_type: 'initial',
+        });
+      }
+
+      if (renderPerformanceHistogram?.record) {
+        renderPerformanceHistogram.record(mountDuration, {
+          component: componentName,
+          event_type: 'mount',
+          performance_tier: mountDuration < 50 ? 'fast' : mountDuration < 200 ? 'normal' : 'slow',
         });
       }
 
@@ -132,20 +183,125 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
       });
     }
 
-    if (renderDuration > 100) { // Log slow renders
+    if (renderPerformanceHistogram?.record) {
+      renderPerformanceHistogram.record(renderDuration, {
+        component: componentName,
+        event_type: 'render',
+        performance_tier: renderDuration < 16 ? 'fast' : renderDuration < 50 ? 'normal' : 'slow',
+        frame_budget_met: renderDuration < 16 ? 'true' : 'false', // 60fps budget
+      });
+    }
+
+    // Log slow renders with more context
+    if (renderDuration > 50) { // Lowered threshold for better monitoring
+      if (errorCounter?.add) {
+        errorCounter.add(1, {
+          error_type: 'slow_render',
+          component_name: componentName,
+          severity: renderDuration > 100 ? 'high' : 'medium',
+        });
+      }
+
       safeLog({
-        severityNumber: SeverityNumber.WARN,
-        severityText: 'WARN',
-        body: 'Slow component render detected',
+        severityNumber: renderDuration > 100 ? SeverityNumber.WARN : SeverityNumber.INFO,
+        severityText: renderDuration > 100 ? 'WARN' : 'INFO',
+        body: renderDuration > 100 ? 'Slow component render detected' : 'Component render above 60fps budget',
         attributes: {
           component_name: componentName,
           render_duration_ms: renderDuration,
+          frame_budget_exceeded: renderDuration > 16,
+          performance_impact: renderDuration > 100 ? 'high' : 'medium',
+          url: typeof window !== 'undefined' ? window.location.href : '',
         },
       });
     }
   });
 
   return <>{children}</>;
+}
+
+// Utility functions for performance tracking
+export function trackDataLoading(operationName: string, duration: number, cacheHit: boolean = false, dataSize?: number) {
+  if (dataLoadingDuration?.record) {
+    dataLoadingDuration.record(duration, {
+      operation: operationName,
+      cache_hit: cacheHit ? 'true' : 'false',
+      data_size_category: dataSize ? (dataSize < 1000 ? 'small' : dataSize < 10000 ? 'medium' : 'large') : 'unknown',
+    });
+  }
+
+  if (cacheHitCounter?.add) {
+    cacheHitCounter.add(1, {
+      operation: operationName,
+      result: cacheHit ? 'hit' : 'miss',
+    });
+  }
+
+  safeLog({
+    severityNumber: duration > 2000 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+    severityText: duration > 2000 ? 'WARN' : 'DEBUG',
+    body: `Data loading operation: ${operationName}`,
+    attributes: {
+      operation_name: operationName,
+      duration_ms: duration,
+      cache_hit: cacheHit,
+      data_size: dataSize,
+      performance_tier: duration < 500 ? 'fast' : duration < 2000 ? 'normal' : 'slow',
+    },
+  });
+}
+
+export function trackApiCall(apiEndpoint: string, duration: number, statusCode?: number, errorMessage?: string) {
+  if (apiCallDuration?.record) {
+    apiCallDuration.record(duration, {
+      endpoint: apiEndpoint,
+      status_code: statusCode ? statusCode.toString() : 'unknown',
+      success: (!errorMessage && (!statusCode || statusCode < 400)) ? 'true' : 'false',
+    });
+  }
+
+  if (errorMessage && errorCounter?.add) {
+    errorCounter.add(1, {
+      error_type: 'api_error',
+      endpoint: apiEndpoint,
+      status_code: statusCode?.toString() || 'unknown',
+    });
+  }
+
+  safeLog({
+    severityNumber: errorMessage ? SeverityNumber.ERROR : duration > 5000 ? SeverityNumber.WARN : SeverityNumber.DEBUG,
+    severityText: errorMessage ? 'ERROR' : duration > 5000 ? 'WARN' : 'DEBUG',
+    body: `API call: ${apiEndpoint}`,
+    attributes: {
+      api_endpoint: apiEndpoint,
+      duration_ms: duration,
+      status_code: statusCode,
+      error_message: errorMessage,
+      performance_tier: duration < 1000 ? 'fast' : duration < 5000 ? 'normal' : 'slow',
+    },
+  });
+}
+
+export function trackComponentError(componentName: string, errorMessage: string, errorStack?: string) {
+  if (errorCounter?.add) {
+    errorCounter.add(1, {
+      error_type: 'component_error',
+      component_name: componentName,
+    });
+  }
+
+  safeLog({
+    severityNumber: SeverityNumber.ERROR,
+    severityText: 'ERROR',
+    body: `Component error in ${componentName}`,
+    attributes: {
+      component_name: componentName,
+      error_message: errorMessage,
+      error_stack: errorStack,
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      timestamp: new Date().toISOString(),
+    },
+  });
 }
 
 // Global performance monitoring setup
