@@ -130,15 +130,22 @@ function calculateStatsFromRawData(shots: any[]): FullPlayerStats {
     const made = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1';
     if (made) madeShots++;
 
-    // Use exact shotValue comparison to match database query
-    const shotValue = shot.shotValue;
+    // Use exact shotValue comparison to match database query - ensure it's a number
+    const shotValue = Number(shot.shotValue);
+    
+    // Debug log for inconsistent data
+    if (shotValue !== 2 && shotValue !== 3) {
+      console.log(`🎯 Unexpected shotValue for Stephen Curry:`, shot.shotValue, typeof shot.shotValue, shot);
+    }
+    
     if (shotValue === 3) {
       threePointAttempted++;
       if (made) threePointMade++;
-    } else {
+    } else if (shotValue === 2) {
       twoPointAttempted++;
       if (made) twoPointMade++;
     }
+    // Skip any shots that don't have valid shotValue
 
     // Zone analysis
     const zone = determineZone(shot);
@@ -158,7 +165,8 @@ function calculateStatsFromRawData(shots: any[]): FullPlayerStats {
   // Analyze zones
   const zoneAnalysis = analyzeZones(zoneStats);
 
-  console.log(`🎯 Calculated stats - Total: ${totalShots}, Made: ${madeShots}, 3PT: ${threePointMade}/${threePointAttempted}`);
+  console.log(`🎯 FINAL Calculated stats - Total: ${totalShots}, Made: ${madeShots}, 2PT: ${twoPointMade}/${twoPointAttempted}, 3PT: ${threePointMade}/${threePointAttempted}`);
+  console.log(`🎯 Expected vs Actual 3PT: Expected 311/784, Got ${threePointMade}/${threePointAttempted}`);
 
   return {
     totalShots,
