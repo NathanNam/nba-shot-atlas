@@ -19,14 +19,23 @@ initOtel().then(({ tracer, logger, meter }) => {
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
   
-  // Test the fixed NBA metrics
+  // Test all NBA metrics to populate Observe
   setTimeout(() => {
-    console.log('🧪 Testing fixed NBA metrics...');
+    console.log('🧪 Testing all NBA metrics...');
     try {
+      // Test various NBA metric types
       MetricsIntegration.trackFeature('app_initialization_fixed', { timestamp: Date.now() });
-      console.log('🧪 NBA feature metric should now work');
+      MetricsIntegration.trackContentEngagement('shot_chart', 'player', 'LeBron James', '2023-24', 5000);
+      MetricsIntegration.trackComparison('player_vs_player', 'LeBron James', 'Stephen Curry', '2023-24');
+      MetricsIntegration.trackShotChartInteraction('click', {
+        entityName: 'LeBron James',
+        entityType: 'player',
+        season: '2023-24',
+        shotCount: 1250
+      });
+      console.log('🧪 All NBA metrics should now appear in Observe');
     } catch (error) {
-      console.error('🧪 Error with fixed NBA metrics:', error);
+      console.error('🧪 Error with NBA metrics:', error);
     }
   }, 1500);
 }).catch(error => {
