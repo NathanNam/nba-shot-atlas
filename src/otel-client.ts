@@ -244,6 +244,31 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
       },
     });
 
+    // Create test metrics for verification
+    const testCounter = meter.createCounter('test_metrics', {
+      description: 'Test counter to verify metrics are flowing to Observe',
+    });
+    
+    const testHistogram = meter.createHistogram('test_request_duration', {
+      description: 'Test histogram to verify metrics are flowing to Observe',
+      unit: 'ms',
+    });
+
+    // Emit test metrics
+    testCounter.add(1, { 
+      environment: import.meta.env.MODE,
+      service: serviceName,
+      test_type: 'counter_verification'
+    });
+    
+    testHistogram.record(Math.random() * 100, {
+      environment: import.meta.env.MODE,
+      service: serviceName,
+      test_type: 'histogram_verification'
+    });
+
+    console.log('✅ Test metrics emitted for verification');
+
     return { tracer, logger, meter };
   } catch (error) {
     const fallbackLogger = loggerProvider.getLogger(serviceName);
