@@ -2,7 +2,6 @@ import { Meter, metrics, trace, Tracer } from "@opentelemetry/api";
 import { logs, Logger, SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
-import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { DocumentLoadInstrumentation } from "@opentelemetry/instrumentation-document-load";
@@ -173,19 +172,8 @@ function createProviders() {
     })
   ];
 
-  // Add Prometheus exporter for development/debugging (optional)
-  if (import.meta.env.MODE === 'development') {
-    try {
-      // Note: Prometheus exporter works differently - it doesn't use PeriodicExportingMetricReader
-      // It starts its own HTTP server to expose metrics
-      const prometheusExporter = new PrometheusExporter({
-        port: 9464, // Default Prometheus metrics port
-      });
-      console.log('Prometheus exporter initialized on port 9464');
-    } catch (error) {
-      console.warn('Failed to initialize Prometheus exporter:', error);
-    }
-  }
+  // Note: Prometheus exporter is for server-side use only, not browser
+  // Metrics are exported via OTLP only in browser environment
 
   meterProvider = new MeterProvider({
     resource: resource,
