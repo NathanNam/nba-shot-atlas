@@ -269,6 +269,20 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
 
     console.log('✅ Test metrics emitted for verification');
 
+    // Test NBA Analytics metrics creation to verify they work
+    const nbaMeter = metrics.getMeter('hoops-analytics-viz');
+    const testNbaCounter = nbaMeter.createCounter('test_nba_user_sessions_total', {
+      description: 'Test NBA analytics counter to verify metrics are flowing',
+    });
+    
+    testNbaCounter.add(1, {
+      session_type: 'test',
+      platform: 'web',
+      test_type: 'nba_verification'
+    });
+    
+    console.log('✅ Test NBA metrics emitted for verification');
+
     return { tracer, logger, meter };
   } catch (error) {
     const fallbackLogger = loggerProvider.getLogger(serviceName);

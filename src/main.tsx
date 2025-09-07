@@ -17,7 +17,16 @@ initOtel().then(({ tracer, logger, meter }) => {
   console.log('✅ OTEL Components ready:', { tracer: !!tracer, logger: !!logger, meter: !!meter });
   
   // Initialize NBA Analytics metrics tracking
+  console.log('🎯 Initializing NBA Analytics Metrics...');
   MetricsIntegration.initialize();
+  console.log('🎯 NBA Analytics Metrics initialization called');
+  
+  // Test NBA metrics immediately to verify they work
+  setTimeout(() => {
+    console.log('🧪 Testing NBA metrics...');
+    MetricsIntegration.trackFeature('test_feature', { test: true });
+    console.log('🧪 NBA test metrics triggered');
+  }, 200);
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
