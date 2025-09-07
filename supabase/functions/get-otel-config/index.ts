@@ -12,9 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    // Get the OpenTelemetry configuration from environment variables
+    // Get the OpenTelemetry configuration from Supabase secrets
     const otlpEndpoint = Deno.env.get('VITE_OTEL_EXPORTER_OTLP_ENDPOINT')
     const otlpBearerToken = Deno.env.get('VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN')
+
+    console.log('OTEL Config Check:', {
+      hasEndpoint: !!otlpEndpoint,
+      hasToken: !!otlpBearerToken,
+      endpoint: otlpEndpoint ? 'configured' : 'missing'
+    })
 
     if (!otlpEndpoint) {
       throw new Error('VITE_OTEL_EXPORTER_OTLP_ENDPOINT not configured')
