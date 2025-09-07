@@ -57,6 +57,30 @@ export class NBAAnalyticsMetrics {
     description: 'User satisfaction scores based on interaction patterns',
   });
 
+  // Application performance metrics
+  private static readonly apiRequestCounter = meter.createCounter('nba_api_requests_total', {
+    description: 'Total number of API requests made by the application',
+  });
+
+  private static readonly apiErrorCounter = meter.createCounter('nba_api_request_errors_total', {
+    description: 'Total number of failed API requests',
+  });
+
+  private static readonly apiRequestDuration = meter.createHistogram('nba_api_request_duration_ms', {
+    description: 'Duration of API requests',
+    unit: 'ms',
+  });
+
+  private static readonly pageLoadTimeHistogram = meter.createHistogram('nba_page_load_time_ms', {
+    description: 'Page load time from navigation start',
+    unit: 'ms',
+  });
+
+  private static readonly domContentLoadedHistogram = meter.createHistogram('nba_dom_content_loaded_ms', {
+    description: 'Time until DOM content loaded event',
+    unit: 'ms',
+  });
+
   /**
    * Track user session start with NBA analytics context
    */
@@ -311,6 +335,86 @@ export class NBAAnalyticsMetrics {
 
       span.setAttributes({
         'nba.interaction_tracked': true,
+      });
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
+   * Track API request performance and results
+   */
+  static trackApiRequest(endpoint: string, method: string, status: number, duration: number) {
+    const span = tracer.startSpan('nba_analytics.api_request', {
+      attributes: {
+        'http.url': endpoint,
+        'http.method': method,
+        'http.status_code': status,
+        'http.duration_ms': duration,
+      },
+    });
+
+    try {
+      this.apiRequestCounter.add(1, {
+        endpoint,
+        method,
+        status: status.toString(),
+      });
+
+      this.apiRequestDuration.record(duration, {
+        endpoint,
+        method,
+        status: status.toString(),
+      });
+
+      if (status >= 400 || status === 0) {
+        this.apiErrorCounter.add(1, {
+          endpoint,
+          method,
+          status: status.toString(),
+        });
+
+        logger.emit({
+          severityNumber: SeverityNumber.WARN,
+          severityText: 'WARN',
+          body: 'API request failed',
+          attributes: {
+            endpoint,
+            method,
+            status,
+            duration_ms: duration,
+          },
+        });
+      }
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
+   * Track initial page load metrics
+   */
+  static trackPageLoad(loadTime: number, domContentLoaded: number) {
+    const span = tracer.startSpan('nba_analytics.page_load', {
+      attributes: {
+        'page.load_time_ms': loadTime,
+        'page.dom_content_loaded_ms': domContentLoaded,
+      },
+    });
+
+    try {
+      this.pageLoadTimeHistogram.record(loadTime);
+      this.domContentLoadedHistogram.record(domContentLoaded);
+
+      logger.emit({
+        severityNumber: SeverityNumber.INFO,
+        severityText: 'INFO',
+        body: 'Page load metrics tracked',
+        attributes: {
+          load_time_ms: loadTime,
+          dom_content_loaded_ms: domContentLoaded,
+          timestamp: new Date().toISOString(),
+        },
       });
     } finally {
       span.end();
