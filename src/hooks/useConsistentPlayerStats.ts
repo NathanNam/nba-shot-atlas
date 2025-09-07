@@ -42,12 +42,15 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
   useEffect(() => {
     async function fetchConsistentStats() {
       if (!playerId || !season) {
-        console.log(`🎯 useConsistentPlayerStats: Skipping fetch - playerId: "${playerId}", season: "${season}"`);
+        console.log(`🎯 CONSISTENT HOOK: Skipping fetch - playerId: "${playerId}", season: "${season}"`);
         setLoading(false);
         setStats(null);
         setError(null);
         return;
       }
+
+      console.log(`🎯 CONSISTENT HOOK: Starting fetch for player ${playerId} season ${season}`);
+      console.log(`🎯 CONSISTENT HOOK: Player ID type: ${typeof playerId}, value: "${playerId}"`);
 
       try {
         setLoading(true);
@@ -167,6 +170,13 @@ function calculateStatsFromRawData(shots: any[]): FullPlayerStats {
 
   console.log(`🎯 FINAL Calculated stats - Total: ${totalShots}, Made: ${madeShots}, 2PT: ${twoPointMade}/${twoPointAttempted}, 3PT: ${threePointMade}/${threePointAttempted}`);
   console.log(`🎯 Expected vs Actual 3PT: Expected 311/784, Got ${threePointMade}/${threePointAttempted}`);
+  
+  // Additional validation - the numbers should always be exactly 311/784 for Stephen Curry
+  if (threePointMade !== 311 || threePointAttempted !== 784) {
+    console.error(`🚨 CONSISTENT HOOK: Stephen Curry 3PT numbers are WRONG! Expected 311/784, got ${threePointMade}/${threePointAttempted}`);
+    console.error(`🚨 Raw shot data length: ${shots.length}`);
+    console.error(`🚨 First few shots:`, shots.slice(0, 3));
+  }
 
   return {
     totalShots,

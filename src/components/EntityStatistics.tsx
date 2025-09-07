@@ -120,13 +120,18 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
     
     // ALWAYS use consistent stats for Stephen Curry when available - no fallback to calculated stats
     if (isStephenCurry && consistentStats.stats && !consistentStats.loading) {
-      console.log(`🎯 Using FINAL consistent stats for Stephen Curry:`, consistentStats.stats);
+      console.log(`🎯 ENTITY STATS: Using FINAL consistent stats for Stephen Curry:`, {
+        totalShots: consistentStats.stats.totalShots,
+        threePointMade: consistentStats.stats.threePointMade,
+        threePointAttempted: consistentStats.stats.threePointAttempted,
+        threePointPercentage: consistentStats.stats.threePointPercentage
+      });
       return consistentStats.stats;
     }
     
     // For Stephen Curry, if we're still loading consistent stats, return loading state
     if (isStephenCurry && consistentStats.loading) {
-      console.log(`🎯 Stephen Curry consistent stats still loading, returning empty stats`);
+      console.log(`🎯 ENTITY STATS: Stephen Curry consistent stats still loading, returning empty stats`);
       return {
         totalShots: 0,
         madeShots: 0,
@@ -144,6 +149,15 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
         favoriteSpot: "Loading...",
         favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
       };
+    }
+    
+    // Stephen Curry should NEVER reach this point if consistent stats are working
+    if (isStephenCurry) {
+      console.error(`🚨 ENTITY STATS: Stephen Curry reached fallback calculation! This should not happen!`, {
+        hasConsistentStats: !!consistentStats.stats,
+        consistentLoading: consistentStats.loading,
+        consistentError: consistentStats.error
+      });
     }
     
     if (!shotData || shotData.length === 0 || (viewMode === 'player' && playersLoading) || !entityId) {
