@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { SupabaseDataService, ShotData } from '@/services/supabaseDataService';
 import { tracer, logger } from '../otel-client';
 import { SeverityNumber } from '@opentelemetry/api-logs';
+import { trackAPIResponse, trackError } from '@/components/PerformanceMonitor';
+import { SpanStatusCode } from '@opentelemetry/api';
+import { structuredLogger } from '@/utils/structuredLogger';
 
 // Singleton data manager to prevent duplicate fetches
 class ShotDataManager {
@@ -98,24 +101,49 @@ class ShotDataManager {
     });
 
     const span = tracer.startSpan('singleton_shot_data.load', {
-      attributes: { season, entity_id: entityId, view_mode: viewMode },
+      attributes: { 
+        season, 
+        entity_id: entityId, 
+        view_mode: viewMode,
+        cache_key: key,
+        subscriber_count: entry.subscribers.size,
+      },
     });
 
     entry.fetchPromise = (async () => {
+      const startTime = Date.now();
+      
       try {
         if (!entityId && viewMode !== 'league') {
           console.log(`🔐 ShotDataManager: No entityId for ${viewMode}, skipping`);
+          span.setAttributes({
+            'data.empty_result': true,
+            'data.reason': 'no_entity_id',
+          });
           return [];
         }
 
-        logger.emit({
-          severityNumber: SeverityNumber.INFO,
-          severityText: 'INFO',
-          body: 'Loading shot data via singleton manager',
-          attributes: { season, entity_id: entityId, view_mode: viewMode },
+        // Create child span for data service call
+        const dataSpan = tracer.startSpan('supabase_data_service.get_shot_data', {
+          attributes: { 
+            season, 
+            entity_id: entityId, 
+            view_mode: viewMode,
+            service: 'supabase',
+          },
         });
 
-        const data = await SupabaseDataService.getShotData(
+        structuredLogger.logDataLoading(
+          'shot_data_fetch_start',
+          viewMode,
+          entityId,
+          season,
+          undefined, // no duration yet
+          undefined, // no error
+        );
+
+        try {
+          const data = await SupabaseDataService.getShotData(
           season,
           entityId,
           viewMode,
@@ -134,6 +162,7 @@ class ShotDataManager {
         );
 
         const safeData = Array.isArray(data) ? data : [];
+        const responseTime = Date.now() - startTime;
 
         console.log(`🔐 ShotDataManager: Fetched ${safeData.length} shots for ${key}`, {
           dataHash: JSON.stringify(safeData.slice(0, 3)),
@@ -146,7 +175,32 @@ class ShotDataManager {
         entry.progress = null; // Clear progress when complete
         entry.timestamp = Date.now();
 
-        span.setAttributes({ success: true, result_count: safeData.length });
+        // Track successful API response
+        trackAPIResponse(`supabase.getShotData.${viewMode}`, responseTime, true, 200);
+        
+        span.setAttributes({ 
+          success: true, 
+          result_count: safeData.length,
+          response_time_ms: responseTime,
+          'data.size_bytes': JSON.stringify(safeData).length,
+        });
+        
+        dataSpan.setAttributes({
+          success: true,
+          result_count: safeData.length,
+          response_time_ms: responseTime,
+        });
+        dataSpan.setStatus({ code: SpanStatusCode.OK });
+        dataSpan.end();
+
+        structuredLogger.logDataLoading(
+          'shot_data_fetch_success',
+          viewMode,
+          entityId,
+          season,
+          responseTime,
+          undefined, // no error
+        );
 
         // Notify all subscribers
         entry.subscribers.forEach(callback => {
@@ -159,9 +213,31 @@ class ShotDataManager {
         });
 
         return safeData;
+        
+        } catch (dataErr) {
+          const dataErrorMessage = dataErr instanceof Error ? dataErr.message : 'Supabase data service error';
+          dataSpan.setStatus({ 
+            code: SpanStatusCode.ERROR, 
+            message: dataErrorMessage 
+          });
+          dataSpan.recordException(dataErr as Error);
+          dataSpan.end();
+          throw dataErr;
+        }
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
+        const responseTime = Date.now() - startTime;
+        
+        // Track failed API response
+        trackAPIResponse(`supabase.getShotData.${viewMode}`, responseTime, false);
+        trackError('data_loading_error', errorMessage, 'ShotDataManager', {
+          season,
+          entity_id: entityId,
+          view_mode: viewMode,
+          cache_key: key,
+          response_time_ms: responseTime,
+        });
         
         entry.data = [];
         entry.loading = false;
@@ -169,7 +245,16 @@ class ShotDataManager {
         entry.progress = null;
         entry.timestamp = Date.now();
 
-        span.setAttributes({ success: false, error: errorMessage });
+        span.setAttributes({ 
+          success: false, 
+          error: errorMessage,
+          response_time_ms: responseTime,
+        });
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: errorMessage 
+        });
+        span.recordException(err as Error);
 
         // Notify all subscribers of error
         entry.subscribers.forEach(callback => {
@@ -181,12 +266,14 @@ class ShotDataManager {
           });
         });
 
-        logger.emit({
-          severityNumber: SeverityNumber.ERROR,
-          severityText: 'ERROR',
-          body: 'Error loading shot data via singleton manager',
-          attributes: { season, entity_id: entityId, view_mode: viewMode, error: errorMessage },
-        });
+        structuredLogger.logDataLoading(
+          'shot_data_fetch_error',
+          viewMode,
+          entityId,
+          season,
+          responseTime,
+          err as Error,
+        );
 
         throw err;
       } finally {

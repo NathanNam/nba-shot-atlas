@@ -16,6 +16,10 @@ let componentRenderDuration: any;
 let userInteractionCounter: any;
 let performanceObservationCounter: any;
 let memoryUsageGauge: any;
+let apiResponseTimeHistogram: any;
+let componentRerenderCounter: any;
+let errorCounter: any;
+let userInteractionLatencyHistogram: any;
 
 // Initialize metrics safely
 const initMetrics = () => {
@@ -39,6 +43,22 @@ const initMetrics = () => {
     memoryUsageGauge = meter.createUpDownCounter('memory_usage_mb', {
       description: 'Current memory usage in megabytes',
     });
+
+    apiResponseTimeHistogram = meter.createHistogram('api_response_time_ms', {
+      description: 'API response times in milliseconds',
+    });
+
+    componentRerenderCounter = meter.createCounter('component_rerenders_total', {
+      description: 'Total number of component rerenders',
+    });
+
+    errorCounter = meter.createCounter('errors_total', {
+      description: 'Total number of errors encountered',
+    });
+
+    userInteractionLatencyHistogram = meter.createHistogram('user_interaction_latency_ms', {
+      description: 'Latency from user interaction to response',
+    });
   }
 };
 
@@ -53,6 +73,8 @@ interface PerformanceMonitorProps {
 export function PerformanceMonitor({ componentName = 'unknown', children }: PerformanceMonitorProps) {
   const renderStartTime = useRef<number>(Date.now());
   const mountTime = useRef<number>(Date.now());
+  const renderCount = useRef<number>(0);
+  const previousProps = useRef<any>();
 
   useEffect(() => {
     const span = tracer.startSpan('performance_monitor.component_lifecycle', {
@@ -121,14 +143,24 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
     }
   }, [componentName]);
 
-  // Track render performance
+  // Track render performance and rerenders
   useEffect(() => {
     const renderDuration = Date.now() - renderStartTime.current;
+    renderCount.current += 1;
     
     if (componentRenderDuration?.record) {
       componentRenderDuration.record(renderDuration, {
         component_name: componentName,
         lifecycle_event: 'render',
+        render_count: renderCount.current.toString(),
+      });
+    }
+
+    // Track rerenders after initial mount
+    if (renderCount.current > 1 && componentRerenderCounter?.add) {
+      componentRerenderCounter.add(1, {
+        component_name: componentName,
+        render_count: renderCount.current.toString(),
       });
     }
 
@@ -140,13 +172,110 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
         attributes: {
           component_name: componentName,
           render_duration_ms: renderDuration,
+          render_count: renderCount.current,
+          is_rerender: renderCount.current > 1,
         },
       });
     }
+
+    // Debug excessive rerenders
+    if (renderCount.current > 10) {
+      safeLog({
+        severityNumber: SeverityNumber.WARN,
+        severityText: 'WARN',
+        body: 'Excessive component rerenders detected',
+        attributes: {
+          component_name: componentName,
+          total_renders: renderCount.current,
+          average_render_duration: renderDuration,
+        },
+      });
+    }
+
+    // Reset render start time for next render
+    renderStartTime.current = Date.now();
   });
 
   return <>{children}</>;
 }
+
+// Utility functions for tracking performance outside of components
+export const trackAPIResponse = (apiEndpoint: string, responseTime: number, success: boolean, statusCode?: number) => {
+  if (apiResponseTimeHistogram?.record) {
+    apiResponseTimeHistogram.record(responseTime, {
+      endpoint: apiEndpoint,
+      success: success.toString(),
+      status_code: statusCode?.toString() || 'unknown',
+    });
+  }
+
+  if (!success && errorCounter?.add) {
+    errorCounter.add(1, {
+      error_type: 'api_error',
+      endpoint: apiEndpoint,
+      status_code: statusCode?.toString() || 'unknown',
+    });
+  }
+
+  safeLog({
+    severityNumber: success ? SeverityNumber.INFO : SeverityNumber.ERROR,
+    severityText: success ? 'INFO' : 'ERROR',
+    body: success ? 'API request completed' : 'API request failed',
+    attributes: {
+      endpoint: apiEndpoint,
+      response_time_ms: responseTime,
+      success,
+      status_code: statusCode,
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+export const trackUserInteractionLatency = (interactionType: string, latency: number, additionalContext?: Record<string, any>) => {
+  if (userInteractionLatencyHistogram?.record) {
+    userInteractionLatencyHistogram.record(latency, {
+      interaction_type: interactionType,
+      ...additionalContext,
+    });
+  }
+
+  if (latency > 500) { // Log slow interactions
+    safeLog({
+      severityNumber: SeverityNumber.WARN,
+      severityText: 'WARN',
+      body: 'Slow user interaction detected',
+      attributes: {
+        interaction_type: interactionType,
+        latency_ms: latency,
+        ...additionalContext,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+export const trackError = (errorType: string, errorMessage: string, componentName?: string, additionalContext?: Record<string, any>) => {
+  if (errorCounter?.add) {
+    errorCounter.add(1, {
+      error_type: errorType,
+      component_name: componentName || 'unknown',
+    });
+  }
+
+  safeLog({
+    severityNumber: SeverityNumber.ERROR,
+    severityText: 'ERROR',
+    body: errorMessage,
+    attributes: {
+      error_type: errorType,
+      component_name: componentName,
+      ...additionalContext,
+      timestamp: new Date().toISOString(),
+      url: typeof window !== 'undefined' ? window.location.href : undefined,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+    },
+  });
+};
 
 // Global performance monitoring setup
 export function setupGlobalPerformanceMonitoring() {

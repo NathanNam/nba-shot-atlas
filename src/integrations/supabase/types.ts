@@ -150,7 +150,7 @@ export type Database = {
           playerName: string | null
           playerNameI: string | null
           pointsTotal: string | null
-          saeson: string | null
+          season: string | null
           scoreAway: string | null
           scoreHome: string | null
           SHOT_CLOCK_APPROX: string | null
@@ -183,7 +183,7 @@ export type Database = {
           playerName?: string | null
           playerNameI?: string | null
           pointsTotal?: string | null
-          saeson?: string | null
+          season?: string | null
           scoreAway?: string | null
           scoreHome?: string | null
           SHOT_CLOCK_APPROX?: string | null
@@ -216,7 +216,7 @@ export type Database = {
           playerName?: string | null
           playerNameI?: string | null
           pointsTotal?: string | null
-          saeson?: string | null
+          season?: string | null
           scoreAway?: string | null
           scoreHome?: string | null
           SHOT_CLOCK_APPROX?: string | null

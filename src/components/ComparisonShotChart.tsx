@@ -2,6 +2,9 @@ import { ShotChart } from "@/components/ui/shot-chart";
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
 import { Card } from "@/components/ui/card";
+import { useNBAAnalyticsTracking, useUserActionTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { useEffect } from "react";
 
 interface ComparisonShotChartProps {
   entityName: string;
@@ -11,6 +14,10 @@ interface ComparisonShotChartProps {
 }
 
 export function ComparisonShotChart({ entityName, season1, season2, viewMode }: ComparisonShotChartProps) {
+  // Initialize tracking hooks
+  const { trackComparisonView, trackShotChartInteraction } = useNBAAnalyticsTracking();
+  const { trackAction } = useUserActionTracking();
+  
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -45,6 +52,31 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
   
   // Always call useMultiSeasonData hook - never conditionally call hooks
   const multiSeasonData = useMultiSeasonData(season1, season2, entityId1 || '', entityId2 || '', viewMode);
+  
+  // Track comparison view when data is loaded
+  useEffect(() => {
+    if (!multiSeasonData.season1.loading && !multiSeasonData.season2?.loading && 
+        multiSeasonData.season1.data.length > 0 && multiSeasonData.season2?.data && multiSeasonData.season2.data.length > 0) {
+      trackComparisonView(season1, season2, viewMode);
+      trackShotChartInteraction('comparison_loaded', {
+        entity_name: entityName,
+        season1,
+        season2,
+        view_mode: viewMode,
+        shots_season1: multiSeasonData.season1.data.length,
+        shots_season2: multiSeasonData.season2.data.length,
+      });
+      trackAction('comparison_view', {
+        entity_name: entityName,
+        season1,
+        season2,
+        view_mode: viewMode,
+        total_shots: multiSeasonData.season1.data.length + multiSeasonData.season2.data.length,
+      });
+    }
+  }, [multiSeasonData.season1.loading, multiSeasonData.season2?.loading, 
+      multiSeasonData.season1.data.length, multiSeasonData.season2?.data?.length,
+      entityName, season1, season2, viewMode]);
   
   // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
@@ -93,15 +125,17 @@ export function ComparisonShotChart({ entityName, season1, season2, viewMode }: 
   }
   
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <ShotChart
-        title={`${entityName} (${season1})`}
-        data={multiSeasonData.season1.loading ? undefined : multiSeasonData.season1.data}
-      />
-      <ShotChart
-        title={`${entityName} (${season2})`}
-        data={multiSeasonData.season2?.loading ? undefined : multiSeasonData.season2?.data}
-      />
-    </div>
+    <PerformanceMonitor componentName={`ComparisonShotChart-${viewMode}-${entityName}`}>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <ShotChart
+          title={`${entityName} (${season1})`}
+          data={multiSeasonData.season1.loading ? undefined : multiSeasonData.season1.data}
+        />
+        <ShotChart
+          title={`${entityName} (${season2})`}
+          data={multiSeasonData.season2?.loading ? undefined : multiSeasonData.season2?.data}
+        />
+      </div>
+    </PerformanceMonitor>
   );
 }

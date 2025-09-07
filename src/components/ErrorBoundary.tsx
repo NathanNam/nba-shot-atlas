@@ -4,6 +4,7 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { trackError } from './PerformanceMonitor';
 
 interface Props {
   children: ReactNode;
@@ -54,6 +55,19 @@ class ErrorBoundary extends Component<Props, State> {
         error_type: 'component_error',
       });
 
+      // Track error with performance monitor utility
+      trackError('react_component_error', error.message, 'ErrorBoundary', {
+        error_name: error.name,
+        component_stack: errorInfo.componentStack,
+        error_stack: error.stack,
+        user_session_info: {
+          viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+          memory_usage: (performance as any).memory ? 
+            `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB` : 'unknown',
+          connection_type: (navigator as any).connection?.effectiveType || 'unknown',
+        }
+      });
+
       // Log detailed error information
       logger.emit({
         severityNumber: SeverityNumber.ERROR,
@@ -67,6 +81,10 @@ class ErrorBoundary extends Component<Props, State> {
           user_agent: navigator.userAgent,
           url: window.location.href,
           timestamp: new Date().toISOString(),
+          viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+          memory_usage: (performance as any).memory ? 
+            `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB` : 'unknown',
+          connection_type: (navigator as any).connection?.effectiveType || 'unknown',
         },
       });
 

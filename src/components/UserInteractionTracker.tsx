@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
+import { featureMetrics } from '../services/featureMetrics';
 
 // User interaction metrics
 const userActionCounter = meter.createCounter('user_actions_total', {
@@ -217,11 +218,15 @@ export function useNBAAnalyticsTracking() {
   const { trackAction, trackFeatureUsage } = useUserActionTracking();
 
   const trackPlayerSelection = (playerId: string, playerName: string, season: string) => {
+    // Use both the existing tracking and new feature metrics
     trackFeatureUsage('player_selection', {
       player_id: playerId,
       player_name: playerName,
       season: season,
     });
+    
+    // Enhanced tracking with custom metrics
+    featureMetrics.trackPlayerSelection(playerId, playerName, season);
   };
 
   const trackTeamSelection = (teamId: string, teamName: string, season: string) => {
@@ -230,6 +235,8 @@ export function useNBAAnalyticsTracking() {
       team_name: teamName,
       season: season,
     });
+    
+    featureMetrics.trackTeamSelection(teamId, teamName, season);
   };
 
   const trackSeasonChange = (fromSeason: string, toSeason: string) => {
@@ -237,6 +244,8 @@ export function useNBAAnalyticsTracking() {
       from_season: fromSeason,
       to_season: toSeason,
     });
+    
+    featureMetrics.trackSeasonChange(fromSeason, toSeason);
   };
 
   const trackViewModeChange = (fromMode: string, toMode: string) => {
@@ -244,6 +253,8 @@ export function useNBAAnalyticsTracking() {
       from_mode: fromMode,
       to_mode: toMode,
     });
+    
+    featureMetrics.trackViewModeChange(fromMode, toMode);
   };
 
   const trackShotChartInteraction = (interactionType: string, shotData?: any) => {
@@ -251,6 +262,16 @@ export function useNBAAnalyticsTracking() {
       interaction_type: interactionType,
       shot_count: shotData?.length || 0,
     });
+    
+    // Enhanced tracking with entity context
+    if (shotData?.entityName && shotData?.season) {
+      featureMetrics.trackShotChartInteraction(
+        interactionType, 
+        shotData.entityName, 
+        shotData.season, 
+        shotData?.length || 0
+      );
+    }
   };
 
   const trackStatisticsView = (entityType: string, entityId: string, season: string) => {
@@ -259,6 +280,8 @@ export function useNBAAnalyticsTracking() {
       entity_id: entityId,
       season: season,
     });
+    
+    featureMetrics.trackStatisticsView(entityType, entityId, season);
   };
 
   const trackComparisonView = (season1: string, season2: string, entityType: string) => {
@@ -267,6 +290,8 @@ export function useNBAAnalyticsTracking() {
       season2: season2,
       entity_type: entityType,
     });
+    
+    featureMetrics.trackComparisonView(season1, season2, entityType);
   };
 
   return {

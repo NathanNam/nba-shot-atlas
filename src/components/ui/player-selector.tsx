@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking, useUserActionTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 interface PlayerSelectorProps {
   viewMode: "player" | "team" | "league";
@@ -30,6 +32,10 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
+  // Initialize tracking hooks
+  const { trackPlayerSelection, trackTeamSelection } = useNBAAnalyticsTracking();
+  const { trackAction } = useUserActionTracking();
+  
   // Always call hook but only use results in player mode
   console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers`);
   const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
@@ -47,13 +53,39 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const handleSelect = (entityName: string) => {
     if (selectedEntities.includes(entityName)) {
       onEntitiesChange(selectedEntities.filter(item => item !== entityName));
+      trackAction('entity_deselected', { 
+        entity_name: entityName, 
+        view_mode: viewMode,
+        season: selectedSeason 
+      });
     } else if (selectedEntities.length < maxSelections) {
       onEntitiesChange([...selectedEntities, entityName]);
+      
+      // Track selection based on view mode
+      if (viewMode === "player") {
+        const player = players.find(p => p.name === entityName);
+        trackPlayerSelection(player?.id || entityName, entityName, selectedSeason);
+      } else if (viewMode === "team") {
+        trackTeamSelection(entityName, entityName, selectedSeason);
+      }
+      
+      trackAction('entity_selected', { 
+        entity_name: entityName, 
+        view_mode: viewMode,
+        season: selectedSeason,
+        total_selected: selectedEntities.length + 1
+      });
     }
   };
 
   const handleRemove = (entityName: string) => {
     onEntitiesChange(selectedEntities.filter(item => item !== entityName));
+    trackAction('entity_removed', { 
+      entity_name: entityName, 
+      view_mode: viewMode,
+      season: selectedSeason,
+      total_remaining: selectedEntities.length - 1
+    });
   };
 
   const filteredEntities = (entities || []).filter(entity =>
@@ -75,15 +107,16 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-mobile-title">
-          Select {viewMode === "player" ? "Players" : "Teams"}
-        </h3>
-        <Badge variant="secondary" className="text-mobile-xs sm:text-xs">
-          {selectedEntities.length}/{maxSelections} selected
-        </Badge>
-      </div>
+    <PerformanceMonitor componentName={`PlayerSelector-${viewMode}`}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-mobile-title">
+            Select {viewMode === "player" ? "Players" : "Teams"}
+          </h3>
+          <Badge variant="secondary" className="text-mobile-xs sm:text-xs">
+            {selectedEntities.length}/{maxSelections} selected
+          </Badge>
+        </div>
 
       {/* Selected Entities */}
       {selectedEntities.length > 0 && (
@@ -174,6 +207,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
           Maximum of {maxSelections} {viewMode === "player" ? "players" : "teams"} can be compared at once.
         </div>
       )}
-    </div>
+      </div>
+    </PerformanceMonitor>
   );
 }

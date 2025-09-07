@@ -1,6 +1,9 @@
 import { ShotChart } from "@/components/ui/shot-chart";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { useEffect } from "react";
 
 interface EntityShotChartProps {
   entityName: string;
@@ -10,6 +13,9 @@ interface EntityShotChartProps {
 }
 
 export function EntityShotChart({ entityName, selectedSeason, viewMode, preloadedData }: EntityShotChartProps) {
+  // Initialize NBA analytics tracking
+  const { trackShotChartInteraction, trackStatisticsView } = useNBAAnalyticsTracking();
+  
   // Always call hook but only use results in player mode
   const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
   
@@ -55,6 +61,21 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
     ? { shotData: preloadedData, loading: false, error: null, progress: null }
     : hookResult;
     
+  // Track shot chart interaction when data is loaded
+  useEffect(() => {
+    if (shotData?.length > 0 && !loading && !error) {
+      trackShotChartInteraction('data_loaded', {
+        entity_name: cleanEntityName,
+        season: selectedSeason,
+        view_mode: viewMode,
+        shot_count: shotData.length,
+        data_source: preloadedData !== undefined ? 'preloaded' : 'api'
+      });
+      
+      trackStatisticsView(viewMode, entityId || cleanEntityName, selectedSeason);
+    }
+  }, [shotData?.length, loading, error, cleanEntityName, selectedSeason, viewMode, entityId]);
+
   // Debug logging
   console.log(`🔍 EntityShotChart [${cleanEntityName}]: Using ${preloadedData !== undefined ? 'preloaded' : 'hook'} data`, {
     preloadedLength: preloadedData?.length,
@@ -90,10 +111,12 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   });
   
   return (
-    <ShotChart
-      title={entityName}
-      data={isLoading ? undefined : shotData}
-      progress={isLoading ? progress : null}
-    />
+    <PerformanceMonitor componentName={`EntityShotChart-${viewMode}-${cleanEntityName}`}>
+      <ShotChart
+        title={entityName}
+        data={isLoading ? undefined : shotData}
+        progress={isLoading ? progress : null}
+      />
+    </PerformanceMonitor>
   );
 }

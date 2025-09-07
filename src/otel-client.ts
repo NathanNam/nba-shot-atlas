@@ -1,6 +1,7 @@
 import { Meter, metrics, trace, Tracer } from "@opentelemetry/api";
 import { logs, Logger, SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { DocumentLoadInstrumentation } from "@opentelemetry/instrumentation-document-load";
@@ -12,8 +13,13 @@ import {
   LoggerProvider,
 } from "@opentelemetry/sdk-logs";
 import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import {
   SimpleSpanProcessor,
   WebTracerProvider,
+  TraceIdRatioBasedSampler,
 } from "@opentelemetry/sdk-trace-web";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
@@ -77,10 +83,16 @@ const resource = resourceFromAttributes({
 // These will be initialized after fetching config
 let provider: WebTracerProvider;
 let loggerProvider: LoggerProvider;
+let meterProvider: MeterProvider;
 
 function createProviders() {
+  // Use production sampling: 10% for production, 100% for development
+  const isProduction = import.meta.env.PROD;
+  const samplingRate = isProduction ? 0.1 : 1.0;
+  
   provider = new WebTracerProvider({
     resource: resource,
+    sampler: new TraceIdRatioBasedSampler(samplingRate),
     spanProcessors: [
       new SimpleSpanProcessor(
         new OTLPTraceExporter({
@@ -109,6 +121,25 @@ function createProviders() {
           },
         })
       ),
+    ],
+  });
+
+  // Initialize Meter Provider with production sampling
+  meterProvider = new MeterProvider({
+    resource: resource,
+    readers: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+          url: `${otlpEndpoint}/v1/metrics`,
+          headers: {
+            ...authHeader,
+            "x-observe-target-package": "Metrics",
+            "Content-Type": "application/x-protobuf",
+          },
+        }),
+        exportIntervalMillis: 30000, // Export every 30 seconds for production
+        exportTimeoutMillis: 10000,  // 10 second timeout
+      }),
     ],
   });
 }
@@ -154,9 +185,10 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
     // Initialize tracer, logger, and meter after SDK is started
     tracer = trace.getTracer(serviceName);
     logger = loggerProvider.getLogger(serviceName);
-    meter = metrics.getMeter(serviceName);
+    meter = meterProvider.getMeter(serviceName);
 
     logs.setGlobalLoggerProvider(loggerProvider);
+    metrics.setGlobalMeterProvider(meterProvider);
 
     logger.emit({
       severityNumber: SeverityNumber.INFO,
