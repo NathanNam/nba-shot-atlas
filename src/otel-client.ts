@@ -148,7 +148,6 @@ function createProviders() {
           headers: {
             ...authHeader,
             "x-observe-target-package": "Logs",
-            "Content-Type": "application/x-protobuf",
           },
         })
       ),
@@ -156,14 +155,13 @@ function createProviders() {
   });
 
   // Initialize Metrics Provider with OTLP exporter
+  // Browser OTLP exporters use JSON format, not protobuf
   const otlpMetricExporter = new OTLPMetricExporter({
     url: `${otlpEndpoint}/v1/metrics`,
     headers: {
       ...authHeader,
       "x-observe-target-package": "Metrics",
-      "Content-Type": "application/x-protobuf",
     },
-    // Use HTTP transport and ensure protobuf serialization
     timeoutMillis: 10000,
   });
 
