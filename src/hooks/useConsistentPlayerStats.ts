@@ -64,24 +64,24 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
           throw new Error(`Invalid player ID: ${playerId}`);
         }
 
-        // Instead of complex batching, use a single query with a high limit
-        // This matches exactly what the direct SQL query does
+        // Use direct SQL to replicate the exact query that worked
+        // Only select the columns we need to reduce data transfer and avoid timeout
         const { data: shotData, error: dbError } = await (supabase as any)
           .from(`shots_${season}`)
-          .select('*')
-          .eq('personId', numericPlayerId)
-          .limit(50000); // High limit to ensure we get all shots
+          .select('shotResult, shotValue, shotDistance, xLegacy, yLegacy')
+          .eq('personId', numericPlayerId);
 
         if (dbError) {
           throw new Error(`Database error: ${dbError.message}`);
         }
 
         const allShots = shotData || [];
-
-        console.log(
-          `🎯 CONSISTENT HOOK: Single query returned ${allShots.length} shots for consistency check`
-        );
-
+        console.log(`🎯 CONSISTENT HOOK: Query returned ${allShots.length} shots for Stephen Curry`);
+        
+        // Verify we got the expected count
+        if (allShots.length !== 1258) {
+          console.error(`🚨 Expected 1258 shots, got ${allShots.length}`);
+        
         // Calculate stats directly from raw data
         const calculatedStats = calculateStatsFromRawData(allShots);
         setStats(calculatedStats);
