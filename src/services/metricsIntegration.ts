@@ -176,15 +176,15 @@ export class MetricsIntegration {
         const response = await originalFetch(...args);
         const duration = performance.now() - start;
         const [input, init] = args;
-        const url = typeof input === 'string' ? input : input.url;
-        const method = init?.method || (typeof input === 'string' ? 'GET' : input.method);
+        const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+        const method = init?.method || (typeof input === 'string' ? 'GET' : (input instanceof URL ? 'GET' : input.method));
         NBAAnalyticsMetrics.trackApiRequest(url, method, response.status, duration);
         return response;
       } catch (error) {
         const duration = performance.now() - start;
         const [input, init] = args;
-        const url = typeof input === 'string' ? input : input.url;
-        const method = init?.method || (typeof input === 'string' ? 'GET' : input.method);
+        const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+        const method = init?.method || (typeof input === 'string' ? 'GET' : (input instanceof URL ? 'GET' : input.method));
         NBAAnalyticsMetrics.trackApiRequest(url, method, 0, duration);
         throw error;
       }

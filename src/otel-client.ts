@@ -118,6 +118,7 @@ function createProviders() {
   provider = new WebTracerProvider({
     resource: resource,
     sampler: getSampler(),
+    forceFlushTimeoutMillis: 5000,
     spanProcessors: [
       new BatchSpanProcessor(
         new OTLPTraceExporter({
@@ -125,8 +126,8 @@ function createProviders() {
           headers: {
             ...authHeader,
             "x-observe-target-package": "Tracing",
-            "Content-Type": "application/x-protobuf",
           },
+          timeoutMillis: 10000,
         }),
         {
           maxQueueSize: 100,
