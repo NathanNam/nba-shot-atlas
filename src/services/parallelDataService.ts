@@ -175,7 +175,8 @@ export class ParallelDataService {
         .from(tableName)
         .select('*')
         .eq('personId', numericEntityId)
-        .range(0, total - 1);
+        .range(0, total - 1)
+        .limit(total); // Explicitly set limit to total count
       if (single && single.length === total) {
         const shots: ShotData[] = single.map((row: any) => ({
           personId: String(row.personId || ''),

@@ -61,11 +61,12 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
           throw new Error(`Invalid player ID: ${playerId}`);
         }
 
-        // Direct database query with no caching
+        // Direct database query with no caching and no limits
         const { data: shots, error: dbError } = await (supabase as any)
           .from(`shots_${season}`)
           .select('*')
-          .eq('personId', numericPlayerId);
+          .eq('personId', numericPlayerId)
+          .limit(50000); // Set a very high limit to ensure we get all data
 
         if (dbError) {
           throw new Error(`Database error: ${dbError.message}`);
