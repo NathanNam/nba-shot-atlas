@@ -39,6 +39,7 @@ export class NBAAnalyticsMetrics {
     }
     
     console.log('🎯 Initializing NBA metrics instruments...');
+    // Use the global metrics API to get the meter, same as the working approach
     this.meter = metrics.getMeter('hoops-analytics-viz');
     
     // User engagement metrics
