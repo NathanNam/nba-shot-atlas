@@ -33,14 +33,19 @@ export class NBAAnalyticsMetrics {
    * Initialize metrics after OTEL is ready
    */
   private static initializeMetrics() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      console.log('🎯 NBA metrics already initialized');
+      return;
+    }
     
+    console.log('🎯 Initializing NBA metrics instruments...');
     this.meter = metrics.getMeter('hoops-analytics-viz');
     
     // User engagement metrics
     this.userSessionCounter = this.meter.createCounter('nba_user_sessions_total', {
       description: 'Total number of NBA analytics user sessions',
     });
+    console.log('✅ Created userSessionCounter');
 
     this.userEngagementDuration = this.meter.createHistogram('nba_user_engagement_duration_ms', {
       description: 'Duration of user engagement with NBA content',
@@ -55,6 +60,7 @@ export class NBAAnalyticsMetrics {
     this.featureUsageCounter = this.meter.createCounter('nba_feature_usage_total', {
       description: 'Usage count of NBA analytics features',
     });
+    console.log('✅ Created featureUsageCounter');
 
     this.comparisonCounter = this.meter.createCounter('nba_comparisons_total', {
       description: 'Total number of NBA entity comparisons',
@@ -111,7 +117,7 @@ export class NBAAnalyticsMetrics {
     });
 
     this.initialized = true;
-    console.log('🎯 NBA Analytics Metrics instruments initialized');
+    console.log('🎯 NBA Analytics Metrics instruments initialized successfully');
   }
 
   /**
@@ -233,7 +239,9 @@ export class NBAAnalyticsMetrics {
     featureContext: Record<string, any> = {},
     success: boolean = true
   ) {
+    console.log('🎯 trackFeatureUsage called:', featureName);
     this.initializeMetrics();
+    console.log('🎯 About to emit feature usage metric');
     const span = tracer.startSpan('nba_analytics.feature_usage', {
       attributes: {
         'nba.feature_name': featureName,
@@ -243,10 +251,12 @@ export class NBAAnalyticsMetrics {
     });
 
     try {
+      console.log('🎯 Calling featureUsageCounter.add()');
       this.featureUsageCounter.add(1, {
         feature_name: featureName,
         success: success ? 'true' : 'false',
       });
+      console.log('🎯 Feature usage metric emitted successfully');
 
       logger.emit({
         severityNumber: success ? SeverityNumber.INFO : SeverityNumber.WARN,
