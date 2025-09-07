@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { PerformanceMonitor } from "./PerformanceMonitor";
+import { useComponentPerformance } from "@/hooks/useComponentPerformance";
+import { useErrorTracking } from "@/hooks/useErrorTracking";
+import { useAPITracking } from "@/hooks/useAPITracking";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +19,31 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  // Initialize performance and error tracking
+  const componentPerf = useComponentPerformance({
+    componentName: 'ComparisonStatistics',
+    metadata: {
+      entity_name: entityName,
+      entity_name_2: entityName2 || 'none',
+      season_1: season1,
+      season_2: season2,
+      view_mode: viewMode,
+      comparison_type: entityName2 ? 'player_vs_player' : 'season_comparison',
+    }
+  });
+
+  const errorTracker = useErrorTracking({
+    source: 'ComparisonStatistics',
+    defaultContext: {
+      entity_name: entityName,
+      entity_name_2: entityName2,
+      season_1: season1,
+      season_2: season2,
+      view_mode: viewMode,
+    }
+  });
+
+  const trackApiCall = useAPITracking();
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -80,6 +109,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
 
   // Helper function to analyze shooting zones (same as EntityStatistics)
   const analyzeZones = (shotData: any[]) => {
+    return componentPerf.trackOperation('analyze_shooting_zones', () => {
     const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
     
     if (shotData.length === 0) {
@@ -189,6 +219,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
       favoriteSpot: favoriteSpot,
       favoriteSpotStats: favoriteSpotStats
     };
+    });
   };
   
   if (multiSeasonData.season1.loading || multiSeasonData.season2?.loading) {
@@ -215,6 +246,9 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   }
 
   if (multiSeasonData.season1.error || multiSeasonData.season2?.error) {
+    const error = multiSeasonData.season1.error || multiSeasonData.season2?.error;
+    errorTracker.trackError(new Error(`Comparison data loading failed: ${error}`), 'high');
+    
     return (
       <Card>
         <CardHeader>
@@ -232,6 +266,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   
   // Calculate statistics for both seasons
   const calculateStats = (data: any[]) => {
+    return componentPerf.trackOperation('calculate_statistics', () => {
     const totalShots = data.length;
     
     // More robust shot result checking
@@ -273,6 +308,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
       favoriteSpot: zoneAnalysis.favoriteSpot,
       favoriteSpotStats: zoneAnalysis.favoriteSpotStats
     };
+    });
   };
 
   const stats1 = calculateStats(data1);
@@ -322,54 +358,56 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   };
 
   return (
-    <div className="space-y-6">
-      {/* Comparison Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {comparisonTitle}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">FG%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
-                {getTrendIcon(fgDiff)}
-                <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
+    <PerformanceMonitor componentName="ComparisonStatistics">
+      <div className="space-y-6">
+        {/* Comparison Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {comparisonTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">FG%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(fgDiff)}`}>
+                  {getTrendIcon(fgDiff)}
+                  <span>{fgDiff >= 0 ? '+' : ''}{(fgDiff * 100).toFixed(1)}%</span>
+                </div>
+                {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
               </div>
-              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">2PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
-                {getTrendIcon(twoPtDiff)}
-                <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">2PT%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(twoPtDiff)}`}>
+                  {getTrendIcon(twoPtDiff)}
+                  <span>{twoPtDiff >= 0 ? '+' : ''}{(twoPtDiff * 100).toFixed(1)}%</span>
+                </div>
+                {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
               </div>
-              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">3PT%</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
-                {getTrendIcon(threePtDiff)}
-                <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">3PT%</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(threePtDiff)}`}>
+                  {getTrendIcon(threePtDiff)}
+                  <span>{threePtDiff >= 0 ? '+' : ''}{(threePtDiff * 100).toFixed(1)}%</span>
+                </div>
+                {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
               </div>
-              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
-            </div>
-            
-            <div className="text-center space-y-1">
-              <div className="text-sm text-muted-foreground">Total Shots</div>
-              <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
-                {getTrendIcon(shotsDiff)}
-                <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
+              
+              <div className="text-center space-y-1">
+                <div className="text-sm text-muted-foreground">Total Shots</div>
+                <div className={`flex items-center justify-center gap-1 font-semibold ${getTrendColor(shotsDiff)}`}>
+                  {getTrendIcon(shotsDiff)}
+                  <span>{shotsDiff >= 0 ? '+' : ''}{shotsDiff}</span>
+                </div>
+                {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
               </div>
-              {isPlayerVsPlayer && <div className="text-xs text-muted-foreground">{entityName2} vs {entityName}</div>}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PerformanceMonitor>
   );
 }
