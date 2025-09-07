@@ -1,10 +1,14 @@
 import { useMultiSeasonData } from "@/hooks/useMultiSeasonData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking } from "@/hooks";
+import { useComponentPerformance } from "@/hooks";
+import { useErrorTracking } from "@/hooks";
 import { StatisticsPanel } from "@/components/ui/statistics-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface ComparisonStatisticsProps {
   entityName: string;
@@ -15,6 +19,19 @@ interface ComparisonStatisticsProps {
 }
 
 export function ComparisonStatistics({ entityName, entityName2, season1, season2, viewMode }: ComparisonStatisticsProps) {
+  // OpenTelemetry instrumentation hooks
+  const { trackComparisonView, trackStatisticsView, trackViewModeChange } = useNBAAnalyticsTracking();
+  const { metrics, recordCustomMetric, startOperation } = useComponentPerformance('ComparisonStatistics', {
+    slowRenderThreshold: 100,
+    memoryLeakThreshold: 25,
+    trackMemory: true,
+  });
+  const { trackError } = useErrorTracking();
+  
+  // Performance tracking refs
+  const dataLoadStart = useRef<number>(Date.now());
+  const calculationStart = useRef<number>(Date.now());
+  
   // Always call hooks but only use results in player mode
   const { players: rawPlayers1, loading: rawLoading1 } = useAvailablePlayers();
   const { players: rawPlayers2, loading: rawLoading2 } = useAvailablePlayers();
@@ -53,6 +70,19 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   
   // Always call useMultiSeasonData hook - never conditionally call hooks
   const multiSeasonData = useMultiSeasonData(actualSeason1, actualSeason2, entityId1 || '', entityId2 || '', viewMode);
+
+  // Track comparison view when data changes
+  useEffect(() => {
+    if (entityName && (entityName2 || season2 !== season1) && !loading1 && !loading2) {
+      const dataLoadTime = Date.now() - dataLoadStart.current;
+      recordCustomMetric('data_load_time', dataLoadTime, {
+        view_mode: viewMode,
+        has_second_entity: entityName2 ? 'true' : 'false',
+      });
+      
+      trackComparisonView(season1, season2, viewMode, entityName, entityName2);
+    }
+  }, [entityName, entityName2, season1, season2, viewMode, loading1, loading2, trackComparisonView, recordCustomMetric]);
 
   // Handle loading states after hooks are called
   if (viewMode === 'player' && (!entityId1 || !entityId2 || loading1 || loading2)) {
@@ -215,6 +245,24 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   }
 
   if (multiSeasonData.season1.error || multiSeasonData.season2?.error) {
+    const errorMessage = multiSeasonData.season1.error?.message || multiSeasonData.season2?.error?.message || 'Unknown error';
+    
+    // Track the error
+    trackError({
+      message: `Comparison data loading failed: ${errorMessage}`,
+      name: 'ComparisonDataError',
+      severity: 'medium',
+    }, {
+      componentName: 'ComparisonStatistics',
+      additionalContext: {
+        entity_name: entityName,
+        entity_name2: entityName2,
+        season1,
+        season2,
+        view_mode: viewMode,
+      },
+    });
+    
     return (
       <Card>
         <CardHeader>
@@ -232,6 +280,7 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
   
   // Calculate statistics for both seasons
   const calculateStats = (data: any[]) => {
+    calculationStart.current = Date.now();
     const totalShots = data.length;
     
     // More robust shot result checking
@@ -255,6 +304,12 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
 
     // Analyze zones using the same logic as EntityStatistics
     const zoneAnalysis = analyzeZones(data);
+
+    const calculationTime = Date.now() - calculationStart.current;
+    recordCustomMetric('stats_calculation_time', calculationTime, {
+      data_size: totalShots.toString(),
+      calculation_complexity: totalShots > 1000 ? 'high' : totalShots > 500 ? 'medium' : 'low',
+    });
 
     return {
       fieldGoalPercentage: totalShots > 0 ? (madeShots / totalShots) : 0,
@@ -320,6 +375,16 @@ export function ComparisonStatistics({ entityName, entityName2, season1, season2
     if (Math.abs(diff) < 0.001) return "text-muted-foreground";
     return diff > 0 ? "text-green-500" : "text-red-500";
   };
+
+  // Track rendering performance
+  useEffect(() => {
+    if (metrics.isSlowRender) {
+      recordCustomMetric('slow_render_detected', 1, {
+        render_time: metrics.renderTime.toString(),
+        data_size: (data1.length + data2.length).toString(),
+      });
+    }
+  }, [metrics.isSlowRender, metrics.renderTime, data1.length, data2.length, recordCustomMetric]);
 
   return (
     <div className="space-y-6">

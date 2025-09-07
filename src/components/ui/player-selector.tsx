@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking, useComponentPerformance, useUserActionTracking } from "@/hooks";
 
 interface PlayerSelectorProps {
   viewMode: "player" | "team" | "league";
@@ -30,6 +31,11 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   
+  // OpenTelemetry tracking hooks
+  const { trackPlayerSelection, trackTeamSelection, trackViewModeChange } = useNBAAnalyticsTracking();
+  const { metrics, recordCustomMetric } = useComponentPerformance('PlayerSelector');
+  const { trackAction, trackFeatureUsage } = useUserActionTracking();
+  
   // Always call hook but only use results in player mode
   console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers`);
   const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
@@ -45,21 +51,101 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   const isLeagueView = viewMode === "league";
 
   const handleSelect = (entityName: string) => {
+    const startTime = Date.now();
+    
     if (selectedEntities.includes(entityName)) {
       onEntitiesChange(selectedEntities.filter(item => item !== entityName));
+      trackAction('entity_deselected', {
+        entity_name: entityName,
+        entity_type: viewMode,
+        season: selectedSeason,
+        selection_count: selectedEntities.length - 1,
+      });
     } else if (selectedEntities.length < maxSelections) {
       onEntitiesChange([...selectedEntities, entityName]);
+      
+      // Track specific entity selection
+      if (viewMode === 'player') {
+        trackPlayerSelection(entityName, entityName, selectedSeason);
+      } else if (viewMode === 'team') {
+        trackTeamSelection(entityName, entityName, selectedSeason);
+      }
+      
+      trackAction('entity_selected', {
+        entity_name: entityName,
+        entity_type: viewMode,
+        season: selectedSeason,
+        selection_count: selectedEntities.length + 1,
+        selection_time_ms: Date.now() - startTime,
+      });
+    } else {
+      trackAction('max_selections_reached', {
+        entity_type: viewMode,
+        max_selections: maxSelections,
+        attempted_entity: entityName,
+      });
     }
+    
+    recordCustomMetric('selection_interaction_time', Date.now() - startTime, {
+      action: 'select',
+      entity_type: viewMode,
+    });
+    
+    setOpen(false);
   };
 
   const handleRemove = (entityName: string) => {
+    const startTime = Date.now();
     onEntitiesChange(selectedEntities.filter(item => item !== entityName));
+    
+    trackAction('entity_removed', {
+      entity_name: entityName,
+      entity_type: viewMode,
+      season: selectedSeason,
+      remaining_count: selectedEntities.length - 1,
+    });
+    
+    recordCustomMetric('selection_interaction_time', Date.now() - startTime, {
+      action: 'remove',
+      entity_type: viewMode,
+    });
   };
 
   const filteredEntities = (entities || []).filter(entity =>
     entity.toLowerCase().includes(searchValue.toLowerCase())
   );
   console.log(`🔍 PlayerSelector: filteredEntities length=${filteredEntities.length}`);
+
+  // Track search functionality
+  useEffect(() => {
+    if (searchValue.length > 0) {
+      const searchTime = 500; // Debounce time simulation
+      recordCustomMetric('search_performed', searchTime, {
+        query_length: searchValue.length.toString(),
+        results_count: filteredEntities.length.toString(),
+        entity_type: viewMode,
+      });
+      
+      trackFeatureUsage('entity_search', {
+        query: searchValue.substring(0, 10), // Limit PII
+        results_count: filteredEntities.length,
+        entity_type: viewMode,
+      });
+    }
+  }, [searchValue, filteredEntities.length, viewMode, recordCustomMetric, trackFeatureUsage]);
+
+  // Track popover interactions
+  const handlePopoverOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    
+    if (isOpen) {
+      trackFeatureUsage('entity_selector_opened', {
+        entity_type: viewMode,
+        current_selections: selectedEntities.length,
+        available_entities: entities.length,
+      });
+    }
+  };
 
   if (isLeagueView) {
     return (
@@ -109,7 +195,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
       )}
 
       {/* Entity Selector */}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handlePopoverOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger, meter } from '../otel-client';
+import { useCoreWebVitals } from '../hooks/useCoreWebVitals';
 
 // Safe logger function that checks if logger is initialized
 const safeLog = (logData: any) => {
@@ -89,6 +90,9 @@ interface PerformanceMonitorProps {
 export function PerformanceMonitor({ componentName = 'unknown', children }: PerformanceMonitorProps) {
   const renderStartTime = useRef<number>(Date.now());
   const mountTime = useRef<number>(Date.now());
+  
+  // Integrate Core Web Vitals monitoring
+  const { metrics: webVitalsMetrics, getOverallScore } = useCoreWebVitals();
 
   useEffect(() => {
     const span = tracer.startSpan('performance_monitor.component_lifecycle', {
@@ -131,11 +135,17 @@ export function PerformanceMonitor({ componentName = 'unknown', children }: Perf
         attributes: {
           component_name: componentName,
           mount_duration_ms: mountDuration,
+          web_vitals_score: getOverallScore(),
+          web_vitals_metrics: webVitalsMetrics,
         },
       });
 
       span.setAttributes({
         'component.mount_duration_ms': mountDuration,
+        'webvitals.overall_score': getOverallScore(),
+        'webvitals.cls': webVitalsMetrics.cls || 0,
+        'webvitals.fid': webVitalsMetrics.fid || 0,
+        'webvitals.lcp': webVitalsMetrics.lcp || 0,
       });
 
       // Cleanup function for unmount
@@ -374,17 +384,59 @@ export function setupGlobalPerformanceMonitoring() {
         }, { passive: true });
       });
 
-      // Monitor memory usage periodically
+      // Enhanced memory monitoring with leak detection
       if ('memory' in performance) {
+        let previousMemoryReadings: number[] = [];
+        let memoryTrendCounter = 0;
+        
         const monitorMemory = () => {
           const memory = (performance as any).memory;
           if (memory) {
             const usedMB = memory.usedJSHeapSize / 1024 / 1024;
             const totalMB = memory.totalJSHeapSize / 1024 / 1024;
             
+            // Track memory readings for leak detection
+            previousMemoryReadings.push(usedMB);
+            if (previousMemoryReadings.length > 10) {
+              previousMemoryReadings.shift(); // Keep only last 10 readings
+            }
+
             if (memoryUsageGauge?.add) {
               memoryUsageGauge.add(usedMB, { memory_type: 'used' });
               memoryUsageGauge.add(totalMB, { memory_type: 'total' });
+            }
+
+            // Enhanced memory leak detection
+            if (previousMemoryReadings.length >= 5) {
+              const averageGrowth = previousMemoryReadings.reduce((acc, curr, index) => {
+                if (index === 0) return 0;
+                return acc + (curr - previousMemoryReadings[index - 1]);
+              }, 0) / (previousMemoryReadings.length - 1);
+
+              // Detect consistent memory growth (potential leak)
+              if (averageGrowth > 2 && usedMB > 50) { // Growing by 2MB+ per interval
+                memoryTrendCounter++;
+                
+                if (memoryTrendCounter >= 3) { // Consistent trend over 3 intervals
+                  safeLog({
+                    severityNumber: SeverityNumber.ERROR,
+                    severityText: 'ERROR',
+                    body: 'Potential memory leak detected',
+                    attributes: {
+                      used_memory_mb: usedMB,
+                      total_memory_mb: totalMB,
+                      average_growth_mb: averageGrowth,
+                      memory_readings: previousMemoryReadings,
+                      trend_counter: memoryTrendCounter,
+                      memory_usage_percentage: (usedMB / totalMB) * 100,
+                    },
+                  });
+                  
+                  memoryTrendCounter = 0; // Reset to avoid spam
+                }
+              } else {
+                memoryTrendCounter = Math.max(0, memoryTrendCounter - 1);
+              }
             }
 
             // Log high memory usage
@@ -397,14 +449,15 @@ export function setupGlobalPerformanceMonitoring() {
                   used_memory_mb: usedMB,
                   total_memory_mb: totalMB,
                   memory_usage_percentage: (usedMB / totalMB) * 100,
+                  memory_trend: averageGrowth > 0 ? 'growing' : 'stable',
                 },
               });
             }
           }
         };
 
-        // Monitor memory every 30 seconds
-        setInterval(monitorMemory, 30000);
+        // Monitor memory every 15 seconds for better leak detection
+        setInterval(monitorMemory, 15000);
         monitorMemory(); // Initial measurement
       }
 

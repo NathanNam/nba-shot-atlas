@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ShotData } from "@/services/supabaseDataService";
+import { useNBAAnalyticsTracking, useComponentPerformance, useUserActionTracking } from "@/hooks";
 
 interface ShotChartProps {
   title: string;
@@ -17,6 +18,14 @@ type ViewMode = "shots" | "heatmap";
 export function ShotChart({ title, data, width = 500, height = 470, progress }: ShotChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("shots");
+  
+  // OpenTelemetry tracking hooks
+  const { trackShotChartInteraction } = useNBAAnalyticsTracking();
+  const { metrics, recordCustomMetric, startOperation } = useComponentPerformance('ShotChart', {
+    slowRenderThreshold: 200, // Shot charts can be complex
+    memoryLeakThreshold: 30,
+  });
+  const { trackFeatureUsage } = useUserActionTracking();
 
   console.log(`🔍 ShotChart DEBUG - ${title}:`, {
     dataLength: data?.length || 0,
@@ -26,6 +35,10 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
 
   useEffect(() => {
     if (!svgRef.current) return;
+
+    // Start performance monitoring for chart rendering
+    const renderOperation = startOperation('shot_chart_render');
+    const renderStartTime = Date.now();
 
     const svg = svgRef.current;
     svg.innerHTML = ''; // Clear previous content
@@ -169,6 +182,8 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
 
     // Render shot data based on view mode
     if (data && data.length > 0) {
+      const dataRenderStart = Date.now();
+      
       if (viewMode === "shots") {
         // Individual shots view - render all shots
         const fragment = document.createDocumentFragment();
@@ -195,20 +210,61 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           shotCircle.setAttribute("data-distance", shot.shotDistance?.toString() || '0');
           shotCircle.setAttribute("data-description", shot.description || '');
 
+          // Add click tracking for individual shots
+          shotCircle.addEventListener('click', () => {
+            trackShotChartInteraction('click', {
+              entityName: shot.personId?.toString() || 'unknown',
+              entityType: 'player',
+              season: 'current', // Could be passed as prop
+              shotCount: 1,
+              filterApplied: 'none',
+            });
+          });
+
           fragment.appendChild(shotCircle);
         });
 
         svg.appendChild(fragment);
+        
+        recordCustomMetric('individual_shots_rendered', Date.now() - dataRenderStart, {
+          shot_count: data.length.toString(),
+        });
       } else {
         // Heat map view
-        renderHeatMap(data, svg, centerX, hoopCenterY, scale);
+        renderHeatMap(data, svg, centerX, hoopCenterY, scale, trackShotChartInteraction, recordCustomMetric);
+        
+        recordCustomMetric('heatmap_rendered', Date.now() - dataRenderStart, {
+          shot_count: data.length.toString(),
+        });
       }
     }
+
+    // Complete performance monitoring
+    const totalRenderTime = Date.now() - renderStartTime;
+    recordCustomMetric('chart_render_time', totalRenderTime, {
+      view_mode: viewMode,
+      data_size: data?.length.toString() || '0',
+      has_data: data && data.length > 0 ? 'true' : 'false',
+    });
+
+    renderOperation.end(true, {
+      render_time_ms: totalRenderTime,
+      data_points: data?.length || 0,
+      view_mode: viewMode,
+    });
 
   }, [data, viewMode]);
 
   // Heat map rendering function
-  const renderHeatMap = (shots: ShotData[], svg: SVGSVGElement, centerX: number, hoopCenterY: number, scale: number) => {
+  const renderHeatMap = (
+    shots: ShotData[], 
+    svg: SVGSVGElement, 
+    centerX: number, 
+    hoopCenterY: number, 
+    scale: number,
+    trackInteraction?: (type: 'hover' | 'click' | 'filter' | 'zoom' | 'export', context: any) => void,
+    recordMetric?: (name: string, value: number, attributes?: Record<string, string>) => void
+  ) => {
     const hexSize = 12; // Size of hexagons
     const hexGrid = new Map<string, { made: number; total: number; x: number; y: number }>();
     
@@ -290,9 +346,33 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
           total: bin.total,
           efficiency: (efficiency * 100).toFixed(1)
         });
+        
+        // Track hover interaction
+        if (trackInteraction) {
+          trackInteraction('hover', {
+            entityName: 'unknown', // Could be passed as parameter
+            entityType: 'player',
+            season: 'current',
+            shotCount: bin.total,
+            filterApplied: 'heatmap',
+          });
+        }
       });
       
       hexPath.addEventListener("mouseleave", hideTooltip);
+
+      // Add click tracking for heatmap hexagons
+      hexPath.addEventListener("click", () => {
+        if (trackInteraction) {
+          trackInteraction('click', {
+            entityName: 'unknown',
+            entityType: 'player',
+            season: 'current',
+            shotCount: bin.total,
+            filterApplied: 'heatmap',
+          });
+        }
+      });
 
       fragment.appendChild(hexPath);
     });
@@ -382,7 +462,26 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
             <Switch
               id="view-mode"
               checked={viewMode === "heatmap"}
-              onCheckedChange={(checked) => setViewMode(checked ? "heatmap" : "shots")}
+              onCheckedChange={(checked) => {
+                const newMode = checked ? "heatmap" : "shots";
+                const previousMode = viewMode;
+                setViewMode(newMode);
+                
+                // Track view mode change
+                trackFeatureUsage('shot_chart_view_mode_change', {
+                  from_mode: previousMode,
+                  to_mode: newMode,
+                  data_size: data?.length || 0,
+                });
+                
+                trackShotChartInteraction('filter', {
+                  entityName: 'unknown', // Could be passed as prop
+                  entityType: 'player',
+                  season: 'current',
+                  shotCount: data?.length || 0,
+                  filterApplied: newMode,
+                });
+              }}
               className="data-[state=checked]:bg-primary"
             />
           </div>

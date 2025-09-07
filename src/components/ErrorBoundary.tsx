@@ -37,6 +37,23 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Get enhanced session context
+    const sessionId = sessionStorage.getItem('nba_session_id') || 'unknown';
+    const sessionStart = sessionStorage.getItem('nba_session_start');
+    const sessionDuration = sessionStart ? Date.now() - parseInt(sessionStart) : 0;
+    
+    // Get performance context
+    const performanceMemory = (performance as any).memory;
+    const memoryInfo = performanceMemory ? {
+      usedJSHeapSize: Math.round(performanceMemory.usedJSHeapSize / 1024 / 1024),
+      totalJSHeapSize: Math.round(performanceMemory.totalJSHeapSize / 1024 / 1024),
+      jsHeapSizeLimit: Math.round(performanceMemory.jsHeapSizeLimit / 1024 / 1024),
+    } : {};
+
+    // Get React DevTools info if available
+    const reactVersion = (React as any).__version__ || 'unknown';
+    const reactMode = process.env.NODE_ENV || 'unknown';
+
     const span = tracer.startSpan('error_boundary.component_error', {
       attributes: {
         'error.type': 'react_component_error',
@@ -44,29 +61,63 @@ class ErrorBoundary extends Component<Props, State> {
         'error.message': error.message,
         'error.stack': error.stack || 'No stack trace available',
         'error.component_stack': errorInfo.componentStack,
+        'session.id': sessionId,
+        'session.duration_ms': sessionDuration,
+        'react.version': reactVersion,
+        'react.mode': reactMode,
+        'performance.memory_used_mb': memoryInfo.usedJSHeapSize || 0,
       },
     });
 
     try {
-      // Record error metrics
+      // Record error metrics with enhanced context
       errorCounter.add(1, {
         error_name: error.name,
         error_type: 'component_error',
+        session_duration_tier: sessionDuration < 30000 ? 'short' : sessionDuration < 300000 ? 'medium' : 'long',
+        memory_usage_tier: (memoryInfo.usedJSHeapSize || 0) > 100 ? 'high' : (memoryInfo.usedJSHeapSize || 0) > 50 ? 'medium' : 'low',
       });
 
-      // Log detailed error information
+      // Log detailed error information with enhanced context
       logger.emit({
         severityNumber: SeverityNumber.ERROR,
         severityText: 'ERROR',
         body: 'React component error caught by error boundary',
         attributes: {
+          // Error details
           error_name: error.name,
           error_message: error.message,
           error_stack: error.stack,
           component_stack: errorInfo.componentStack,
+          
+          // Session context
+          session_id: sessionId,
+          session_duration_ms: sessionDuration,
+          
+          // Environment context
           user_agent: navigator.userAgent,
           url: window.location.href,
           timestamp: new Date().toISOString(),
+          react_version: reactVersion,
+          react_mode: reactMode,
+          
+          // Performance context
+          memory_info: memoryInfo,
+          
+          // Browser context
+          viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+          screen_size: `${screen.width}x${screen.height}`,
+          connection_type: (navigator as any).connection?.effectiveType || 'unknown',
+          online_status: navigator.onLine,
+          
+          // NBA app specific context
+          current_route: window.location.pathname,
+          current_search: window.location.search,
+          referrer: document.referrer,
+          
+          // Local storage context (safe extraction)
+          has_cached_data: Boolean(localStorage.getItem('preloaded_data')),
+          theme: localStorage.getItem('theme') || 'unknown',
         },
       });
 
