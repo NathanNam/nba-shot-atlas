@@ -30,28 +30,48 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('📊 Edge function started');
     const { playerId, season } = await req.json();
     
-    console.log(`📊 Calculating stats for player ${playerId} in season ${season}`);
+    console.log(`📊 Processing request for player ${playerId} in season ${season}`);
+
+    if (!playerId || !season) {
+      return new Response(
+        JSON.stringify({ error: 'Missing playerId or season' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Calculate basic shooting stats
-    const { data: basicStats, error: basicError } = await supabase
-      .from(`shots_${season}`)
-      .select('shotResult, shotValue')
-      .eq('personId', parseInt(playerId));
+    console.log('📊 Supabase client created, fetching data...');
 
-    if (basicError) {
-      console.error('Error fetching basic stats:', basicError);
-      throw basicError;
+    // Use a single optimized query for all stats calculation
+    const { data: shots, error: dbError } = await supabase
+      .from(`shots_${season}`)
+      .select('shotResult, shotValue, shotDistance, xLegacy, yLegacy')
+      .eq('personId', parseInt(playerId))
+      .limit(5000); // Reasonable limit to prevent timeouts
+
+    if (dbError) {
+      console.error('📊 Database error:', dbError);
+      return new Response(
+        JSON.stringify({ error: `Database error: ${dbError.message}` }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    if (!basicStats || basicStats.length === 0) {
-      console.log(`No shots found for player ${playerId} in season ${season}`);
+    if (!shots || shots.length === 0) {
+      console.log(`📊 No shots found for player ${playerId} in season ${season}`);
       return new Response(
         JSON.stringify({ 
           error: `No shots found for player ${playerId} in season ${season}` 
@@ -63,15 +83,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate shooting statistics
-    const totalShots = basicStats.length;
+    console.log(`📊 Found ${shots.length} shots, calculating stats...`);
+
+    // Calculate all stats in one pass
+    const totalShots = shots.length;
     let madeShots = 0;
     let twoPointMade = 0;
     let twoPointAttempted = 0;
     let threePointMade = 0;
     let threePointAttempted = 0;
 
-    basicStats.forEach(shot => {
+    // Zone tracking
+    const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
+
+    shots.forEach(shot => {
       const made = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1';
       if (made) madeShots++;
 
@@ -83,32 +108,9 @@ Deno.serve(async (req) => {
         twoPointAttempted++;
         if (made) twoPointMade++;
       }
-    });
 
-    const fieldGoalPercentage = totalShots > 0 ? madeShots / totalShots : 0;
-    const twoPointPercentage = twoPointAttempted > 0 ? twoPointMade / twoPointAttempted : 0;
-    const threePointPercentage = threePointAttempted > 0 ? threePointMade / threePointAttempted : 0;
-
-    console.log(`📊 Basic stats calculated: ${madeShots}/${totalShots} FG, ${threePointMade}/${threePointAttempted} 3PT`);
-
-    // Calculate zone statistics
-    const { data: zoneData, error: zoneError } = await supabase
-      .from(`shots_${season}`)
-      .select('shotResult, shotValue, shotDistance, xLegacy, yLegacy')
-      .eq('personId', parseInt(playerId));
-
-    if (zoneError) {
-      console.error('Error fetching zone data:', zoneError);
-      throw zoneError;
-    }
-
-    // Zone analysis
-    const zoneStats = new Map<string, { made: number; total: number; percentage: number }>();
-
-    zoneData?.forEach(shot => {
-      const made = shot.shotResult === 'Made' || shot.shotResult === 'MADE' || shot.shotResult === '1';
+      // Zone analysis
       const zone = determineZone(shot);
-      
       if (!zoneStats.has(zone)) {
         zoneStats.set(zone, { made: 0, total: 0, percentage: 0 });
       }
@@ -118,6 +120,10 @@ Deno.serve(async (req) => {
       if (made) zs.made++;
       zs.percentage = zs.total > 0 ? zs.made / zs.total : 0;
     });
+
+    const fieldGoalPercentage = totalShots > 0 ? madeShots / totalShots : 0;
+    const twoPointPercentage = twoPointAttempted > 0 ? twoPointMade / twoPointAttempted : 0;
+    const threePointPercentage = threePointAttempted > 0 ? threePointMade / threePointAttempted : 0;
 
     // Find hottest, coldest, and favorite zones
     let hottestZone = "No data";
@@ -172,10 +178,7 @@ Deno.serve(async (req) => {
       favoriteSpotStats
     };
 
-    console.log(`📊 Final stats for player ${playerId}:`, {
-      totalShots: playerStats.totalShots,
-      threePoint: `${playerStats.threePointMade}/${playerStats.threePointAttempted}`
-    });
+    console.log(`📊 Stats calculated successfully: ${threePointMade}/${threePointAttempted} 3PT`);
 
     return new Response(
       JSON.stringify(playerStats),
@@ -185,9 +188,9 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in get-player-stats function:', error);
+    console.error('📊 Function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: `Function error: ${error.message}` }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
