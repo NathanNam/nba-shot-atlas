@@ -61,25 +61,43 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
           throw new Error(`Invalid player ID: ${playerId}`);
         }
 
-        // Direct database query with no caching and no limits
-        const { data: shots, error: dbError } = await (supabase as any)
-          .from(`shots_${season}`)
-          .select('*')
-          .eq('personId', numericPlayerId)
-          .limit(50000); // Set a very high limit to ensure we get all data
+        // Supabase limits responses to 1000 rows per request, so fetch in
+        // batches to ensure we retrieve all available shots. Use a safety
+        // upper bound of 50k records to prevent runaway loops.
+        const batchSize = 1000;
+        const maxRecords = 50000;
+        let from = 0;
+        let allShots: any[] = [];
 
-        if (dbError) {
-          throw new Error(`Database error: ${dbError.message}`);
+        while (from < maxRecords) {
+          const { data: batch, error: dbError } = await (supabase as any)
+            .from(`shots_${season}`)
+            .select('*')
+            .eq('personId', numericPlayerId)
+            .range(from, from + batchSize - 1);
+
+          if (dbError) {
+            throw new Error(`Database error: ${dbError.message}`);
+          }
+
+          if (!batch || batch.length === 0) {
+            break;
+          }
+
+          allShots = allShots.concat(batch);
+          from += batchSize;
+
+          if (batch.length < batchSize) {
+            break;
+          }
         }
 
-        if (!shots) {
-          throw new Error('No data returned from database');
-        }
-
-        console.log(`🎯 Direct query returned ${shots.length} shots for consistency check`);
+        console.log(
+          `🎯 Direct query returned ${allShots.length} shots for consistency check`
+        );
 
         // Calculate stats directly from raw data
-        const calculatedStats = calculateStatsFromRawData(shots);
+        const calculatedStats = calculateStatsFromRawData(allShots);
         setStats(calculatedStats);
 
       } catch (err) {
