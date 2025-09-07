@@ -1,6 +1,6 @@
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { trace, SpanStatusCode, metrics, Meter } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
-import { tracer, logger, meter } from '../otel-client';
+import { tracer, logger } from '../otel-client';
 
 /**
  * NBA Analytics Business Metrics Service
@@ -8,83 +8,117 @@ import { tracer, logger, meter } from '../otel-client';
  * Tracks key business KPIs and user engagement metrics specific to NBA analytics
  */
 export class NBAAnalyticsMetrics {
-  // User engagement metrics
-  private static readonly userSessionCounter = meter.createCounter('nba_user_sessions_total', {
-    description: 'Total number of NBA analytics user sessions',
-  });
+  private static meter: Meter;
+  private static initialized = false;
 
-  private static readonly userEngagementDuration = meter.createHistogram('nba_user_engagement_duration_ms', {
-    description: 'Duration of user engagement with NBA content',
-    unit: 'ms',
-  });
+  // Metrics will be initialized after OTEL is ready
+  private static userSessionCounter: any;
+  private static userEngagementDuration: any;
+  private static contentViewCounter: any;
+  private static featureUsageCounter: any;
+  private static comparisonCounter: any;
+  private static shotChartInteractionCounter: any;
+  private static playerPopularityCounter: any;
+  private static seasonPopularityCounter: any;
+  private static dataVolumeHistogram: any;
+  private static dataQualityGauge: any;
+  private static userSatisfactionHistogram: any;
+  private static apiRequestCounter: any;
+  private static apiErrorCounter: any;
+  private static apiRequestDuration: any;
+  private static pageLoadTimeHistogram: any;
+  private static domContentLoadedHistogram: any;
 
-  private static readonly contentViewCounter = meter.createCounter('nba_content_views_total', {
-    description: 'Total views of NBA content by type',
-  });
+  /**
+   * Initialize metrics after OTEL is ready
+   */
+  private static initializeMetrics() {
+    if (this.initialized) return;
+    
+    this.meter = metrics.getMeter('hoops-analytics-viz');
+    
+    // User engagement metrics
+    this.userSessionCounter = this.meter.createCounter('nba_user_sessions_total', {
+      description: 'Total number of NBA analytics user sessions',
+    });
 
-  // Feature usage metrics
-  private static readonly featureUsageCounter = meter.createCounter('nba_feature_usage_total', {
-    description: 'Usage count of NBA analytics features',
-  });
+    this.userEngagementDuration = this.meter.createHistogram('nba_user_engagement_duration_ms', {
+      description: 'Duration of user engagement with NBA content',
+      unit: 'ms',
+    });
 
-  private static readonly comparisonCounter = meter.createCounter('nba_comparisons_total', {
-    description: 'Total number of NBA entity comparisons',
-  });
+    this.contentViewCounter = this.meter.createCounter('nba_content_views_total', {
+      description: 'Total views of NBA content by type',
+    });
 
-  private static readonly shotChartInteractionCounter = meter.createCounter('nba_shot_chart_interactions_total', {
-    description: 'Total interactions with shot charts',
-  });
+    // Feature usage metrics
+    this.featureUsageCounter = this.meter.createCounter('nba_feature_usage_total', {
+      description: 'Usage count of NBA analytics features',
+    });
 
-  // Data insights metrics
-  private static readonly playerPopularityCounter = meter.createCounter('nba_player_views_total', {
-    description: 'Total views per NBA player',
-  });
+    this.comparisonCounter = this.meter.createCounter('nba_comparisons_total', {
+      description: 'Total number of NBA entity comparisons',
+    });
 
-  private static readonly seasonPopularityCounter = meter.createCounter('nba_season_views_total', {
-    description: 'Total views per NBA season',
-  });
+    this.shotChartInteractionCounter = this.meter.createCounter('nba_shot_chart_interactions_total', {
+      description: 'Total interactions with shot charts',
+    });
 
-  private static readonly dataVolumeHistogram = meter.createHistogram('nba_data_volume_processed', {
-    description: 'Volume of NBA data processed (shots, statistics, etc)',
-  });
+    // Data insights metrics
+    this.playerPopularityCounter = this.meter.createCounter('nba_player_views_total', {
+      description: 'Total views per NBA player',
+    });
 
-  // Performance and quality metrics  
-  private static readonly dataQualityGauge = meter.createUpDownCounter('nba_data_quality_score', {
-    description: 'Data quality score based on completeness and accuracy',
-  });
+    this.seasonPopularityCounter = this.meter.createCounter('nba_season_views_total', {
+      description: 'Total views per NBA season',
+    });
 
-  private static readonly userSatisfactionHistogram = meter.createHistogram('nba_user_satisfaction_score', {
-    description: 'User satisfaction scores based on interaction patterns',
-  });
+    this.dataVolumeHistogram = this.meter.createHistogram('nba_data_volume_processed', {
+      description: 'Volume of NBA data processed (shots, statistics, etc)',
+    });
 
-  // Application performance metrics
-  private static readonly apiRequestCounter = meter.createCounter('nba_api_requests_total', {
-    description: 'Total number of API requests made by the application',
-  });
+    // Performance and quality metrics  
+    this.dataQualityGauge = this.meter.createUpDownCounter('nba_data_quality_score', {
+      description: 'Data quality score based on completeness and accuracy',
+    });
 
-  private static readonly apiErrorCounter = meter.createCounter('nba_api_request_errors_total', {
-    description: 'Total number of failed API requests',
-  });
+    this.userSatisfactionHistogram = this.meter.createHistogram('nba_user_satisfaction_score', {
+      description: 'User satisfaction scores based on interaction patterns',
+    });
 
-  private static readonly apiRequestDuration = meter.createHistogram('nba_api_request_duration_ms', {
-    description: 'Duration of API requests',
-    unit: 'ms',
-  });
+    // Application performance metrics
+    this.apiRequestCounter = this.meter.createCounter('nba_api_requests_total', {
+      description: 'Total number of API requests made by the application',
+    });
 
-  private static readonly pageLoadTimeHistogram = meter.createHistogram('nba_page_load_time_ms', {
-    description: 'Page load time from navigation start',
-    unit: 'ms',
-  });
+    this.apiErrorCounter = this.meter.createCounter('nba_api_request_errors_total', {
+      description: 'Total number of failed API requests',
+    });
 
-  private static readonly domContentLoadedHistogram = meter.createHistogram('nba_dom_content_loaded_ms', {
-    description: 'Time until DOM content loaded event',
-    unit: 'ms',
-  });
+    this.apiRequestDuration = this.meter.createHistogram('nba_api_request_duration_ms', {
+      description: 'Duration of API requests',
+      unit: 'ms',
+    });
+
+    this.pageLoadTimeHistogram = this.meter.createHistogram('nba_page_load_time_ms', {
+      description: 'Page load time from navigation start',
+      unit: 'ms',
+    });
+
+    this.domContentLoadedHistogram = this.meter.createHistogram('nba_dom_content_loaded_ms', {
+      description: 'Time until DOM content loaded event',
+      unit: 'ms',
+    });
+
+    this.initialized = true;
+    console.log('🎯 NBA Analytics Metrics instruments initialized');
+  }
 
   /**
    * Track user session start with NBA analytics context
    */
   static trackUserSession(sessionType: 'new' | 'returning', userAgent?: string, viewport?: string) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.user_session', {
       attributes: {
         'nba.session_type': sessionType,
@@ -130,6 +164,7 @@ export class NBAAnalyticsMetrics {
     season: string,
     engagementDuration: number
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.content_engagement', {
       attributes: {
         'nba.content_type': contentType,
@@ -198,6 +233,7 @@ export class NBAAnalyticsMetrics {
     featureContext: Record<string, any> = {},
     success: boolean = true
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.feature_usage', {
       attributes: {
         'nba.feature_name': featureName,
@@ -243,6 +279,7 @@ export class NBAAnalyticsMetrics {
     season2?: string,
     dataPoints?: number
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.comparison', {
       attributes: {
         'nba.comparison_type': comparisonType,
@@ -304,6 +341,7 @@ export class NBAAnalyticsMetrics {
       filterApplied?: string;
     }
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.shot_chart_interaction', {
       attributes: {
         'nba.interaction_type': interactionType,
@@ -345,6 +383,7 @@ export class NBAAnalyticsMetrics {
    * Track API request performance and results
    */
   static trackApiRequest(endpoint: string, method: string, status: number, duration: number) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.api_request', {
       attributes: {
         'http.url': endpoint,
@@ -395,6 +434,7 @@ export class NBAAnalyticsMetrics {
    * Track initial page load metrics
    */
   static trackPageLoad(loadTime: number, domContentLoaded: number) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.page_load', {
       attributes: {
         'page.load_time_ms': loadTime,
@@ -430,6 +470,7 @@ export class NBAAnalyticsMetrics {
     completenessPercentage: number,
     dataSize: number
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.data_quality', {
       attributes: {
         'nba.data_type': dataType,
@@ -481,6 +522,7 @@ export class NBAAnalyticsMetrics {
     pageViews: number,
     bounceRate: number
   ) {
+    this.initializeMetrics();
     const span = tracer.startSpan('nba_analytics.user_satisfaction', {
       attributes: {
         'nba.satisfaction_score': satisfactionScore,

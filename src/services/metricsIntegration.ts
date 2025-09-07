@@ -14,20 +14,24 @@ export class MetricsIntegration {
   static initialize() {
     if (this.initialized) return;
 
-    // Track initial session
-    this.trackAppStart();
+    // Wait a bit to ensure OTEL is fully initialized
+    setTimeout(() => {
+      // Track initial session
+      this.trackAppStart();
 
-    // Track page load performance
-    this.trackPageLoad();
+      // Track page load performance
+      this.trackPageLoad();
 
-    // Set up periodic user satisfaction tracking
-    this.setupPeriodicTracking();
+      // Set up periodic user satisfaction tracking
+      this.setupPeriodicTracking();
 
-    // Monitor API requests
-    this.setupApiRequestTracking();
+      // Monitor API requests
+      this.setupApiRequestTracking();
+
+      console.log('🎯 NBA Analytics Metrics initialized');
+    }, 100);
 
     this.initialized = true;
-    console.log('🎯 NBA Analytics Metrics initialized');
   }
 
   /**
