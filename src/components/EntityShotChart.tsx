@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { ShotChart } from "@/components/ui/shot-chart";
 import { useSingletonShotData } from "@/hooks/useSingletonShotData";
 import { useAvailablePlayers } from "@/hooks/useAvailablePlayers";
+import { useNBAAnalyticsTracking } from "@/components/UserInteractionTracker";
+import { PerformanceMonitor, trackDataLoading } from "@/components/PerformanceMonitor";
 
 interface EntityShotChartProps {
   entityName: string;
@@ -10,6 +13,8 @@ interface EntityShotChartProps {
 }
 
 export function EntityShotChart({ entityName, selectedSeason, viewMode, preloadedData }: EntityShotChartProps) {
+  const { trackShotChartInteraction, trackPlayerSelection, trackTeamSelection, trackStatisticsView } = useNBAAnalyticsTracking();
+  
   // Always call hook but only use results in player mode
   const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
   
@@ -54,6 +59,45 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   const { shotData, loading, error, progress } = preloadedData !== undefined 
     ? { shotData: preloadedData, loading: false, error: null, progress: null }
     : hookResult;
+
+  // Track data loading performance
+  useEffect(() => {
+    const startTime = Date.now();
+    
+    if (!loading && shotData && shotData.length > 0) {
+      const loadDuration = Date.now() - startTime;
+      const isPreloaded = preloadedData !== undefined;
+      
+      trackDataLoading(
+        `shot_chart_${viewMode}_${cleanEntityName}`,
+        loadDuration,
+        isPreloaded,
+        shotData.length
+      );
+
+      // Track entity selection
+      if (viewMode === 'player') {
+        trackPlayerSelection(entityId || 'unknown', cleanEntityName, selectedSeason);
+      } else if (viewMode === 'team') {
+        trackTeamSelection(entityId || 'unknown', cleanEntityName, selectedSeason);
+      }
+      
+      trackStatisticsView(viewMode, entityId || 'unknown', selectedSeason);
+    }
+  }, [loading, shotData, viewMode, entityId, cleanEntityName, selectedSeason, preloadedData]);
+
+  // Track shot chart interactions
+  useEffect(() => {
+    if (shotData && shotData.length > 0) {
+      trackShotChartInteraction('chart_rendered', {
+        entity_name: cleanEntityName,
+        entity_type: viewMode,
+        season: selectedSeason,
+        shots_count: shotData.length,
+        data_source: preloadedData !== undefined ? 'preloaded' : 'api',
+      });
+    }
+  }, [shotData, cleanEntityName, viewMode, selectedSeason, preloadedData]);
     
   // Debug logging
   console.log(`🔍 EntityShotChart [${cleanEntityName}]: Using ${preloadedData !== undefined ? 'preloaded' : 'hook'} data`, {
@@ -90,10 +134,12 @@ export function EntityShotChart({ entityName, selectedSeason, viewMode, preloade
   });
   
   return (
-    <ShotChart
-      title={entityName}
-      data={isLoading ? undefined : shotData}
-      progress={isLoading ? progress : null}
-    />
+    <PerformanceMonitor componentName={`EntityShotChart-${viewMode}`}>
+      <ShotChart
+        title={entityName}
+        data={isLoading ? undefined : shotData}
+        progress={isLoading ? progress : null}
+      />
+    </PerformanceMonitor>
   );
 }
