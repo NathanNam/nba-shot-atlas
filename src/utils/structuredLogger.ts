@@ -52,11 +52,20 @@ export class StructuredLogger {
   }
 
   static debug(message: string, context?: LogContext) {
+    const attributes = this.getBaseAttributes(context);
+    // Convert Error objects to strings for OpenTelemetry compatibility
+    const cleanAttributes = Object.fromEntries(
+      Object.entries(attributes).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    );
+
     logger.emit({
       severityNumber: SeverityNumber.DEBUG,
       severityText: 'DEBUG',
       body: message,
-      attributes: this.getBaseAttributes(context),
+      attributes: cleanAttributes,
     });
 
     // Also log to console in development
@@ -66,11 +75,19 @@ export class StructuredLogger {
   }
 
   static info(message: string, context?: LogContext) {
+    const attributes = this.getBaseAttributes(context);
+    const cleanAttributes = Object.fromEntries(
+      Object.entries(attributes).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    );
+
     logger.emit({
       severityNumber: SeverityNumber.INFO,
       severityText: 'INFO',
       body: message,
-      attributes: this.getBaseAttributes(context),
+      attributes: cleanAttributes,
     });
 
     if (import.meta.env.MODE === 'development') {
@@ -79,11 +96,19 @@ export class StructuredLogger {
   }
 
   static warn(message: string, context?: LogContext) {
+    const attributes = this.getBaseAttributes(context);
+    const cleanAttributes = Object.fromEntries(
+      Object.entries(attributes).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    );
+
     logger.emit({
       severityNumber: SeverityNumber.WARN,
       severityText: 'WARN',
       body: message,
-      attributes: this.getBaseAttributes(context),
+      attributes: cleanAttributes,
     });
 
     console.warn(`⚠️ [WARN] ${message}`, context);
@@ -96,12 +121,19 @@ export class StructuredLogger {
       error_stack: context?.error?.stack,
       error_name: context?.error?.name,
     };
+    
+    const cleanAttributes = Object.fromEntries(
+      Object.entries(errorAttributes).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    );
 
     logger.emit({
       severityNumber: SeverityNumber.ERROR,
       severityText: 'ERROR',
       body: message,
-      attributes: errorAttributes,
+      attributes: cleanAttributes,
     });
 
     console.error(`❌ [ERROR] ${message}`, context);
@@ -114,12 +146,19 @@ export class StructuredLogger {
       error_stack: context?.error?.stack,
       error_name: context?.error?.name,
     };
+    
+    const cleanAttributes = Object.fromEntries(
+      Object.entries(fatalAttributes).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    );
 
     logger.emit({
       severityNumber: SeverityNumber.FATAL,
       severityText: 'FATAL',
       body: message,
-      attributes: fatalAttributes,
+      attributes: cleanAttributes,
     });
 
     console.error(`💀 [FATAL] ${message}`, context);
@@ -246,9 +285,16 @@ export class StructuredLogger {
     operation: () => T,
     context?: LogContext
   ): T {
+    const cleanContext = context ? Object.fromEntries(
+      Object.entries(context).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    ) : {};
+    
     const span = tracer.startSpan(spanName, {
       attributes: {
-        ...context,
+        ...cleanContext,
         operation_type: 'logged_operation',
       },
     });
@@ -275,9 +321,16 @@ export class StructuredLogger {
     operation: () => Promise<T>,
     context?: LogContext
   ): Promise<T> {
+    const cleanContext = context ? Object.fromEntries(
+      Object.entries(context).map(([key, value]) => [
+        key,
+        value instanceof Error ? value.message : value
+      ])
+    ) : {};
+    
     const span = tracer.startSpan(spanName, {
       attributes: {
-        ...context,
+        ...cleanContext,
         operation_type: 'logged_async_operation',
       },
     });

@@ -9,10 +9,14 @@ import "./utils/forceCacheClear";
 
 // Initialize OpenTelemetry
 import { initOtel } from "./otel-client";
+import { MetricsIntegration } from "./services/metricsIntegration";
 
-// Initialize OTEL asynchronously
+// Initialize OTEL and metrics asynchronously
 initOtel().then(() => {
   console.log('✅ OpenTelemetry initialized successfully');
+  
+  // Initialize NBA Analytics metrics tracking
+  MetricsIntegration.initialize();
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });

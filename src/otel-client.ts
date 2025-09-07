@@ -156,24 +156,32 @@ function createProviders() {
     ],
   });
 
-  // Initialize Metrics Provider with OTLP and Prometheus exporters
-  const metricExporters = [
-    new OTLPMetricExporter({
-      url: `${otlpEndpoint}/v1/metrics`,
-      headers: {
-        ...authHeader,
-        "x-observe-target-package": "Metrics",
-        "Content-Type": "application/x-protobuf",
-      },
+  // Initialize Metrics Provider with OTLP exporter
+  const otlpMetricExporter = new OTLPMetricExporter({
+    url: `${otlpEndpoint}/v1/metrics`,
+    headers: {
+      ...authHeader,
+      "x-observe-target-package": "Metrics",
+      "Content-Type": "application/x-protobuf",
+    },
+  });
+
+  const readers = [
+    new PeriodicExportingMetricReader({
+      exporter: otlpMetricExporter,
+      exportIntervalMillis: 10000, // Export metrics every 10 seconds
     })
   ];
 
   // Add Prometheus exporter for development/debugging (optional)
   if (import.meta.env.MODE === 'development') {
     try {
-      metricExporters.push(new PrometheusExporter({
+      // Note: Prometheus exporter works differently - it doesn't use PeriodicExportingMetricReader
+      // It starts its own HTTP server to expose metrics
+      const prometheusExporter = new PrometheusExporter({
         port: 9464, // Default Prometheus metrics port
-      }));
+      });
+      console.log('Prometheus exporter initialized on port 9464');
     } catch (error) {
       console.warn('Failed to initialize Prometheus exporter:', error);
     }
@@ -181,12 +189,7 @@ function createProviders() {
 
   meterProvider = new MeterProvider({
     resource: resource,
-    readers: metricExporters.map(exporter => 
-      new PeriodicExportingMetricReader({
-        exporter,
-        exportIntervalMillis: 10000, // Export metrics every 10 seconds
-      })
-    ),
+    readers: readers,
   });
 }
 

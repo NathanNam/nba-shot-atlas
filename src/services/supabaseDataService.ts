@@ -64,9 +64,9 @@ class SupabaseDataService {
 
       while (true) {
         const { data, error } = await supabase
-          .from<SupabasePlayerRow>('players')
+          .from('players')
           .select('*')
-          .range(from, from + batchSize - 1);
+          .range(from, from + batchSize - 1) as { data: SupabasePlayerRow[] | null; error: any };
 
         if (error) {
           span.setStatus({
@@ -80,7 +80,7 @@ class SupabaseDataService {
           break;
         }
 
-        allPlayers = allPlayers.concat(data);
+        allPlayers = allPlayers.concat(data || []);
 
         // If we received less than the batch size, we've fetched all rows
         if (data.length < batchSize) {
@@ -93,7 +93,7 @@ class SupabaseDataService {
       const players: Player[] = allPlayers.map(player => ({
         // Support both column naming conventions: personId/playerFullName or
         // id/name. Fall back to 0/empty string when not available.
-        personId: player.personId || player.id || 0,
+        personId: Number(player.personId || player.id || 0),
         playerFullName: player.playerFullName || player.name || '',
         id: (player.personId || player.id || 0).toString(),
         name: player.playerFullName || player.name || ''
