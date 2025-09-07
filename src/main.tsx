@@ -12,11 +12,25 @@ import { initOtel } from "./otel-client";
 import { MetricsIntegration } from "./services/metricsIntegration";
 
 // Initialize OTEL and metrics asynchronously
-initOtel().then(() => {
+initOtel().then(({ tracer, logger, meter }) => {
   console.log('✅ OpenTelemetry initialized successfully');
+  console.log('✅ OTEL Components ready:', { tracer: !!tracer, logger: !!logger, meter: !!meter });
   
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
+  
+  // Create and update test metric immediately
+  const testCounter = meter.createCounter('test_metric', {
+    description: 'A test metric to verify OTEL metrics are working'
+  });
+  testCounter.add(1, { source: 'initialization' });
+  console.log('✅ Test metric created and incremented');
+  
+  // Set up periodic test metric updates
+  setInterval(() => {
+    testCounter.add(1, { source: 'periodic' });
+    console.log('📊 Test metric incremented (periodic)');
+  }, 10000); // Every 10 seconds
 }).catch(error => {
   console.error('❌ Failed to initialize OpenTelemetry:', error);
 });
