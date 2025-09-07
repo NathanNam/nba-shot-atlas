@@ -118,25 +118,31 @@ export function EntityStatistics({ entityName, selectedSeason, viewMode, preload
       dataPreview: shotData?.slice(0, 2)
     });
     
-    // Use consistent stats for Stephen Curry if available
-    if (isStephenCurry && consistentStats.stats) {
-      console.log(`🎯 Using consistent stats for Stephen Curry:`, consistentStats.stats);
+    // ALWAYS use consistent stats for Stephen Curry when available - no fallback to calculated stats
+    if (isStephenCurry && consistentStats.stats && !consistentStats.loading) {
+      console.log(`🎯 Using FINAL consistent stats for Stephen Curry:`, consistentStats.stats);
+      return consistentStats.stats;
+    }
+    
+    // For Stephen Curry, if we're still loading consistent stats, return loading state
+    if (isStephenCurry && consistentStats.loading) {
+      console.log(`🎯 Stephen Curry consistent stats still loading, returning empty stats`);
       return {
-        totalShots: consistentStats.stats.totalShots,
-        madeShots: consistentStats.stats.madeShots,
-        fieldGoalPercentage: consistentStats.stats.fieldGoalPercentage,
-        twoPointPercentage: consistentStats.stats.twoPointPercentage,
-        twoPointMade: consistentStats.stats.twoPointMade,
-        twoPointAttempted: consistentStats.stats.twoPointAttempted,
-        threePointPercentage: consistentStats.stats.threePointPercentage,
-        threePointMade: consistentStats.stats.threePointMade,
-        threePointAttempted: consistentStats.stats.threePointAttempted,
-        hottestZone: consistentStats.stats.hottestZone,
-        hottestZoneStats: consistentStats.stats.hottestZoneStats,
-        coldestZone: consistentStats.stats.coldestZone,
-        coldestZoneStats: consistentStats.stats.coldestZoneStats,
-        favoriteSpot: consistentStats.stats.favoriteSpot,
-        favoriteSpotStats: consistentStats.stats.favoriteSpotStats
+        totalShots: 0,
+        madeShots: 0,
+        fieldGoalPercentage: 0,
+        twoPointPercentage: 0,
+        twoPointMade: 0,
+        twoPointAttempted: 0,
+        threePointPercentage: 0,
+        threePointMade: 0,
+        threePointAttempted: 0,
+        hottestZone: "Loading...",
+        hottestZoneStats: { made: 0, total: 0, percentage: 0 },
+        coldestZone: "Loading...",
+        coldestZoneStats: { made: 0, total: 0, percentage: 0 },
+        favoriteSpot: "Loading...",
+        favoriteSpotStats: { made: 0, total: 0, percentage: 0 }
       };
     }
     
