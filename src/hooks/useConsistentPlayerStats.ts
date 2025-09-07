@@ -81,6 +81,7 @@ export function useConsistentPlayerStats(playerId: string, season: string) {
         // Verify we got the expected count
         if (allShots.length !== 1258) {
           console.error(`🚨 Expected 1258 shots, got ${allShots.length}`);
+        }
         
         // Calculate stats directly from raw data
         const calculatedStats = calculateStatsFromRawData(allShots);
