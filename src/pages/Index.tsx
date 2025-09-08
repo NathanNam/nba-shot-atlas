@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { NavigationBar } from "@/components/ui/navigation-bar";
+import { LazyNavigation } from "@/components/LazyNavigation";
 import { PlayerSelector } from "@/components/ui/player-selector";
-import { ShotChart } from "@/components/ui/shot-chart";
 import { VersionMarker } from "@/components/ui/version-marker";
 import { ComponentLoader } from "@/components/LazyIndex";
-import { Button } from "@/components/ui/button";
 import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2024-25");
@@ -48,7 +47,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
-      <NavigationBar
+      <LazyNavigation
         selectedSeason={selectedSeason}
         onSeasonChange={setSelectedSeason}
         viewMode={viewMode}

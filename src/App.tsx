@@ -1,51 +1,34 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
 
-// Lazy load pages to reduce initial bundle size
+// Lazy load heavy providers  
+const AppProviders = lazy(() => import("./AppProviders"));
+
+// Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Import only essential components for initial load
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { PerformanceMonitor, setupGlobalPerformanceMonitoring } from "./components/PerformanceMonitor";
-import { UserInteractionTracker } from "./components/UserInteractionTracker";
 
-const queryClient = new QueryClient();
-
-// Setup global performance monitoring
-setupGlobalPerformanceMonitoring();
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+  </div>
+);
 
 const App = () => (
   <ErrorBoundary>
-    <UserInteractionTracker>
-      <PerformanceMonitor componentName="App">
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div></div>}>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </BrowserRouter>
-            </TooltipProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </PerformanceMonitor>
-    </UserInteractionTracker>
+    <BrowserRouter>
+      <Suspense fallback={<LoadingFallback />}>
+        <AppProviders>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppProviders>
+      </Suspense>
+    </BrowserRouter>
   </ErrorBoundary>
 );
 

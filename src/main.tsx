@@ -1,11 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { DataPreloader } from "@/services/dataPreloader";
 import App from "./App";
 import "./index.css";
 
-// Force clear caches first
-import "./utils/forceCacheClear";
+// Force clear caches first - lazy load to avoid blocking initial render
+setTimeout(() => {
+  import("./utils/forceCacheClear");
+}, 50);
 
 // Defer OpenTelemetry initialization until after app loads
 const initializeAnalytics = async () => {
@@ -134,22 +135,14 @@ const initializeAnalytics = async () => {
   });
 };
 
-// Initialize analytics after a short delay to allow app to load first
+// Initialize analytics after app loads to avoid blocking initial render
 setTimeout(() => {
   initializeAnalytics().catch(error => {
     console.error('❌ Failed to initialize analytics:', error);
   });
-}, 100);
+}, 500);
 
-// Preloading disabled for now to troubleshoot caching issues
-// setTimeout(() => {
-//   DataPreloader.preloadDefaultData().then(() => {
-//     console.log('🚀 Default data preloading completed');
-//   }).catch(error => {
-//     console.error('🚀 Error preloading default data:', error);
-//   });
-// }, 200);
-
+// Render app immediately without waiting for analytics
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
