@@ -398,7 +398,7 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
              progress.loaded ? `Loading: ${progress.loaded.toLocaleString()} shots loaded` :
              'Loading shot data...'}
           </div>
-          {progress.total && (
+          {progress.total ? (
             <div className="w-80 space-y-2">
               <Progress 
                 value={(progress.loaded / progress.total) * 100} 
@@ -408,7 +408,17 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
                 {progress.loaded.toLocaleString()} / {progress.total.toLocaleString()} shots
               </div>
             </div>
-          )}
+          ) : progress.loaded > 0 ? (
+            <div className="w-80 space-y-2">
+              <Progress 
+                value={undefined}
+                className="w-full h-3"
+              />
+              <div className="text-xs text-muted-foreground text-center">
+                {progress.loaded.toLocaleString()} shots loaded
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (!data || data.length === 0) ? (
         <div className="flex items-center justify-center h-64">
