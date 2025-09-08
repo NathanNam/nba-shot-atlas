@@ -1,4 +1,4 @@
-import { trace, SpanStatusCode, metrics, Meter } from '@opentelemetry/api';
+import { trace, SpanStatusCode, metrics, Meter, Counter, Histogram, UpDownCounter } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { tracer, logger } from '../otel-client';
 
@@ -12,22 +12,22 @@ export class NBAAnalyticsMetrics {
   private static initialized = false;
 
   // Metrics will be initialized after OTEL is ready
-  private static userSessionCounter: any;
-  private static userEngagementDuration: any;
-  private static contentViewCounter: any;
-  private static featureUsageCounter: any;
-  private static comparisonCounter: any;
-  private static shotChartInteractionCounter: any;
-  private static playerPopularityCounter: any;
-  private static seasonPopularityCounter: any;
-  private static dataVolumeHistogram: any;
-  private static dataQualityGauge: any;
-  private static userSatisfactionHistogram: any;
-  private static apiRequestCounter: any;
-  private static apiErrorCounter: any;
-  private static apiRequestDuration: any;
-  private static pageLoadTimeHistogram: any;
-  private static domContentLoadedHistogram: any;
+  private static userSessionCounter: Counter | null = null;
+  private static userEngagementDuration: Histogram | null = null;
+  private static contentViewCounter: Counter | null = null;
+  private static featureUsageCounter: Counter | null = null;
+  private static comparisonCounter: Counter | null = null;
+  private static shotChartInteractionCounter: Counter | null = null;
+  private static playerPopularityCounter: Counter | null = null;
+  private static seasonPopularityCounter: Counter | null = null;
+  private static dataVolumeHistogram: Histogram | null = null;
+  private static dataQualityGauge: UpDownCounter | null = null;
+  private static userSatisfactionHistogram: Histogram | null = null;
+  private static apiRequestCounter: Counter | null = null;
+  private static apiErrorCounter: Counter | null = null;
+  private static apiRequestDuration: Histogram | null = null;
+  private static pageLoadTimeHistogram: Histogram | null = null;
+  private static domContentLoadedHistogram: Histogram | null = null;
 
   /**
    * Initialize metrics after OTEL is ready
@@ -251,7 +251,7 @@ export class NBAAnalyticsMetrics {
    */
   static trackFeatureUsage(
     featureName: string,
-    featureContext: Record<string, any> = {},
+    featureContext: Record<string, string | number | boolean> = {},
     success: boolean = true
   ) {
     console.log('🎯 trackFeatureUsage called:', featureName);

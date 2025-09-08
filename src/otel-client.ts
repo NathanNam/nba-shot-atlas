@@ -95,8 +95,12 @@ async function fetchOtelConfig() {
   } catch (error) {
     console.warn("Failed to fetch OTEL config from Supabase, using defaults:", error);
     // Fallback to environment variables if available
-    otlpEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
-    otlpEndpointBearerToken = import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN;
+    // Check for both VITE_ prefixed (for client-side) and standard OTEL_ prefixed environment variables
+    otlpEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ??
+                   import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
+                   "http://localhost:4318";
+    otlpEndpointBearerToken = import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN ??
+                              import.meta.env.OTEL_EXPORTER_OTLP_BEARER_TOKEN;
     authHeader = otlpEndpointBearerToken
       ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
       : {};
@@ -284,9 +288,9 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
 }
 
 // Export the meter for use by NBA metrics
-export let globalMeter: any = null;
+export let globalMeter: Meter | null = null;
 
-export const setGlobalMeter = (meter: any) => {
+export const setGlobalMeter = (meter: Meter) => {
   globalMeter = meter;
 };
 
