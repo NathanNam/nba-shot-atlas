@@ -7,20 +7,21 @@ import "./index.css";
 // Force clear caches first
 import "./utils/forceCacheClear";
 
-// Initialize OpenTelemetry
-import { initOtel } from "./otel-client";
-import { MetricsIntegration } from "./services/metricsIntegration";
-
-// Initialize OTEL and metrics asynchronously
-initOtel().then(({ tracer, logger, meter }) => {
-  console.log('✅ OpenTelemetry initialized successfully');
-  console.log('✅ OTEL Components ready:', { tracer: !!tracer, logger: !!logger, meter: !!meter });
-  
-  // Set global meter for NBA metrics
-  import('./otel-client').then(({ setGlobalMeter }) => {
+// Defer OpenTelemetry initialization until after app loads
+const initializeAnalytics = async () => {
+  // Dynamic imports to avoid loading telemetry code in initial bundle
+  const [{ initOtel }, { MetricsIntegration }] = await Promise.all([
+    import("./otel-client"),
+    import("./services/metricsIntegration")
+  ]);
+  return initOtel().then(async ({ tracer, logger, meter }) => {
+    console.log('✅ OpenTelemetry initialized successfully');
+    console.log('✅ OTEL Components ready:', { tracer: !!tracer, logger: !!logger, meter: !!meter });
+    
+    // Set global meter for NBA metrics
+    const { setGlobalMeter } = await import('./otel-client');
     setGlobalMeter(meter);
     console.log('✅ Global meter set for NBA metrics');
-  });
   
   // Initialize NBA Analytics metrics tracking
   MetricsIntegration.initialize();
@@ -127,10 +128,18 @@ initOtel().then(({ tracer, logger, meter }) => {
   // UpDownCounter (gauge)
   nbaDataQualityGauge.add(85, { data_type: 'shot_data', test: 'true' });
   
-  console.log('🧪 All NBA metrics test data emitted successfully');
-}).catch(error => {
-  console.error('❌ Failed to initialize OpenTelemetry:', error);
-});
+    console.log('🧪 All NBA metrics test data emitted successfully');
+  }).catch(error => {
+    console.error('❌ Failed to initialize OpenTelemetry:', error);
+  });
+};
+
+// Initialize analytics after a short delay to allow app to load first
+setTimeout(() => {
+  initializeAnalytics().catch(error => {
+    console.error('❌ Failed to initialize analytics:', error);
+  });
+}, 100);
 
 // Preloading disabled for now to troubleshoot caching issues
 // setTimeout(() => {

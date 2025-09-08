@@ -2,18 +2,8 @@ import { useState } from "react";
 import { NavigationBar } from "@/components/ui/navigation-bar";
 import { PlayerSelector } from "@/components/ui/player-selector";
 import { ShotChart } from "@/components/ui/shot-chart";
-import { EntityShotChart } from "@/components/EntityShotChart";
-import { EntityStatistics } from "@/components/EntityStatistics";
-import { LeagueShotChart } from "@/components/LeagueShotChart";
-import { LeagueStatistics } from "@/components/LeagueStatistics";
 import { VersionMarker } from "@/components/ui/version-marker";
-import { ComparisonShotChart } from "@/components/ComparisonShotChart";
-import { ComparisonStatistics } from "@/components/ComparisonStatistics";
-import { MultiEntityComparison } from "@/components/MultiEntityComparison";
-import { EntityVsEntityComparison } from "@/components/EntityVsEntityComparison";
-import { EntityVsEntityDualSeasonComparison } from "@/components/EntityVsEntityDualSeasonComparison";
-import { BatchEntityVsEntityDualSeasonComparison } from "@/components/BatchEntityVsEntityDualSeasonComparison";
-import { BatchEntityLayout } from "@/components/BatchEntityLayout";
+import { ComponentLoader } from "@/components/LazyIndex";
 import { Button } from "@/components/ui/button";
 import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
 
@@ -95,8 +85,9 @@ const Index = () => {
                     {/* Row 1: Two shot charts for 2024-25 Season */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {selectedEntities.map((entity) => (
-                        <EntityShotChart
+                        <ComponentLoader
                           key={`${entity}-${selectedSeason}`}
+                          component="EntityShotChart"
                           entityName={`${entity} (${selectedSeason})`}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
@@ -108,8 +99,9 @@ const Index = () => {
                     {/* Row 2: Two shot charts for 2023-24 Season */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {selectedEntities.map((entity) => (
-                        <EntityShotChart
+                        <ComponentLoader
                           key={`${entity}-${selectedSeason2}`}
+                          component="EntityShotChart"
                           entityName={`${entity} (${selectedSeason2})`}
                           selectedSeason={selectedSeason2}
                           viewMode={viewMode}
@@ -121,8 +113,9 @@ const Index = () => {
                 ) : (
                   // Single entity across seasons
                   selectedEntities.map((entity) => (
-                    <ComparisonShotChart
+                    <ComponentLoader
                       key={entity}
+                      component="ComparisonShotChart"
                       entityName={entity}
                       season1={selectedSeason}
                       season2={selectedSeason2}
@@ -134,8 +127,9 @@ const Index = () => {
                 // Single Season Mode (original functionality)
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   {selectedEntities.map((entity) => (
-                    <EntityShotChart
+                    <ComponentLoader
                       key={`${entity}-${selectedSeason}-${viewMode}`}
+                      component="EntityShotChart"
                       entityName={entity}
                       selectedSeason={selectedSeason}
                       viewMode={viewMode}
@@ -151,7 +145,8 @@ const Index = () => {
                 // Comparison Mode Statistics
                 selectedEntities.length > 1 ? (
                   // Two entities + comparison on: Use batch fetching for all 4 combinations
-                  <BatchEntityLayout
+                  <ComponentLoader
+                    component="BatchEntityLayout"
                     entity1={selectedEntities[0]}
                     entity2={selectedEntities[1]}
                     season1={selectedSeason}
@@ -164,22 +159,25 @@ const Index = () => {
                   <div className="space-y-6">
                     {/* Individual player statistics for each season */}
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      <EntityStatistics
+                      <ComponentLoader
                         key={`${selectedEntities[0]}-${selectedSeason}-${viewMode}`}
+                        component="EntityStatistics"
                         entityName={selectedEntities[0]}
                         selectedSeason={selectedSeason}
                         viewMode={viewMode}
                       />
-                      <EntityStatistics
+                      <ComponentLoader
                         key={`${selectedEntities[0]}-${selectedSeason2}-${viewMode}`}
+                        component="EntityStatistics"
                         entityName={selectedEntities[0]}
                         selectedSeason={selectedSeason2}
                         viewMode={viewMode}
                       />
                     </div>
                     {/* Season comparison */}
-                    <ComparisonStatistics
+                    <ComponentLoader
                       key={selectedEntities[0]}
+                      component="ComparisonStatistics"
                       entityName={selectedEntities[0]}
                       season1={selectedSeason}
                       season2={selectedSeason2}
@@ -195,8 +193,9 @@ const Index = () => {
                     {/* Individual player statistics */}
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                       {selectedEntities.map((entity) => (
-                        <EntityStatistics
+                        <ComponentLoader
                           key={`${entity}-${selectedSeason}-${viewMode}`}
+                          component="EntityStatistics"
                           entityName={entity}
                           selectedSeason={selectedSeason}
                           viewMode={viewMode}
@@ -204,7 +203,8 @@ const Index = () => {
                       ))}
                     </div>
                     {/* Entity vs Entity comparison */}
-                    <EntityVsEntityComparison
+                    <ComponentLoader
+                      component="EntityVsEntityComparison"
                       entity1={selectedEntities[0]}
                       entity2={selectedEntities[1]}
                       season={selectedSeason}
@@ -214,8 +214,9 @@ const Index = () => {
                 ) : (
                   // Single Season Mode Statistics (original functionality)
                   selectedEntities.map((entity) => (
-                    <EntityStatistics
+                    <ComponentLoader
                       key={`${entity}-${selectedSeason}-${viewMode}`}
+                      component="EntityStatistics"
                       entityName={entity}
                       selectedSeason={selectedSeason}
                       viewMode={viewMode}
