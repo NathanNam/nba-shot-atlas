@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { ShotData } from "@/services/supabaseDataService";
 
 interface ShotChartProps {
@@ -392,17 +393,20 @@ export function ShotChart({ title, data, width = 500, height = 470, progress }: 
       {/* Loading state with progress */}
       {(!data || data.length === 0) && progress ? (
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <div className="animate-pulse text-muted-foreground">
+          <div className="animate-pulse text-muted-foreground text-center">
             {progress.isProcessing ? 'Processing data...' : 
              progress.loaded ? `Loading: ${progress.loaded.toLocaleString()} shots loaded` :
              'Loading shot data...'}
           </div>
           {progress.total && (
-            <div className="w-64 bg-secondary rounded-full h-2">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${(progress.loaded / progress.total) * 100}%` }}
+            <div className="w-80 space-y-2">
+              <Progress 
+                value={(progress.loaded / progress.total) * 100} 
+                className="w-full h-3"
               />
+              <div className="text-xs text-muted-foreground text-center">
+                {progress.loaded.toLocaleString()} / {progress.total.toLocaleString()} shots
+              </div>
             </div>
           )}
         </div>
