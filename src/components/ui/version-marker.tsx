@@ -6,7 +6,7 @@ interface VersionMarkerProps {
   variant?: "default" | "minimal" | "prominent";
 }
 
-export function VersionMarker({ version = "v2.2.0", variant = "default" }: VersionMarkerProps) {
+export function VersionMarker({ version = "v2.2.1", variant = "default" }: VersionMarkerProps) {
   const baseClasses = "font-mono text-xs transition-all duration-200";
   
   if (variant === "minimal") {
