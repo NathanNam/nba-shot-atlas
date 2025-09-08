@@ -14,32 +14,11 @@ interface LazyComponentProps {
 }
 
 const ComponentLoader = ({ component, ...props }: LazyComponentProps) => {
-  const LoadingSpinner = ({ message }: { message: string }) => (
-    <div className="flex flex-col items-center justify-center p-8 space-y-3">
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center p-8">
       <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-      <div className="text-sm text-muted-foreground animate-pulse">{message}</div>
     </div>
   );
-
-  const getLoadingMessage = () => {
-    const entityName = props.entityName || props.entity1 || 'Entity';
-    switch (component) {
-      case 'EntityShotChart':
-        return `Loading ${entityName} shot chart...`;
-      case 'EntityStatistics':
-        return `Loading ${entityName} statistics...`;
-      case 'ComparisonShotChart':
-        return `Loading ${entityName} comparison...`;
-      case 'ComparisonStatistics':
-        return `Loading comparison statistics...`;
-      case 'BatchEntityLayout':
-        return `Loading batch statistics...`;
-      case 'EntityVsEntityComparison':
-        return `Loading entity comparison...`;
-      default:
-        return 'Loading...';
-    }
-  };
 
   const renderComponent = () => {
     switch (component) {
@@ -61,7 +40,7 @@ const ComponentLoader = ({ component, ...props }: LazyComponentProps) => {
   };
 
   return (
-    <Suspense fallback={<LoadingSpinner message={getLoadingMessage()} />}>
+    <Suspense fallback={<LoadingSpinner />}>
       {renderComponent()}
     </Suspense>
   );
