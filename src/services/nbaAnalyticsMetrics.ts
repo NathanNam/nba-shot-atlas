@@ -34,7 +34,6 @@ export class NBAAnalyticsMetrics {
    */
   private static initializeMetrics() {
     if (this.initialized) {
-      console.log('🎯 NBA metrics already initialized');
       return;
     }
     
