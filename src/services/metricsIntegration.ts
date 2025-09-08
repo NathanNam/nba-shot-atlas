@@ -110,7 +110,7 @@ export class MetricsIntegration {
   /**
    * Track feature usage with context
    */
-  static trackFeature(featureName: string, context: Record<string, any> = {}) {
+  static trackFeature(featureName: string, context: Record<string, string | number | boolean> = {}) {
     NBAAnalyticsMetrics.trackFeatureUsage(featureName, context, true);
     this.trackPageView();
   }
