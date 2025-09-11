@@ -237,7 +237,7 @@ const Index = () => {
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
               <span className="text-center">Built with modern web technologies</span>
-              <VersionMarker version="v2.2.0" />
+              <VersionMarker version="v2.2.2" />
             </div>
           </div>
         </div>
