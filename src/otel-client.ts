@@ -93,9 +93,10 @@ async function fetchOtelConfig() {
     console.log(`✅ OTEL config fetched from Supabase: ${otlpEndpoint}`);
     return config;
   } catch (error) {
-    console.warn("Failed to fetch OTEL config from Supabase, using defaults:", error);
+    console.warn("Failed to fetch OTEL config from Supabase, using environment variables:", error);
     // Fallback to environment variables if available
     // Check for both VITE_ prefixed (for client-side) and standard OTEL_ prefixed environment variables
+    // Priority: VITE_ prefixed (for Vite builds) -> standard OTEL_ (for runtime) -> defaults
     otlpEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ??
                    import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
                    "http://localhost:4318";
@@ -104,6 +105,8 @@ async function fetchOtelConfig() {
     authHeader = otlpEndpointBearerToken
       ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
       : {};
+
+    console.log(`✅ Using environment variables - Endpoint: ${otlpEndpoint}, Token: ${otlpEndpointBearerToken ? '[REDACTED]' : 'none'}`);
   }
 }
 
