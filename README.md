@@ -84,7 +84,7 @@ This project includes comprehensive OpenTelemetry instrumentation for observabil
 
 ### Configuration
 
-The application supports OpenTelemetry configuration via environment variables:
+The application supports OpenTelemetry configuration via environment variables (primary method) with Supabase Edge Function fallback:
 
 ```bash
 # Copy the example environment file
@@ -93,7 +93,13 @@ cp .env.example .env.local
 # Edit the environment variables
 VITE_OTEL_EXPORTER_OTLP_ENDPOINT=https://your-otlp-endpoint
 VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN=your_bearer_token
+VITE_OTEL_SAMPLING_RATE=1.0
 ```
+
+**Configuration Priority:**
+1. **Environment Variables** (recommended): `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` and `VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN`
+2. **Supabase Edge Function**: Fallback if environment variables are not available
+3. **Default**: `http://localhost:4318` for local development
 
 ### Testing OpenTelemetry
 

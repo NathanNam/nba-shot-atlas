@@ -59,13 +59,33 @@ const getSampler = () => {
   });
 };
 
-// Function to fetch OTEL configuration from Supabase Edge Function
+// Function to configure OTEL using environment variables with Supabase fallback
 async function fetchOtelConfig() {
   try {
-    // Use the full Supabase URL with authentication
+    // Priority: Environment variables first (as specified in the task), then Supabase fallback
+    // Check for both VITE_ prefixed (for client-side) and standard OTEL_ prefixed environment variables
+    const envEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ??
+                        import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    const envBearerToken = import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN ??
+                           import.meta.env.OTEL_EXPORTER_OTLP_BEARER_TOKEN;
+
+    if (envEndpoint) {
+      // Use environment variables if available (primary configuration method)
+      otlpEndpoint = envEndpoint;
+      otlpEndpointBearerToken = envBearerToken;
+      authHeader = otlpEndpointBearerToken
+        ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
+        : {};
+
+      console.log(`✅ Using environment variables - Endpoint: ${otlpEndpoint}, Token: ${otlpEndpointBearerToken ? '[REDACTED]' : 'none'}`);
+      return { endpoint: otlpEndpoint, bearerToken: otlpEndpointBearerToken };
+    }
+
+    // Fallback to Supabase Edge Function if environment variables are not available
+    console.log("Environment variables not found, attempting Supabase config fetch...");
     const supabaseUrl = 'https://icfqngdeohzzjvzcmawo.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE';
-    
+
     const response = await fetch(`${supabaseUrl}/functions/v1/get-otel-config`, {
       method: 'GET',
       headers: {
@@ -79,7 +99,7 @@ async function fetchOtelConfig() {
     }
 
     const config = await response.json();
-    
+
     if (config.error) {
       throw new Error(config.error);
     }
@@ -93,20 +113,13 @@ async function fetchOtelConfig() {
     console.log(`✅ OTEL config fetched from Supabase: ${otlpEndpoint}`);
     return config;
   } catch (error) {
-    console.warn("Failed to fetch OTEL config from Supabase, using environment variables:", error);
-    // Fallback to environment variables if available
-    // Check for both VITE_ prefixed (for client-side) and standard OTEL_ prefixed environment variables
-    // Priority: VITE_ prefixed (for Vite builds) -> standard OTEL_ (for runtime) -> defaults
-    otlpEndpoint = import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ??
-                   import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
-                   "http://localhost:4318";
-    otlpEndpointBearerToken = import.meta.env.VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN ??
-                              import.meta.env.OTEL_EXPORTER_OTLP_BEARER_TOKEN;
-    authHeader = otlpEndpointBearerToken
-      ? { Authorization: `Bearer ${otlpEndpointBearerToken}` }
-      : {};
+    console.warn("Failed to fetch OTEL config from both environment variables and Supabase, using defaults:", error);
+    // Final fallback to defaults
+    otlpEndpoint = "http://localhost:4318";
+    otlpEndpointBearerToken = undefined;
+    authHeader = {};
 
-    console.log(`✅ Using environment variables - Endpoint: ${otlpEndpoint}, Token: ${otlpEndpointBearerToken ? '[REDACTED]' : 'none'}`);
+    console.log(`✅ Using default configuration - Endpoint: ${otlpEndpoint}`);
   }
 }
 
@@ -200,13 +213,17 @@ logger = defaultLoggerProvider.getLogger(serviceName);
 
 // Initialize OpenTelemetry and return initialized components
 export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; meter: Meter }> {
-  // Fetch OTEL configuration from Supabase first
+  console.log('🚀 Initializing OpenTelemetry for NBA Analytics Visualization...');
+
+  // Fetch OTEL configuration (prioritizing environment variables)
   await fetchOtelConfig();
-  
+
   // Create providers with the fetched configuration
   createProviders();
-  
+
   try {
+    console.log('🔧 Registering OpenTelemetry instrumentations...');
+
     // Registering instrumentations / plugins
     registerInstrumentations({
       instrumentations: [
@@ -225,6 +242,7 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
       ],
     });
 
+    console.log('📊 Registering trace and metrics providers...');
     provider.register({});
 
     // Register the metrics provider
@@ -237,6 +255,8 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
 
     logs.setGlobalLoggerProvider(loggerProvider);
 
+    console.log('✅ OpenTelemetry providers registered successfully');
+
     logger.emit({
       severityNumber: SeverityNumber.INFO,
       severityText: "INFO",
@@ -244,10 +264,12 @@ export async function initOtel(): Promise<{ tracer: Tracer; logger: Logger; mete
       attributes: {
         service: serviceName,
         endpoint: otlpEndpoint,
+        has_bearer_token: !!otlpEndpointBearerToken,
         environment: import.meta.env.MODE,
-        sampling_strategy: import.meta.env.MODE === 'production' ? 'parent_based_10pct' : 
+        sampling_strategy: import.meta.env.MODE === 'production' ? 'parent_based_10pct' :
                           import.meta.env.MODE === 'development' ? 'always_on' : 'parent_based_configurable',
         sampling_rate: import.meta.env.VITE_OTEL_SAMPLING_RATE || '1.0',
+        config_source: import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT || import.meta.env.VITE_OTEL_EXPORTER_OTLP_ENDPOINT ? 'environment_variables' : 'supabase_or_default',
       },
     });
 
