@@ -154,8 +154,8 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 font-ui text-xs text-ink-2">
           <p>
             NBA regular seasons 2013-14 to 2025-26. Play-by-play from{' '}
-            <a className="underline" href="https://github.com/shufinskiy/nba_data">shufinskiy/nba_data</a>, prepared with the
-            nba-shot-quality project.
+            <a className="underline" href="https://github.com/shufinskiy/nba_data">shufinskiy/nba_data</a>, processed with
+            the <a className="underline" href="https://github.com/bnamm1/nba-shot-quality">nba-shot-quality</a> pipeline.
           </p>
         </div>
       </footer>
