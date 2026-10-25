@@ -1,266 +1,185 @@
-import { lazy, Suspense, useState } from "react";
-import { LazyNavigation } from "@/components/LazyNavigation";
-import { PlayerSelector } from "@/components/ui/player-selector";
-import { VersionMarker } from "@/components/ui/version-marker";
-import { ComponentLoader } from "@/components/LazyIndex";
-import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
-import { Button } from "@/components/ui/button";
-// Charts library is only needed in career mode.
-const CareerView = lazy(() => import("@/components/career/CareerView").then(m => ({ default: m.CareerView })));
+import { useEffect, useState } from 'react';
+import type { Kind } from '@/services/staticData';
+import { usePlayers, useSeasonIndex } from '@/hooks/useData';
+import { EntityPicker, type Selection } from '@/components/app/EntityPicker';
+import { SeasonView, Empty } from '@/components/app/SeasonView';
+import { CareerView } from '@/components/app/CareerView';
+import { TEAMS } from '@/lib/teams';
+
+type Mode = 'season' | 'career';
+type Look = 'editorial' | 'minimal';
+
+interface ViewState {
+  mode: Mode;
+  kind: Kind;
+  players: Selection[];
+  teams: Selection[];
+  season: string | null;
+  vs: string | null;
+}
+
+const DEFAULTS: ViewState = {
+  mode: 'season',
+  kind: 'player',
+  players: [{ id: '201939', name: 'Stephen Curry' }],
+  teams: [{ id: 'GSW', name: TEAMS.GSW }],
+  season: null,
+  vs: null,
+};
+
+// The view lives in the URL (?mode=career&kind=player&ids=201939,203081&season=2025-26&vs=2015-16),
+// so a link opens the same page. Player names are filled in once players.json loads.
+function readUrl(): ViewState {
+  const q = new URLSearchParams(window.location.search);
+  const kind: Kind = q.get('kind') === 'team' ? 'team' : 'player';
+  const ids = (q.get('ids') ?? '').split(',').filter(Boolean).slice(0, 2);
+  const sels = ids.map(id => ({ id, name: kind === 'team' ? TEAMS[id] ?? id : '' }));
+  return {
+    mode: q.get('mode') === 'career' ? 'career' : 'season',
+    kind,
+    players: kind === 'player' && sels.length ? sels : DEFAULTS.players,
+    teams: kind === 'team' && sels.length ? sels : DEFAULTS.teams,
+    season: q.get('season'),
+    vs: q.get('vs'),
+  };
+}
+
+function writeUrl(v: ViewState) {
+  const q = new URLSearchParams();
+  if (v.mode !== 'season') q.set('mode', v.mode);
+  if (v.kind !== 'player') q.set('kind', v.kind);
+  const sels = v.kind === 'player' ? v.players : v.teams;
+  const def = v.kind === 'player' ? DEFAULTS.players : DEFAULTS.teams;
+  if (sels.map(s => s.id).join() !== def.map(s => s.id).join()) q.set('ids', sels.map(s => s.id).join(','));
+  if (v.mode === 'season' && v.season) q.set('season', v.season);
+  if (v.mode === 'season' && v.vs) q.set('vs', v.vs);
+  const s = q.toString();
+  window.history.replaceState(null, '', s ? `?${s}` : window.location.pathname);
+}
+
+function readLook(): Look {
+  try {
+    return localStorage.getItem('look') === 'minimal' ? 'minimal' : 'editorial';
+  } catch {
+    return 'editorial';
+  }
+}
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2025-26");
-  const [viewMode, setViewMode] = useState<"player" | "team">("player");
-  const [isComparisonMode, setIsComparisonMode] = useState(false);
-  const [selectedSeason2, setSelectedSeason2] = useState("2024-25");
-  const [isCareerMode, setIsCareerMode] = useState(false);
+  const [view, setView] = useState<ViewState>(readUrl);
+  const [look, setLook] = useState<Look>(readLook);
+  const index = useSeasonIndex();
+  const players = usePlayers();
 
-  // From the career view: open one season in the normal view.
-  const openSeason = (season: string) => {
-    setSelectedSeason(season);
-    if (season === selectedSeason2) setSelectedSeason2(season === "2025-26" ? "2024-25" : "2025-26");
-    setIsComparisonMode(false);
-    setIsCareerMode(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  
-  
-  // Cache selections for each view mode
-  const [playerSelections, setPlayerSelections] = useState<string[]>(["Stephen Curry"]);
-  const [teamSelections, setTeamSelections] = useState<string[]>(["GSW"]);
-  
-  // Get current selections based on view mode
-  const selectedEntities = viewMode === "player" ? playerSelections : teamSelections;
+  const season = view.season && index.data?.seasons.includes(view.season) ? view.season : index.data?.default ?? null;
+  const selections = view.kind === 'player' ? view.players : view.teams;
+  const update = (patch: Partial<ViewState>) => setView(v => ({ ...v, ...patch }));
 
-  // Handle view mode changes
-  const handleViewModeChange = (newViewMode: "player" | "team") => {
-    console.log(`🔍 Index: Switching to viewMode: ${newViewMode}`);
-    setViewMode(newViewMode);
-  };
-  
-  // Handle entity changes based on current view mode
-  const handleEntitiesChange = (entities: string[]) => {
-    if (viewMode === "player") {
-      setPlayerSelections(entities);
-    } else if (viewMode === "team") {
-      setTeamSelections(entities);
+  useEffect(() => writeUrl(view), [view]);
+
+  useEffect(() => {
+    document.documentElement.dataset.look = look;
+    try {
+      localStorage.setItem('look', look);
+    } catch {
+      // private mode: the look just isn't remembered
     }
+  }, [look]);
+
+  // Players from a shared link arrive as ids only.
+  useEffect(() => {
+    if (!players.data || view.players.every(p => p.name)) return;
+    const byId = new Map(players.data.map(p => [p.id, p.name]));
+    update({ players: view.players.map(p => ({ ...p, name: p.name || byId.get(p.id) || p.id })).filter(p => byId.has(p.id)) });
+  }, [players.data, view.players]);
+
+  const setSelections = (next: Selection[]) => update(view.kind === 'player' ? { players: next } : { teams: next });
+  const openSeason = (s: string) => {
+    update({ mode: 'season', season: s, vs: null });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const { batchResults } = useComparisonBatchShotData({
-    entity1: selectedEntities[0] || '',
-    entity2: selectedEntities[1] || '',
-    season1: selectedSeason,
-    season2: selectedSeason2,
-    viewMode,
-    enabled: isComparisonMode && selectedEntities.length > 1,
-  });
+  const seasons = index.data?.seasons ?? [];
+  const canCompareSeasons = view.mode === 'season' && selections.length === 1;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation Bar */}
-      <LazyNavigation
-        selectedSeason={selectedSeason}
-        onSeasonChange={setSelectedSeason}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-        isComparisonMode={isComparisonMode}
-        onComparisonModeChange={setIsComparisonMode}
-        selectedSeason2={selectedSeason2}
-        onSeason2Change={setSelectedSeason2}
-        isCareerMode={isCareerMode}
-        onCareerModeChange={setIsCareerMode}
-      />
-
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {/* Sidebar - Entity Selector */}
-          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
-            <PlayerSelector
-              viewMode={viewMode}
-              selectedEntities={selectedEntities}
-              onEntitiesChange={handleEntitiesChange}
-              selectedSeason={isCareerMode ? "" : selectedSeason}
-            />
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-rule bg-paper">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-8 gap-y-3">
+          <a href="./" className="font-display text-2xl leading-none whitespace-nowrap" aria-label="Shot Quality, home">
+            Shot <i className="text-brand">Quality</i>
+          </a>
+          <nav className="seg" aria-label="View">
+            <button aria-pressed={view.mode === 'season'} onClick={() => update({ mode: 'season' })}>Season</button>
+            <button aria-pressed={view.mode === 'career'} onClick={() => update({ mode: 'career' })}>Career</button>
+          </nav>
+          <div className="seg" role="group" aria-label="Players or teams">
+            <button aria-pressed={view.kind === 'player'} onClick={() => update({ kind: 'player' })}>Players</button>
+            <button aria-pressed={view.kind === 'team'} onClick={() => update({ kind: 'team' })}>Teams</button>
           </div>
+          {view.mode === 'season' && season && (
+            <label className="ml-auto flex items-center gap-2 font-ui text-sm">
+              <span className="text-ink-2">Season</span>
+              <select className="control" value={season} onChange={e => update({ season: e.target.value, vs: view.vs === e.target.value ? null : view.vs })}>
+                {seasons.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+      </header>
 
-          {/* Main Content Area */}
-          {isCareerMode ? (
-          <div className="lg:col-span-3">
-            <Suspense fallback={<div className="p-8 text-center text-muted-foreground animate-pulse">Loading career view…</div>}>
-              <CareerView entities={selectedEntities} viewMode={viewMode} onOpenSeason={openSeason} />
-            </Suspense>
-          </div>
-          ) : (
-          <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Shot Charts Grid */}
-            <div className="space-y-4 sm:space-y-6">
-              {isComparisonMode ? (
-                // Comparison Mode - Handle multiple entities or seasons
-                selectedEntities.length > 1 ? (
-                  // Two entities + comparison mode: Reorganized layout
-                  <div className="space-y-6">
-                    {/* Row 1: Two shot charts for the first season */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {selectedEntities.map((entity) => (
-                        <ComponentLoader
-                          key={`${entity}-${selectedSeason}`}
-                          component="EntityShotChart"
-                          entityName={`${entity} (${selectedSeason})`}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                          preloadedData={batchResults[`${entity}_${selectedSeason}`]?.data}
-                        />
-                      ))}
-                    </div>
-                    
-                    {/* Row 2: Two shot charts for the second season */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {selectedEntities.map((entity) => (
-                        <ComponentLoader
-                          key={`${entity}-${selectedSeason2}`}
-                          component="EntityShotChart"
-                          entityName={`${entity} (${selectedSeason2})`}
-                          selectedSeason={selectedSeason2}
-                          viewMode={viewMode}
-                          preloadedData={batchResults[`${entity}_${selectedSeason2}`]?.data}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  // Single entity across seasons
-                  selectedEntities.map((entity) => (
-                    <ComponentLoader
-                      key={entity}
-                      component="ComparisonShotChart"
-                      entityName={entity}
-                      season1={selectedSeason}
-                      season2={selectedSeason2}
-                      viewMode={viewMode}
-                    />
-                  ))
-                )
-              ) : (
-                // Single Season Mode (original functionality)
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  {selectedEntities.map((entity) => (
-                    <ComponentLoader
-                      key={`${entity}-${selectedSeason}-${viewMode}`}
-                      component="EntityShotChart"
-                      entityName={entity}
-                      selectedSeason={selectedSeason}
-                      viewMode={viewMode}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Statistics Panels */}
-            <div className="space-y-4 sm:space-y-6">
-              {isComparisonMode ? (
-                // Comparison Mode Statistics
-                selectedEntities.length > 1 ? (
-                  // Two entities + comparison on: Use batch fetching for all 4 combinations
-                  <ComponentLoader
-                    component="BatchEntityLayout"
-                    entity1={selectedEntities[0]}
-                    entity2={selectedEntities[1]}
-                    season1={selectedSeason}
-                    season2={selectedSeason2}
-                    viewMode={viewMode}
-                    preloadedResults={batchResults}
-                  />
-                ) : (
-                  // Single entity across seasons: Show individual stats for each season + season comparison
-                  <div className="space-y-6">
-                    {/* Individual player statistics for each season */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      <ComponentLoader
-                        key={`${selectedEntities[0]}-${selectedSeason}-${viewMode}`}
-                        component="EntityStatistics"
-                        entityName={selectedEntities[0]}
-                        selectedSeason={selectedSeason}
-                        viewMode={viewMode}
-                      />
-                      <ComponentLoader
-                        key={`${selectedEntities[0]}-${selectedSeason2}-${viewMode}`}
-                        component="EntityStatistics"
-                        entityName={selectedEntities[0]}
-                        selectedSeason={selectedSeason2}
-                        viewMode={viewMode}
-                      />
-                    </div>
-                    {/* Season comparison */}
-                    <ComponentLoader
-                      key={selectedEntities[0]}
-                      component="ComparisonStatistics"
-                      entityName={selectedEntities[0]}
-                      season1={selectedSeason}
-                      season2={selectedSeason2}
-                      viewMode={viewMode}
-                    />
-                  </div>
-                )
-              ) : (
-                // Non-comparison mode
-                selectedEntities.length > 1 ? (
-                  // Two players + comparison off: Show individual stats for each player + player vs player comparison
-                  <div className="space-y-6">
-                    {/* Individual player statistics */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {selectedEntities.map((entity) => (
-                        <ComponentLoader
-                          key={`${entity}-${selectedSeason}-${viewMode}`}
-                          component="EntityStatistics"
-                          entityName={entity}
-                          selectedSeason={selectedSeason}
-                          viewMode={viewMode}
-                        />
-                      ))}
-                    </div>
-                    {/* Entity vs Entity comparison */}
-                    <ComponentLoader
-                      component="EntityVsEntityComparison"
-                      entity1={selectedEntities[0]}
-                      entity2={selectedEntities[1]}
-                      season={selectedSeason}
-                      viewMode={viewMode}
-                    />
-                  </div>
-                ) : (
-                  // Single Season Mode Statistics (original functionality)
-                  selectedEntities.map((entity) => (
-                    <ComponentLoader
-                      key={`${entity}-${selectedSeason}-${viewMode}`}
-                      component="EntityStatistics"
-                      entityName={entity}
-                      selectedSeason={selectedSeason}
-                      viewMode={viewMode}
-                    />
-                  ))
-                )
-              )}
-            </div>
-          </div>
+      <div className="border-b border-rule-soft">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <EntityPicker
+            kind={view.kind}
+            players={players.data ?? []}
+            season={view.mode === 'season' ? season ?? undefined : undefined}
+            selected={selections}
+            onChange={setSelections}
+          />
+          {canCompareSeasons && season && (
+            <label className="flex items-center gap-2 font-ui text-sm">
+              <span className="text-ink-2">Compare with</span>
+              <select className="control" value={view.vs ?? ''} onChange={e => update({ vs: e.target.value || null })}>
+                <option value="">another season…</option>
+                {seasons.filter(s => s !== season).map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
           )}
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 backdrop-blur-sm mt-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-              NBA Shot Analytics • Data from 2013-2014 to 2025-2026 seasons
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-              <span className="text-center">Built with modern web technologies</span>
-              <VersionMarker version="v2.2.2" />
-            </div>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {index.error ? (
+          <Empty tone="bad">{index.error}</Empty>
+        ) : !index.data || !season ? (
+          <Empty pulse>Loading…</Empty>
+        ) : view.mode === 'career' ? (
+          <CareerView kind={view.kind} selections={selections} index={index.data} onOpenSeason={openSeason} />
+        ) : (
+          <SeasonView
+            kind={view.kind}
+            selections={selections}
+            season={season}
+            compareSeason={canCompareSeasons ? view.vs : null}
+            index={index.data}
+            onOpenSeason={openSeason}
+            onOpenCareer={() => update({ mode: 'career' })}
+          />
+        )}
+      </main>
+
+      <footer className="border-t border-rule">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row gap-3 justify-between font-ui text-xs text-ink-2">
+          <p>
+            NBA regular seasons 2013-14 to 2025-26. Play-by-play from{' '}
+            <a className="underline" href="https://github.com/shufinskiy/nba_data">shufinskiy/nba_data</a>, prepared with the
+            nba-shot-quality project.
+          </p>
+          <div className="seg" role="group" aria-label="Look">
+            <span className="text-ink-3 mr-1">Look</span>
+            <button aria-pressed={look === 'editorial'} onClick={() => setLook('editorial')}>Editorial</button>
+            <button aria-pressed={look === 'minimal'} onClick={() => setLook('minimal')}>Minimal</button>
           </div>
         </div>
       </footer>

@@ -1,21 +1,19 @@
-// Static shot data built by scripts/build_data.py into public/data/.
-// One columnar JSON file per season; each is fetched once and decoded once.
-import type { ShotData } from './supabaseDataService';
+// Static data built by scripts/build_data.py into public/data/:
+//   seasons.json          season list, default season, league averages per season
+//   players.json          [personId, name, season start years] for every shooter
+//   players/<id>.json     one player's shots over all seasons
+//   teams/<code>.json     one team's shots over all seasons
+// Each file is fetched once and decoded once.
 
-interface SeasonFile {
-  season: string;
-  count: number;
-  teams: string[];
-  subTypes: string[];
-  playerIds: number[];
-  p: number[];
-  t: number[];
-  x: number[];
-  y: number[];
-  d: number[];
-  m: number[];
-  v: number[];
-  s: number[];
+export interface ShotData {
+  personId: string;
+  teamTricode: string;
+  xLegacy: number;
+  yLegacy: number;
+  shotDistance: number;
+  shotResult: 'Made' | 'Missed';
+  shotValue: number;
+  subType?: string;
 }
 
 export interface LeagueSeason {
@@ -25,13 +23,36 @@ export interface LeagueSeason {
   threeShare: number;
   efgPct: number;
   pointsPerShot: number;
+  teams: number;
+  /** [attempts, made] per zone, in SeasonIndex.zones order. */
+  zones: [number, number][];
 }
 
 export interface SeasonIndex {
   /** Newest first. */
   seasons: string[];
   default: string;
+  zones: string[];
   league: Record<string, LeagueSeason>;
+}
+
+export interface PlayerInfo {
+  id: string;
+  name: string;
+  /** Season labels ('2025-26') with at least one shot, oldest first. */
+  seasons: string[];
+}
+
+export type Kind = 'player' | 'team';
+
+export interface Career {
+  id: string;
+  /** Oldest first: the seasons with at least one shot. */
+  seasons: string[];
+  bySeason: Map<string, ShotData[]>;
+  /** Teams played for, per season (players only). */
+  teamsBySeason: Map<string, string[]>;
+  all: ShotData[];
 }
 
 interface CareerFile {
@@ -50,60 +71,44 @@ interface CareerFile {
   s: number[];
 }
 
-export interface Career {
-  id: string;
-  /** Oldest first: the seasons with at least one shot. */
-  seasons: string[];
-  bySeason: Map<string, ShotData[]>;
-  /** Teams played for, per season (players only). */
-  teamsBySeason: Map<string, string[]>;
-  all: ShotData[];
-}
-
 const BASE = `${import.meta.env.BASE_URL}data`;
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}/${path}`);
-  if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+  if (!res.ok) throw new Error(`Couldn't load ${path} (${res.status})`);
   return res.json() as Promise<T>;
 }
 
-let seasonIndex: Promise<SeasonIndex> | null = null;
-/** [personId, full name, season start years in which they took a shot] */
-export type PlayerRow = [number, string, number[]];
+/** Cache a promise per key; a failed load is dropped so the next call retries. */
+function cached<T>(cache: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
+  let p = cache.get(key);
+  if (!p) {
+    p = load();
+    p.catch(() => cache.delete(key));
+    cache.set(key, p);
+  }
+  return p;
+}
 
-let playerList: Promise<PlayerRow[]> | null = null;
-const seasonShots = new Map<string, Promise<ShotData[]>>();
+let seasonIndex: Promise<SeasonIndex> | null = null;
+let players: Promise<PlayerInfo[]> | null = null;
+const careers = new Map<string, Promise<Career>>();
+
+export const seasonLabel = (startYear: number) => `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 
 export function loadSeasonIndex(): Promise<SeasonIndex> {
   seasonIndex ??= getJson<SeasonIndex>('seasons.json');
+  seasonIndex.catch(() => (seasonIndex = null));
   return seasonIndex;
 }
 
-export function loadPlayers(): Promise<PlayerRow[]> {
-  playerList ??= getJson<PlayerRow[]>('players.json');
-  return playerList;
+export function loadPlayers(): Promise<PlayerInfo[]> {
+  players ??= getJson<[number, string, number[]][]>('players.json').then(rows =>
+    rows.map(([id, name, years]) => ({ id: String(id), name, seasons: years.map(seasonLabel) }))
+  );
+  players.catch(() => (players = null));
+  return players;
 }
-
-function decode(f: SeasonFile): ShotData[] {
-  const ids = f.playerIds.map(String);
-  const shots: ShotData[] = new Array(f.count);
-  for (let i = 0; i < f.count; i++) {
-    shots[i] = {
-      personId: ids[f.p[i]],
-      teamTricode: f.teams[f.t[i]],
-      xLegacy: f.x[i],
-      yLegacy: f.y[i],
-      shotDistance: f.d[i],
-      shotResult: f.m[i] ? 'Made' : 'Missed',
-      shotValue: f.v[i],
-      subType: f.subTypes[f.s[i]],
-    };
-  }
-  return shots;
-}
-
-const careers = new Map<string, Promise<Career>>();
 
 function decodeCareer(f: CareerFile): Career {
   const bySeason = new Map<string, ShotData[]>(f.seasons.map(season => [season, []]));
@@ -135,35 +140,6 @@ function decodeCareer(f: CareerFile): Career {
 }
 
 /** Every shot of one player (by personId) or team (by tricode) since 2013-14. */
-export function loadCareer(kind: 'player' | 'team', id: string): Promise<Career> {
-  const key = `${kind}/${id}`;
-  let career = careers.get(key);
-  if (!career) {
-    career = getJson<CareerFile>(`${kind}s/${id}.json`).then(decodeCareer);
-    career.catch(() => careers.delete(key));
-    careers.set(key, career);
-  }
-  return career;
-}
-
-export function loadSeason(season: string): Promise<ShotData[]> {
-  let shots = seasonShots.get(season);
-  if (!shots) {
-    shots = getJson<SeasonFile>(`shots/${season}.json`).then(decode);
-    // Drop a failed load so the next request retries it.
-    shots.catch(() => seasonShots.delete(season));
-    seasonShots.set(season, shots);
-  }
-  return shots;
-}
-
-export async function getShots(
-  season: string,
-  entityId?: string,
-  viewMode: 'player' | 'team' | 'league' = 'league',
-): Promise<ShotData[]> {
-  const shots = await loadSeason(season);
-  if (viewMode === 'player' && entityId) return shots.filter(s => s.personId === entityId);
-  if (viewMode === 'team' && entityId) return shots.filter(s => s.teamTricode === entityId);
-  return shots;
+export function loadCareer(kind: Kind, id: string): Promise<Career> {
+  return cached(careers, `${kind}/${id}`, () => getJson<CareerFile>(`${kind}s/${id}.json`).then(decodeCareer));
 }

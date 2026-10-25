@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Build the app's static data files from enriched shot CSVs.
 
-Each season becomes one compact, columnar JSON file under public/data/, so the
+Shots are grouped into compact, columnar JSON files under public/data/, so the
 app needs no database:
 
     public/data/seasons.json            season list (newest first) + default
     public/data/players.json            [[personId, full name, [season start years]], ...]
-    public/data/shots/2025-26.json      one season of shots, columnar
     public/data/players/<personId>.json one player's shots over all seasons (career view)
     public/data/teams/<tricode>.json    one team's shots over all seasons
 
@@ -88,12 +87,37 @@ def read_season(path: Path) -> dict:
     }
 
 
+# Court zones, the same rules as src/lib/shotStats.ts zoneOf(). Coordinates are
+# tenths of a foot from the hoop; the corner three runs up to ~9 ft above the hoop.
+ZONES = ["Restricted area", "In the paint", "Mid-range",
+         "Left corner 3", "Right corner 3", "Above the break 3"]
+
+
+def zone_of(x: int, y: int, value: int) -> int:
+    if value == 3:
+        if y <= 90 and x <= -220:
+            return 3
+        if y <= 90 and x >= 220:
+            return 4
+        return 5
+    if math.hypot(x, y) <= 40:
+        return 0
+    if abs(x) < 80 and y < 137.5:
+        return 1
+    return 2
+
+
 def league_summary(data: dict) -> dict:
     n = data["count"]
     made = sum(data["m"])
     threes = [i for i, v in enumerate(data["v"]) if v == 3]
     made3 = sum(data["m"][i] for i in threes)
     points = sum(m * v for m, v in zip(data["m"], data["v"]))
+    zones = [[0, 0] for _ in ZONES]
+    for x, y, v, m in zip(data["x"], data["y"], data["v"], data["m"]):
+        z = zones[zone_of(x, y, v)]
+        z[0] += 1
+        z[1] += m
     return {
         "shots": n,
         "fgPct": round(made / n, 4),
@@ -101,6 +125,9 @@ def league_summary(data: dict) -> dict:
         "threeShare": round(len(threes) / n, 4),
         "efgPct": round((made + 0.5 * made3) / n, 4),
         "pointsPerShot": round(points / n, 4),
+        "teams": len(data["teams"]),
+        # [attempts, made] per zone, in ZONES order
+        "zones": zones,
     }
 
 
@@ -169,7 +196,6 @@ def main(argv=None) -> int:
             for r in csv.DictReader(f):
                 extra.setdefault(int(r["PLAYER_ID"]), r["PLAYER_NAME"])
 
-    (OUT / "shots").mkdir(parents=True, exist_ok=True)
     shooters: dict[int, list[int]] = {}
     seasons = []
     by_season: dict[str, dict] = {}
@@ -178,16 +204,13 @@ def main(argv=None) -> int:
         label = season_label(start)
         data = read_season(files[start])
         data["season"] = label
-        out = OUT / "shots" / f"{label}.json"
-        out.write_text(json.dumps(data, separators=(",", ":")))
         for pid in data["playerIds"]:
             shooters.setdefault(pid, []).append(start)
         seasons.append(label)
         by_season[label] = data
         league[label] = league_summary(data)
         print(f"{label}: {data['count']:,} shots, {len(data['playerIds'])} players, "
-              f"{len(data['teams'])} teams -> {out.relative_to(REPO)} "
-              f"({out.stat().st_size / 1e6:.1f} MB)  [{files[start]}]")
+              f"{len(data['teams'])} teams  [{files[start]}]")
 
     players, missing = [], []
     for pid in sorted(shooters):
@@ -211,7 +234,7 @@ def main(argv=None) -> int:
     if default not in seasons:
         sys.exit(f"default season {default} not built")
     (OUT / "seasons.json").write_text(json.dumps(
-        {"seasons": newest_first, "default": default, "league": league}, indent=1))
+        {"seasons": newest_first, "default": default, "zones": ZONES, "league": league}, indent=1))
     print(f"seasons: {newest_first[-1]} .. {newest_first[0]}, default {default}")
     return 0
 

@@ -3,11 +3,6 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Force clear caches first - lazy load to avoid blocking initial render
-setTimeout(() => {
-  import("./utils/forceCacheClear");
-}, 50);
-
 // Defer OpenTelemetry initialization until after app loads
 const initializeAnalytics = async () => {
   // Dynamic imports to avoid loading telemetry code in initial bundle

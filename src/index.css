@@ -2,240 +2,145 @@
 @tailwind components;
 @tailwind utilities;
 
-/* NBA Shot Chart Analytics Design System
-All colors MUST be HSL for proper theming
-*/
-
+/* Two looks share one layout. Colours are "r g b" triplets so Tailwind can
+   add opacity (bg-ink/10). Editorial is the default; data-look="minimal" on
+   <html> switches to the quiet product look. */
 @layer base {
   :root {
-    /* NBA Dark Theme */
-    --background: 220 13% 8%;
-    --foreground: 210 20% 95%;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Source Serif 4', Georgia, serif;
+    --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-    --card: 220 13% 10%;
-    --card-foreground: 210 20% 95%;
+    --paper: 250 247 240;      /* cream */
+    --panel: 255 253 248;
+    --ink: 29 27 23;
+    --ink-2: 91 87 77;
+    --ink-3: 138 133 120;
+    --rule: 29 27 23;          /* strong rules above sections */
+    --rule-soft: 228 223 211;
+    --brand: 200 16 46;        /* the one red */
+    --good: 31 122 74;
+    --bad: 178 34 34;
+    --series-1: 200 16 46;
+    --series-2: 47 93 138;
+    --league: 138 133 120;
 
-    --popover: 220 13% 12%;
-    --popover-foreground: 210 20% 95%;
+    /* Court */
+    --court-bg: 243 239 230;
+    --court-line: 185 178 162;
+    --hex-cold: 52 101 164;
+    --hex-mid: 214 208 194;
+    --hex-hot: 200 16 46;
+    --hex-thin: 207 201 187;
+    --made: 29 27 23;
+    --missed: 160 153 138;
 
-    /* NBA Primary Colors */
-    --primary: 350 85% 47%; /* NBA Red */
-    --primary-foreground: 210 20% 98%;
-
-    --secondary: 220 13% 15%;
-    --secondary-foreground: 210 20% 95%;
-
-    --muted: 220 13% 15%;
-    --muted-foreground: 215 15% 65%;
-
-    /* NBA Accent */
-    --accent: 45 95% 58%; /* NBA Gold */
-    --accent-foreground: 220 13% 8%;
-
-    /* NBA Blue */
-    --nba-blue: 212 85% 32%;
-    --nba-blue-foreground: 210 20% 98%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
-
-    --border: 220 13% 20%;
-    --input: 220 13% 15%;
-    --ring: 350 85% 47%;
-
-    --radius: 0.75rem;
-
-    /* Court Colors */
-    --court-background: 25 35% 45%; /* Basketball court brown */
-    --court-lines: 0 0% 95%; /* White court lines */
-    --court-restricted: 220 13% 25%; /* Restricted area */
-
-    /* Heat Map Colors */
-    --heat-cold: 220 85% 45%; /* Cold zones - blue */
-    --heat-neutral: 45 15% 75%; /* Neutral zones */
-    --heat-warm: 25 85% 55%; /* Warm zones - orange */
-    --heat-hot: 350 85% 55%; /* Hot zones - red */
-
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--nba-blue)));
-    --gradient-court: radial-gradient(ellipse at center, hsl(var(--court-background)), hsl(25 25% 35%));
-    --gradient-stats: linear-gradient(180deg, hsl(var(--card)), hsl(220 13% 8%));
-
-    /* Shadows */
-    --shadow-court: 0 20px 60px -20px hsl(var(--primary) / 0.3);
-    --shadow-card: 0 10px 30px -10px hsl(220 13% 5% / 0.5);
-    --shadow-glow: 0 0 40px hsl(var(--accent) / 0.2);
-
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --radius: 2px;
+    --heading-weight: 500;
   }
 
-  /* Light mode keeps the same NBA theme but with lighter backgrounds */
-  .light {
-    --background: 210 20% 98%;
-    --foreground: 220 13% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 13% 15%;
-    --border: 220 13% 85%;
-    --input: 220 13% 85%;
-  }
-}
+  [data-look='minimal'] {
+    --font-display: 'Inter', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
 
-@layer base {
+    --paper: 255 255 255;
+    --panel: 255 255 255;
+    --ink: 24 24 27;
+    --ink-2: 82 82 91;
+    --ink-3: 161 161 170;
+    --rule: 240 240 242;
+    --rule-soft: 240 240 242;
+    --brand: 24 24 27;
+    --good: 22 163 74;
+    --bad: 220 38 38;
+    --series-1: 24 24 27;
+    --series-2: 37 99 235;
+    --league: 161 161 170;
+
+    --court-bg: 250 250 250;
+    --court-line: 212 212 216;
+    --hex-cold: 59 130 246;
+    --hex-mid: 212 212 216;
+    --hex-hot: 239 68 68;
+    --hex-thin: 228 228 231;
+    --made: 24 24 27;
+    --missed: 161 161 170;
+
+    --radius: 12px;
+    --heading-weight: 600;
+  }
+
   * {
-    @apply border-border;
+    @apply border-rule-soft;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply bg-paper text-ink font-ui antialiased;
   }
 
-  /* Mobile-optimized text rendering */
-  @media (max-width: 640px) {
-    body {
-      -webkit-text-size-adjust: 100%;
-    }
+  .font-display {
+    font-weight: var(--heading-weight);
+    letter-spacing: -0.01em;
+  }
+  [data-look='minimal'] .font-display {
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* A section: editorial uses a heavy top rule, minimal a soft bordered card. */
+  .section {
+    @apply border-t border-rule pt-4;
+  }
+  [data-look='minimal'] .section {
+    @apply rounded-[12px] border border-rule-soft p-4 sm:p-5;
   }
 
-  /* Mobile Touch Targets */
-  .touch-target {
-    min-height: 44px; /* iOS recommended minimum */
-    min-width: 44px;
+  .kicker {
+    @apply font-ui text-xs font-semibold uppercase tracking-[0.12em] text-brand;
+  }
+  [data-look='minimal'] .kicker {
+    @apply normal-case tracking-normal text-ink-3 font-medium text-sm;
   }
 
-  /* Mobile-first responsive text utilities */
-  .text-responsive-xs {
-    @apply text-mobile-xs sm:text-xs;
+  .label {
+    @apply font-ui text-xs font-semibold uppercase tracking-[0.08em] text-ink-2;
+  }
+  [data-look='minimal'] .label {
+    @apply normal-case tracking-normal font-medium text-[13px];
   }
 
-  .text-responsive-sm {
-    @apply text-mobile-sm sm:text-sm lg:text-base;
+  .seg {
+    @apply inline-flex items-center gap-4;
+  }
+  .seg > button {
+    @apply font-ui text-sm font-semibold text-ink-3 py-1 border-b-2 border-transparent transition-colors hover:text-ink;
+  }
+  .seg > button[aria-pressed='true'] {
+    @apply text-ink border-brand;
+  }
+  [data-look='minimal'] .seg {
+    @apply rounded-lg bg-[#f4f4f5] p-[3px] gap-0;
+  }
+  [data-look='minimal'] .seg > button {
+    @apply border-0 rounded-md px-3 py-1 font-medium text-[13px] text-ink-2;
+  }
+  [data-look='minimal'] .seg > button[aria-pressed='true'] {
+    @apply bg-white text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)];
   }
 
-  .text-responsive-base {
-    @apply text-mobile-base sm:text-base lg:text-lg;
+  .control {
+    @apply font-ui text-sm border border-ink bg-panel px-3 py-1.5 hover:bg-rule-soft/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40;
+  }
+  [data-look='minimal'] .control {
+    @apply border-rule-soft rounded-lg hover:bg-[#fafafa];
   }
 
-  .text-responsive-lg {
-    @apply text-mobile-lg sm:text-lg lg:text-xl;
-  }
-
-  .text-responsive-xl {
-    @apply text-mobile-xl sm:text-xl lg:text-2xl;
-  }
-
-  .text-responsive-2xl {
-    @apply text-mobile-2xl sm:text-2xl lg:text-3xl;
-  }
-
-  /* Fluid typography classes */
-  .text-fluid-title {
-    @apply text-fluid-xl font-semibold;
-  }
-
-  .text-fluid-heading {
-    @apply text-fluid-lg font-medium;
-  }
-
-  .text-fluid-body {
-    @apply text-fluid-base;
-  }
-
-  .text-fluid-caption {
-    @apply text-fluid-sm;
-  }
-
-  /* Mobile spacing utilities */
-  .mobile-padding {
-    @apply p-3 sm:p-4 lg:p-6;
-  }
-
-  .mobile-gap {
-    @apply gap-2 sm:gap-3 lg:gap-4;
-  }
-
-  .mobile-margin {
-    @apply m-2 sm:m-3 lg:m-4;
-  }
-
-  /* NBA Typography */
-  .text-nba-primary {
-    @apply text-primary;
-  }
-
-  .text-nba-blue {
-    color: hsl(var(--nba-blue));
-  }
-
-  .text-court-lines {
-    color: hsl(var(--court-lines));
-  }
-
-  /* Heat Map Colors */
-  .bg-heat-cold {
-    background-color: hsl(var(--heat-cold));
-  }
-
-  .bg-heat-warm {
-    background-color: hsl(var(--heat-warm));
-  }
-
-  .bg-heat-hot {
-    background-color: hsl(var(--heat-hot));
-  }
-
-  /* Gradients */
-  .bg-gradient-hero {
-    background: var(--gradient-hero);
-  }
-
-  .bg-gradient-court {
-    background: var(--gradient-court);
-  }
-
-  .bg-gradient-stats {
-    background: var(--gradient-stats);
-  }
-
-  /* Animations */
-  .transition-smooth {
-    transition: var(--transition-smooth);
-  }
-
-  .transition-spring {
-    transition: var(--transition-spring);
-  }
-
-  /* Glowing effects */
-  .glow-accent {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .shadow-court {
-    box-shadow: var(--shadow-court);
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-card);
+  .num {
+    font-variant-numeric: tabular-nums;
   }
 }
