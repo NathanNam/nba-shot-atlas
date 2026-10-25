@@ -1,10 +1,19 @@
 # Shot Atlas
 
-Where NBA players and teams shoot from, and how well, season by season since
-2013-14. Each page opens with the finding in a headline, then the numbers
-against the league, a hex-bin shot chart with a zone table, and a trend across
-seasons. Career view: every season of a player or team, side by side with a
-second one if you like.
+**[theshotatlas.com](https://theshotatlas.com)**
+
+Where NBA players and teams shoot from, and how well, season by season from
+2013-14 through 2025-26.
+
+- **Season view:** a headline that states the finding (e.g. "Six in ten of Curry's
+  shots in 2025-26 were threes. The league's rate was 42%."), the shooting numbers
+  against the league average, a hex-bin shot chart, a zone table with league
+  baselines, and a season-by-season trend.
+- **Career view:** a trend chart (share of shots that were threes, 3P%, FG%, eFG%,
+  points per shot, shots), a season table, one court per season, and every shot on
+  one court.
+- **Compare** two players or teams, or one player in two seasons.
+- **Shareable links:** the URL keeps the view, e.g. `?mode=career&ids=201939,203081`.
 
 The site is fully static: a Vite + React + TypeScript app plus JSON data files.
 There is no server, database or login, so the host holds no secrets.
@@ -31,11 +40,15 @@ npm run lint
 
 Sources:
 
-- Play-by-play: [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data) (`nbastatsv3_YYYY.tar.xz`).
-- Enrichment: `enrich_shots.py` from the [nba-shot-quality](https://github.com/bnamm1/nba-shot-quality)
-  project; its `enriched_data/` holds 2013-14 to 2024-25.
+- Play-by-play: [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data) (`nbastatsv3_YYYY.tar.xz`),
+  regular season only.
+- Shot processing: `enrich_shots.py` from [bnamm1/nba-shot-quality](https://github.com/bnamm1/nba-shot-quality);
+  its `enriched_data/` holds 2013-14 to 2024-25. The app uses each shot's location, result and
+  value; the shot-clock and shot-context fields the script adds are not shown yet.
 - Player names: `nba_players_2013_2025.csv` from nba-shot-quality, with newer players taken from
   nba_data's `shotdetail_YYYY.tar.xz`.
+- Shot distances the source records as 0 ft (mostly corner threes) are recomputed from the
+  coordinates.
 
 ### Adding a season
 
@@ -58,7 +71,17 @@ Sources:
 ## Deploy
 
 `.github/workflows/pages.yml` lints, builds and publishes `dist/` to GitHub Pages on every
-push to `main`. The custom domain is set in the repo's Pages settings, with DNS at Cloudflare.
+push to `main` (it can also be run by hand from the Actions tab).
+
+One-time setup:
+
+1. **Settings → Pages → Source: GitHub Actions.**
+2. **Settings → Pages → Custom domain:** `theshotatlas.com` (verify the domain first under
+   your account's Pages settings, with the TXT record GitHub gives you).
+3. **DNS at Cloudflare** (DNS only, grey cloud):
+   - `A` records on `@`: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   - `CNAME` `www` → `nathannam.github.io`
+4. **Enforce HTTPS** once GitHub has issued the certificate.
 
 ## Code map
 
@@ -68,6 +91,12 @@ push to `main`. The custom domain is set in the repo's Pages settings, with DNS 
 - `src/lib/`: `shotStats.ts` (percentages, court zones), `headline.ts` (the headline
   sentence), `teams.ts`
 - `src/services/staticData.ts`, `src/hooks/useData.ts`: loading the JSON files
+
+## Credits
+
+- Play-by-play data: [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data).
+- Shot processing and player list: [bnamm1/nba-shot-quality](https://github.com/bnamm1/nba-shot-quality).
+- Built with [Claude Code](https://claude.com/claude-code).
 
 ## History
 
