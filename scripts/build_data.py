@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import lzma
 import math
 import re
 import sys
@@ -38,7 +39,14 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "public" / "data"
-NAME = re.compile(r"nbastatsv3_(\d{4})_enriched_shots\.csv$")
+NAME = re.compile(r"nbastatsv3_(\d{4})_enriched_shots\.csv(\.xz)?$")
+
+
+def open_text(path: Path):
+    """Open a CSV, plain or xz-compressed (name ending in .xz)."""
+    if path.suffix == ".xz":
+        return lzma.open(path, "rt", newline="")
+    return path.open(newline="")
 
 
 def season_label(start: int) -> str:
@@ -57,7 +65,7 @@ def shot_distance(r: dict) -> int:
 
 def read_season(path: Path) -> dict:
     rows = []
-    with path.open(newline="") as f:
+    with open_text(path) as f:
         for r in csv.DictReader(f):
             rows.append((int(r["gameId"]), int(r["actionNumber"]), r))
     rows.sort(key=lambda t: (t[0], t[1]))
@@ -179,7 +187,7 @@ def main(argv=None) -> int:
 
     files: dict[int, Path] = {}
     for d in args.enriched:
-        for p in sorted(d.glob("nbastatsv3_*_enriched_shots.csv")):
+        for p in sorted(d.glob("nbastatsv3_*_enriched_shots.csv*")):
             m = NAME.search(p.name)
             if m:
                 files[int(m.group(1))] = p
@@ -187,12 +195,12 @@ def main(argv=None) -> int:
         sys.exit("no enriched CSVs found")
 
     names: dict[int, str] = {}
-    with args.players.open(newline="") as f:
+    with open_text(args.players) as f:
         for r in csv.DictReader(f):
             names[int(r["personId"])] = r["playerFullName"]
     extra: dict[int, str] = {}
     for p in args.shotdetail:
-        with p.open(newline="") as f:
+        with open_text(p) as f:
             for r in csv.DictReader(f):
                 extra.setdefault(int(r["PLAYER_ID"]), r["PLAYER_NAME"])
 

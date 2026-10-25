@@ -42,28 +42,36 @@ Sources:
 
 - Play-by-play: [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data) (`nbastatsv3_YYYY.tar.xz`),
   regular season only.
-- Shot processing: `enrich_shots.py` from [bnamm1/nba-shot-quality](https://github.com/bnamm1/nba-shot-quality);
-  its `enriched_data/` holds 2013-14 to 2024-25. The app uses each shot's location, result and
-  value; the shot-clock and shot-context fields the script adds are not shown yet.
+- Shot processing: `enrich_shots.py` from [bnamm1/nba-shot-quality](https://github.com/bnamm1/nba-shot-quality)
+  (v5, commit 4f3fd0a). The app uses each shot's location, result and value; the shot-clock and
+  shot-context fields the script adds are not shown yet.
 - Player names: `nba_players_2013_2025.csv` from nba-shot-quality, with newer players taken from
   nba_data's `shotdetail_YYYY.tar.xz`.
 - Shot distances the source records as 0 ft (mostly corner threes) are recomputed from the
   coordinates.
 
+The build inputs are kept outside the repo, xz-compressed (68 MB), in a folder like
+`../hoops-enrich/inputs/`: the 13 `nbastatsv3_YYYY_enriched_shots.csv.xz` files,
+`nba_players_2013_2025.csv`, `shotdetail_2025.csv.xz`, and a copy of `enrich_shots.py` (with its
+LICENSE). `build_data.py` reads `.csv` and `.csv.xz` alike. The nba-shot-quality CSVs are stored
+with Git LFS, so re-cloning that repo needs `git lfs` and uses its owner's LFS bandwidth; prefer the
+local copies.
+
 ### Adding a season
 
 1. Download `nbastatsv3_YYYY.tar.xz` and `shotdetail_YYYY.tar.xz` from nba_data
-   (YYYY = the season's start year) and unpack the CSVs.
-2. Run nba-shot-quality's `enrich_shots.py` on it, from a copy of the script whose
-   `raw_data/` holds `nbastatsv3_YYYY.csv`:
+   (YYYY = the season's start year; e.g.
+   `https://github.com/shufinskiy/nba_data/raw/main/datasets/nbastatsv3_YYYY.tar.xz`) and unpack them.
+2. Run `enrich_shots.py` (needs pandas and numpy) from a folder whose `raw_data/` holds
+   `nbastatsv3_YYYY.csv`:
    `python enrich_shots.py --seasons YYYY --out-dir out`
-3. Rebuild the data (later `--enriched` folders win for the same season):
+3. Compress the outputs into the inputs folder (`xz -9 out/*.csv shotdetail_YYYY.csv`, then move
+   them there) and rebuild:
 
    ```sh
-   python3 scripts/build_data.py \
-     --enriched ../nba-shot-quality/enriched_data path/to/out \
-     --players ../nba-shot-quality/nba_players_2013_2025.csv \
-     --shotdetail path/to/shotdetail_YYYY.csv
+   I=../hoops-enrich/inputs
+   python3 scripts/build_data.py --enriched $I --players $I/nba_players_2013_2025.csv \
+     --shotdetail $I/shotdetail_2025.csv.xz $I/shotdetail_YYYY.csv.xz
    ```
 
 4. Commit `public/data/` and push. The newest season becomes the default.
