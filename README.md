@@ -91,6 +91,8 @@ One-time setup:
 - `src/lib/`: `shotStats.ts` (percentages, court zones), `headline.ts` (the headline
   sentence), `teams.ts`
 - `src/services/staticData.ts`, `src/hooks/useData.ts`: loading the JSON files
+- `scripts/brand/make.mjs`: rebuilds the favicons and the share image (`public/og-image.png`,
+  Curry's career shot map) from the data; see the comment at the top for how to run it
 
 ## Credits
 
