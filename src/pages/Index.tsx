@@ -7,7 +7,6 @@ import { CareerView } from '@/components/app/CareerView';
 import { TEAMS } from '@/lib/teams';
 
 type Mode = 'season' | 'career';
-type Look = 'editorial' | 'minimal';
 
 interface ViewState {
   mode: Mode;
@@ -57,17 +56,8 @@ function writeUrl(v: ViewState) {
   window.history.replaceState(null, '', s ? `?${s}` : window.location.pathname);
 }
 
-function readLook(): Look {
-  try {
-    return localStorage.getItem('look') === 'minimal' ? 'minimal' : 'editorial';
-  } catch {
-    return 'editorial';
-  }
-}
-
 const Index = () => {
   const [view, setView] = useState<ViewState>(readUrl);
-  const [look, setLook] = useState<Look>(readLook);
   const index = useSeasonIndex();
   const players = usePlayers();
 
@@ -76,15 +66,6 @@ const Index = () => {
   const update = (patch: Partial<ViewState>) => setView(v => ({ ...v, ...patch }));
 
   useEffect(() => writeUrl(view), [view]);
-
-  useEffect(() => {
-    document.documentElement.dataset.look = look;
-    try {
-      localStorage.setItem('look', look);
-    } catch {
-      // private mode: the look just isn't remembered
-    }
-  }, [look]);
 
   // Players from a shared link arrive as ids only.
   useEffect(() => {
@@ -170,17 +151,12 @@ const Index = () => {
       </main>
 
       <footer className="border-t border-rule">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row gap-3 justify-between font-ui text-xs text-ink-2">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 font-ui text-xs text-ink-2">
           <p>
             NBA regular seasons 2013-14 to 2025-26. Play-by-play from{' '}
             <a className="underline" href="https://github.com/shufinskiy/nba_data">shufinskiy/nba_data</a>, prepared with the
             nba-shot-quality project.
           </p>
-          <div className="seg" role="group" aria-label="Look">
-            <span className="text-ink-3 mr-1">Look</span>
-            <button aria-pressed={look === 'editorial'} onClick={() => setLook('editorial')}>Editorial</button>
-            <button aria-pressed={look === 'minimal'} onClick={() => setLook('minimal')}>Minimal</button>
-          </div>
         </div>
       </footer>
     </div>

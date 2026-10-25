@@ -8,7 +8,7 @@ interface State {
   error: Error | null;
 }
 
-/** Shows a plain message instead of a blank page, and reports the error to telemetry. */
+/** Shows a plain message instead of a blank page. */
 class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
@@ -18,16 +18,6 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Render error:', error, info.componentStack);
-    // Loaded on demand so telemetry isn't part of the first download.
-    import('../otel-client')
-      .then(({ logger }) =>
-        logger.emit({
-          severityText: 'ERROR',
-          body: 'React render error',
-          attributes: { 'error.message': error.message, 'error.stack': error.stack ?? '' },
-        })
-      )
-      .catch(() => {});
   }
 
   render() {

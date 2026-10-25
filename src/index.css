@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Two looks share one layout. Colours are "r g b" triplets so Tailwind can
-   add opacity (bg-ink/10). Editorial is the default; data-look="minimal" on
-   <html> switches to the quiet product look. */
+/* The editorial look. Colours are "r g b" triplets so Tailwind can add
+   opacity (bg-ink/10). */
 @layer base {
   :root {
     --font-display: 'Fraunces', Georgia, serif;
@@ -39,36 +38,6 @@
     --heading-weight: 500;
   }
 
-  [data-look='minimal'] {
-    --font-display: 'Inter', system-ui, sans-serif;
-    --font-body: 'Inter', system-ui, sans-serif;
-
-    --paper: 255 255 255;
-    --panel: 255 255 255;
-    --ink: 24 24 27;
-    --ink-2: 82 82 91;
-    --ink-3: 161 161 170;
-    --rule: 240 240 242;
-    --rule-soft: 240 240 242;
-    --brand: 24 24 27;
-    --good: 22 163 74;
-    --bad: 220 38 38;
-    --series-1: 24 24 27;
-    --series-2: 37 99 235;
-    --league: 161 161 170;
-
-    --court-bg: 250 250 250;
-    --court-line: 212 212 216;
-    --hex-cold: 59 130 246;
-    --hex-mid: 212 212 216;
-    --hex-hot: 239 68 68;
-    --hex-thin: 228 228 231;
-    --made: 24 24 27;
-    --missed: 161 161 170;
-
-    --radius: 12px;
-    --heading-weight: 600;
-  }
 
   * {
     @apply border-rule-soft;
@@ -86,32 +55,20 @@
     font-weight: var(--heading-weight);
     letter-spacing: -0.01em;
   }
-  [data-look='minimal'] .font-display {
-    letter-spacing: -0.02em;
-  }
 }
 
 @layer components {
-  /* A section: editorial uses a heavy top rule, minimal a soft bordered card. */
+  /* A section opens with a heavy rule, like a magazine page. */
   .section {
     @apply border-t border-rule pt-4;
-  }
-  [data-look='minimal'] .section {
-    @apply rounded-[12px] border border-rule-soft p-4 sm:p-5;
   }
 
   .kicker {
     @apply font-ui text-xs font-semibold uppercase tracking-[0.12em] text-brand;
   }
-  [data-look='minimal'] .kicker {
-    @apply normal-case tracking-normal text-ink-3 font-medium text-sm;
-  }
 
   .label {
     @apply font-ui text-xs font-semibold uppercase tracking-[0.08em] text-ink-2;
-  }
-  [data-look='minimal'] .label {
-    @apply normal-case tracking-normal font-medium text-[13px];
   }
 
   .seg {
@@ -123,21 +80,9 @@
   .seg > button[aria-pressed='true'] {
     @apply text-ink border-brand;
   }
-  [data-look='minimal'] .seg {
-    @apply rounded-lg bg-[#f4f4f5] p-[3px] gap-0;
-  }
-  [data-look='minimal'] .seg > button {
-    @apply border-0 rounded-md px-3 py-1 font-medium text-[13px] text-ink-2;
-  }
-  [data-look='minimal'] .seg > button[aria-pressed='true'] {
-    @apply bg-white text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)];
-  }
 
   .control {
     @apply font-ui text-sm border border-ink bg-panel px-3 py-1.5 hover:bg-rule-soft/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40;
-  }
-  [data-look='minimal'] .control {
-    @apply border-rule-soft rounded-lg hover:bg-[#fafafa];
   }
 
   .num {

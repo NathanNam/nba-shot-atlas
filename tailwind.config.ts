@@ -1,8 +1,7 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 
-// Colours and fonts are CSS variables (src/index.css), so the two looks
-// (editorial, minimal) are a data-look attribute on <html>.
+// Colours and fonts are CSS variables, defined in src/index.css.
 export default {
 	content: ["./index.html", "./src/**/*.{ts,tsx}"],
 	theme: {
