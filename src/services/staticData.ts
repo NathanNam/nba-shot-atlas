@@ -18,9 +18,46 @@ interface SeasonFile {
   s: number[];
 }
 
+export interface LeagueSeason {
+  shots: number;
+  fgPct: number;
+  fg3Pct: number;
+  threeShare: number;
+  efgPct: number;
+  pointsPerShot: number;
+}
+
 export interface SeasonIndex {
+  /** Newest first. */
   seasons: string[];
   default: string;
+  league: Record<string, LeagueSeason>;
+}
+
+interface CareerFile {
+  id: string;
+  count: number;
+  seasons: string[];
+  teams?: string[];
+  subTypes: string[];
+  n: number[];
+  t?: number[];
+  x: number[];
+  y: number[];
+  d: number[];
+  m: number[];
+  v: number[];
+  s: number[];
+}
+
+export interface Career {
+  id: string;
+  /** Oldest first: the seasons with at least one shot. */
+  seasons: string[];
+  bySeason: Map<string, ShotData[]>;
+  /** Teams played for, per season (players only). */
+  teamsBySeason: Map<string, string[]>;
+  all: ShotData[];
 }
 
 const BASE = `${import.meta.env.BASE_URL}data`;
@@ -64,6 +101,49 @@ function decode(f: SeasonFile): ShotData[] {
     };
   }
   return shots;
+}
+
+const careers = new Map<string, Promise<Career>>();
+
+function decodeCareer(f: CareerFile): Career {
+  const bySeason = new Map<string, ShotData[]>(f.seasons.map(season => [season, []]));
+  const teamSets = new Map<string, Set<string>>();
+  const all: ShotData[] = new Array(f.count);
+  for (let i = 0; i < f.count; i++) {
+    const season = f.seasons[f.n[i]];
+    const team = f.t && f.teams ? f.teams[f.t[i]] : f.id;
+    const shot: ShotData = {
+      personId: f.t ? f.id : '',
+      teamTricode: team,
+      xLegacy: f.x[i],
+      yLegacy: f.y[i],
+      shotDistance: f.d[i],
+      shotResult: f.m[i] ? 'Made' : 'Missed',
+      shotValue: f.v[i],
+      subType: f.subTypes[f.s[i]],
+    };
+    all[i] = shot;
+    bySeason.get(season)!.push(shot);
+    if (f.t) {
+      let set = teamSets.get(season);
+      if (!set) teamSets.set(season, (set = new Set()));
+      set.add(team);
+    }
+  }
+  const teamsBySeason = new Map([...teamSets].map(([season, set]) => [season, [...set]]));
+  return { id: f.id, seasons: f.seasons, bySeason, teamsBySeason, all };
+}
+
+/** Every shot of one player (by personId) or team (by tricode) since 2013-14. */
+export function loadCareer(kind: 'player' | 'team', id: string): Promise<Career> {
+  const key = `${kind}/${id}`;
+  let career = careers.get(key);
+  if (!career) {
+    career = getJson<CareerFile>(`${kind}s/${id}.json`).then(decodeCareer);
+    career.catch(() => careers.delete(key));
+    careers.set(key, career);
+  }
+  return career;
 }
 
 export function loadSeason(season: string): Promise<ShotData[]> {

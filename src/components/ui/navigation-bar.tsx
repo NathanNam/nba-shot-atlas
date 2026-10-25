@@ -15,6 +15,8 @@ interface NavigationBarProps {
   onComparisonModeChange: (enabled: boolean) => void;
   selectedSeason2?: string;
   onSeason2Change?: (season: string) => void;
+  isCareerMode: boolean;
+  onCareerModeChange: (enabled: boolean) => void;
 }
 
 const seasons = [
@@ -30,7 +32,9 @@ export function NavigationBar({
   isComparisonMode,
   onComparisonModeChange,
   selectedSeason2,
-  onSeason2Change
+  onSeason2Change,
+  isCareerMode,
+  onCareerModeChange
 }: NavigationBarProps) {
   return (
     <nav className="bg-card border-b border-border shadow-card">
@@ -52,7 +56,14 @@ export function NavigationBar({
           {/* Mobile Controls Row */}
           <div className="pb-3 space-y-3">
             {/* Season Selector Row */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="career-mode-mobile" className="text-xs font-medium text-foreground">
+                  Career
+                </Label>
+                <Switch id="career-mode-mobile" checked={isCareerMode} onCheckedChange={onCareerModeChange} />
+              </div>
+              {!isCareerMode && (<>
               <div className="flex items-center space-x-2 flex-1">
                 <Select value={selectedSeason} onValueChange={onSeasonChange}>
                   <SelectTrigger className="w-28 bg-secondary/50 border-border">
@@ -97,6 +108,7 @@ export function NavigationBar({
                   onCheckedChange={onComparisonModeChange}
                 />
               </div>
+              </>)}
             </div>
             
             {/* View Mode Toggle Row */}
@@ -150,6 +162,16 @@ export function NavigationBar({
 
           {/* Controls */}
           <div className="flex items-center space-x-4">
+            {/* Career Toggle */}
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4 text-accent hidden lg:block" aria-hidden />
+              <Label htmlFor="career-mode" className="text-sm font-medium text-foreground">
+                Career
+              </Label>
+              <Switch id="career-mode" checked={isCareerMode} onCheckedChange={onCareerModeChange} />
+            </div>
+
+            {!isCareerMode && (<>
             {/* Season Comparison Toggle */}
             <div className="flex items-center space-x-2">
               <Label htmlFor="comparison-mode" className="text-sm font-medium text-foreground hidden lg:block">
@@ -200,6 +222,7 @@ export function NavigationBar({
                 )}
               </div>
             </div>
+            </>)}
 
             {/* View Mode Toggle */}
             <div className="flex items-center space-x-1 bg-secondary/30 rounded-lg p-1">

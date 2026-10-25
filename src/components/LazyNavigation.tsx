@@ -10,6 +10,8 @@ interface LazyNavigationProps {
   onViewModeChange: (mode: "player" | "team") => void;
   isComparisonMode: boolean;
   onComparisonModeChange: (enabled: boolean) => void;
+  isCareerMode: boolean;
+  onCareerModeChange: (enabled: boolean) => void;
   selectedSeason2?: string;
   onSeason2Change?: (season: string) => void;
 }

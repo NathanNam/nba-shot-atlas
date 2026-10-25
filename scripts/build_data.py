@@ -7,6 +7,11 @@ app needs no database:
     public/data/seasons.json            season list (newest first) + default
     public/data/players.json            [[personId, full name, [season start years]], ...]
     public/data/shots/2025-26.json      one season of shots, columnar
+    public/data/players/<personId>.json one player's shots over all seasons (career view)
+    public/data/teams/<tricode>.json    one team's shots over all seasons
+
+seasons.json also carries league-wide shooting per season (FG%, 3P%, eFG%,
+points per shot, share of shots that were threes) for the career charts.
 
 Inputs are the enriched CSVs written by nba-shot-quality's enrich_shots.py
 (nbastatsv3_YYYY_enriched_shots.csv, YYYY = season start year). Several
@@ -27,6 +32,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -38,6 +44,16 @@ NAME = re.compile(r"nbastatsv3_(\d{4})_enriched_shots\.csv$")
 
 def season_label(start: int) -> str:
     return f"{start}-{(start + 1) % 100:02d}"
+
+
+def shot_distance(r: dict) -> int:
+    """Distance in feet. The source records some shots (mostly corner threes) as
+    0 ft; when the coordinates (tenths of a foot from the hoop) put a shot past
+    the restricted area, use the distance from the coordinates instead."""
+    d = int(float(r["shotDistance"] or 0))
+    x, y = float(r["xLegacy"] or 0), float(r["yLegacy"] or 0)
+    from_xy = math.hypot(x, y) / 10
+    return round(from_xy) if d == 0 and from_xy > 4 else d
 
 
 def read_season(path: Path) -> dict:
@@ -58,7 +74,7 @@ def read_season(path: Path) -> dict:
         cols["t"].append(idx(teams, r["teamTricode"]))
         cols["x"].append(int(float(r["xLegacy"] or 0)))
         cols["y"].append(int(float(r["yLegacy"] or 0)))
-        cols["d"].append(int(float(r["shotDistance"] or 0)))
+        cols["d"].append(shot_distance(r))
         cols["m"].append(1 if r["shotResult"] == "Made" else 0)
         cols["v"].append(int(float(r["shotValue"] or 2)))
         cols["s"].append(idx(subtypes, r["subType"]))
@@ -70,6 +86,60 @@ def read_season(path: Path) -> dict:
         "playerIds": [int(p) for p in players],
         **cols,
     }
+
+
+def league_summary(data: dict) -> dict:
+    n = data["count"]
+    made = sum(data["m"])
+    threes = [i for i, v in enumerate(data["v"]) if v == 3]
+    made3 = sum(data["m"][i] for i in threes)
+    points = sum(m * v for m, v in zip(data["m"], data["v"]))
+    return {
+        "shots": n,
+        "fgPct": round(made / n, 4),
+        "fg3Pct": round(made3 / len(threes), 4),
+        "threeShare": round(len(threes) / n, 4),
+        "efgPct": round((made + 0.5 * made3) / n, 4),
+        "pointsPerShot": round(points / n, 4),
+    }
+
+
+CAREER_COLS = ("x", "y", "d", "m", "v")
+
+
+def write_careers(by_season: dict[str, dict], kind: str) -> int:
+    """One file per player (kind 'p') or team (kind 't') with every season's shots.
+
+    Columns as in the season files, plus n (index into "seasons"). Player files
+    also keep t (team per shot), since players change teams."""
+    out_dir = OUT / ("players" if kind == "p" else "teams")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    careers: dict[str, dict] = {}
+    for label, data in by_season.items():
+        keys = data["playerIds"] if kind == "p" else data["teams"]
+        for i, k in enumerate(data[kind]):
+            key = str(keys[k])
+            c = careers.get(key)
+            if c is None:
+                c = careers[key] = {"seasons": [], "teams": {}, "subTypes": {},
+                                    "n": [], "t": [], "s": [], **{col: [] for col in CAREER_COLS}}
+            if not c["seasons"] or c["seasons"][-1] != label:
+                c["seasons"].append(label)
+            c["n"].append(len(c["seasons"]) - 1)
+            if kind == "p":
+                c["t"].append(c["teams"].setdefault(data["teams"][data["t"][i]], len(c["teams"])))
+            c["s"].append(c["subTypes"].setdefault(data["subTypes"][data["s"][i]], len(c["subTypes"])))
+            for col in CAREER_COLS:
+                c[col].append(data[col][i])
+    for key, c in careers.items():
+        c["id"] = key
+        c["count"] = len(c["n"])
+        c["teams"] = list(c["teams"])
+        c["subTypes"] = list(c["subTypes"])
+        if kind == "t":
+            del c["t"], c["teams"]
+        (out_dir / f"{key}.json").write_text(json.dumps(c, separators=(",", ":")))
+    return len(careers)
 
 
 def main(argv=None) -> int:
@@ -102,6 +172,8 @@ def main(argv=None) -> int:
     (OUT / "shots").mkdir(parents=True, exist_ok=True)
     shooters: dict[int, list[int]] = {}
     seasons = []
+    by_season: dict[str, dict] = {}
+    league: dict[str, dict] = {}
     for start in sorted(files):
         label = season_label(start)
         data = read_season(files[start])
@@ -111,6 +183,8 @@ def main(argv=None) -> int:
         for pid in data["playerIds"]:
             shooters.setdefault(pid, []).append(start)
         seasons.append(label)
+        by_season[label] = data
+        league[label] = league_summary(data)
         print(f"{label}: {data['count']:,} shots, {len(data['playerIds'])} players, "
               f"{len(data['teams'])} teams -> {out.relative_to(REPO)} "
               f"({out.stat().st_size / 1e6:.1f} MB)  [{files[start]}]")
@@ -129,11 +203,15 @@ def main(argv=None) -> int:
     if missing:
         print("  no name for personId:", " ".join(map(str, missing)))
 
+    print(f"careers: {write_careers(by_season, 'p')} player files, "
+          f"{write_careers(by_season, 't')} team files")
+
     newest_first = sorted(seasons, reverse=True)
     default = args.default or newest_first[0]
     if default not in seasons:
         sys.exit(f"default season {default} not built")
-    (OUT / "seasons.json").write_text(json.dumps({"seasons": newest_first, "default": default}))
+    (OUT / "seasons.json").write_text(json.dumps(
+        {"seasons": newest_first, "default": default, "league": league}, indent=1))
     print(f"seasons: {newest_first[-1]} .. {newest_first[0]}, default {default}")
     return 0
 

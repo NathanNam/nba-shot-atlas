@@ -1,16 +1,28 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { LazyNavigation } from "@/components/LazyNavigation";
 import { PlayerSelector } from "@/components/ui/player-selector";
 import { VersionMarker } from "@/components/ui/version-marker";
 import { ComponentLoader } from "@/components/LazyIndex";
 import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
 import { Button } from "@/components/ui/button";
+// Charts library is only needed in career mode.
+const CareerView = lazy(() => import("@/components/career/CareerView").then(m => ({ default: m.CareerView })));
 
 const Index = () => {
   const [selectedSeason, setSelectedSeason] = useState("2025-26");
   const [viewMode, setViewMode] = useState<"player" | "team">("player");
   const [isComparisonMode, setIsComparisonMode] = useState(false);
   const [selectedSeason2, setSelectedSeason2] = useState("2024-25");
+  const [isCareerMode, setIsCareerMode] = useState(false);
+
+  // From the career view: open one season in the normal view.
+  const openSeason = (season: string) => {
+    setSelectedSeason(season);
+    if (season === selectedSeason2) setSelectedSeason2(season === "2025-26" ? "2024-25" : "2025-26");
+    setIsComparisonMode(false);
+    setIsCareerMode(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   
   
   // Cache selections for each view mode
@@ -56,6 +68,8 @@ const Index = () => {
         onComparisonModeChange={setIsComparisonMode}
         selectedSeason2={selectedSeason2}
         onSeason2Change={setSelectedSeason2}
+        isCareerMode={isCareerMode}
+        onCareerModeChange={setIsCareerMode}
       />
 
 
@@ -68,11 +82,18 @@ const Index = () => {
               viewMode={viewMode}
               selectedEntities={selectedEntities}
               onEntitiesChange={handleEntitiesChange}
-              selectedSeason={selectedSeason}
+              selectedSeason={isCareerMode ? "" : selectedSeason}
             />
           </div>
 
           {/* Main Content Area */}
+          {isCareerMode ? (
+          <div className="lg:col-span-3">
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground animate-pulse">Loading career view…</div>}>
+              <CareerView entities={selectedEntities} viewMode={viewMode} onOpenSeason={openSeason} />
+            </Suspense>
+          </div>
+          ) : (
           <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Shot Charts Grid */}
             <div className="space-y-4 sm:space-y-6">
@@ -225,6 +246,7 @@ const Index = () => {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
 

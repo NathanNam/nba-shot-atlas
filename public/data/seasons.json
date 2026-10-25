@@ -1,1 +1,124 @@
-{"seasons": ["2025-26", "2024-25", "2023-24", "2022-23", "2021-22", "2020-21", "2019-20", "2018-19", "2017-18", "2016-17", "2015-16", "2014-15", "2013-14"], "default": "2025-26"}
+{
+ "seasons": [
+  "2025-26",
+  "2024-25",
+  "2023-24",
+  "2022-23",
+  "2021-22",
+  "2020-21",
+  "2019-20",
+  "2018-19",
+  "2017-18",
+  "2016-17",
+  "2015-16",
+  "2014-15",
+  "2013-14"
+ ],
+ "default": "2025-26",
+ "league": {
+  "2013-14": {
+   "shots": 204172,
+   "fgPct": 0.4544,
+   "fg3Pct": 0.3597,
+   "threeShare": 0.2595,
+   "efgPct": 0.5011,
+   "pointsPerShot": 1.0022
+  },
+  "2014-15": {
+   "shots": 205570,
+   "fgPct": 0.4489,
+   "fg3Pct": 0.35,
+   "threeShare": 0.2682,
+   "efgPct": 0.4959,
+   "pointsPerShot": 0.9917
+  },
+  "2015-16": {
+   "shots": 208049,
+   "fgPct": 0.4521,
+   "fg3Pct": 0.3537,
+   "threeShare": 0.2847,
+   "efgPct": 0.5025,
+   "pointsPerShot": 1.005
+  },
+  "2016-17": {
+   "shots": 210115,
+   "fgPct": 0.4572,
+   "fg3Pct": 0.3575,
+   "threeShare": 0.3161,
+   "efgPct": 0.5137,
+   "pointsPerShot": 1.0274
+  },
+  "2017-18": {
+   "shots": 211707,
+   "fgPct": 0.4602,
+   "fg3Pct": 0.3618,
+   "threeShare": 0.337,
+   "efgPct": 0.5212,
+   "pointsPerShot": 1.0424
+  },
+  "2018-19": {
+   "shots": 219458,
+   "fgPct": 0.4605,
+   "fg3Pct": 0.355,
+   "threeShare": 0.3588,
+   "efgPct": 0.5242,
+   "pointsPerShot": 1.0484
+  },
+  "2019-20": {
+   "shots": 188116,
+   "fgPct": 0.4601,
+   "fg3Pct": 0.3579,
+   "threeShare": 0.3841,
+   "efgPct": 0.5288,
+   "pointsPerShot": 1.0577
+  },
+  "2020-21": {
+   "shots": 190983,
+   "fgPct": 0.4661,
+   "fg3Pct": 0.3666,
+   "threeShare": 0.3918,
+   "efgPct": 0.5379,
+   "pointsPerShot": 1.0758
+  },
+  "2021-22": {
+   "shots": 216722,
+   "fgPct": 0.4611,
+   "fg3Pct": 0.3536,
+   "threeShare": 0.3993,
+   "efgPct": 0.5317,
+   "pointsPerShot": 1.0634
+  },
+  "2022-23": {
+   "shots": 217219,
+   "fgPct": 0.4754,
+   "fg3Pct": 0.3607,
+   "threeShare": 0.3875,
+   "efgPct": 0.5453,
+   "pointsPerShot": 1.0905
+  },
+  "2023-24": {
+   "shots": 218702,
+   "fgPct": 0.4743,
+   "fg3Pct": 0.3657,
+   "threeShare": 0.3949,
+   "efgPct": 0.5465,
+   "pointsPerShot": 1.0931
+  },
+  "2024-25": {
+   "shots": 219528,
+   "fgPct": 0.4672,
+   "fg3Pct": 0.3602,
+   "threeShare": 0.4212,
+   "efgPct": 0.5431,
+   "pointsPerShot": 1.0861
+  },
+  "2025-26": {
+   "shots": 219159,
+   "fgPct": 0.471,
+   "fg3Pct": 0.3596,
+   "threeShare": 0.4151,
+   "efgPct": 0.5457,
+   "pointsPerShot": 1.0913
+  }
+ }
+}
