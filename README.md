@@ -1,117 +1,73 @@
-# Welcome to your Lovable project
+# Shot Quality
 
-## Project info
+Where NBA players and teams shoot from, and how well, season by season since
+2013-14. Each page opens with the finding in a headline, then the numbers
+against the league, a hex-bin shot chart with a zone table, and a trend across
+seasons. Career view: every season of a player or team, side by side with a
+second one if you like.
 
-**URL**: https://lovable.dev/projects/8bc2431a-ceef-4df5-9b2b-a84261007aca
+The site is fully static: a Vite + React + TypeScript app plus JSON data files.
+There is no server, database or login, so the host holds no secrets.
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/8bc2431a-ceef-4df5-9b2b-a84261007aca) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Run it locally
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm ci
+npm run dev        # http://localhost:8080
+npm run build      # static site in dist/
+npm run lint
 ```
 
-**Edit a file directly in GitHub**
+## Data
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+`public/data/` is built by `scripts/build_data.py` and committed:
 
-**Use GitHub Codespaces**
+| File | What it holds |
+|---|---|
+| `seasons.json` | season list, default season, league averages per season and per court zone |
+| `players.json` | every shooter: `[personId, name, [season start years]]` |
+| `players/<personId>.json` | one player's shots over all seasons (columnar) |
+| `teams/<tricode>.json` | one team's shots over all seasons |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Sources:
 
-## What technologies are used for this project?
+- Play-by-play: [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data) (`nbastatsv3_YYYY.tar.xz`).
+- Enrichment: `enrich_shots.py` from the [nba-shot-quality](https://github.com/bnamm1/nba-shot-quality)
+  project; its `enriched_data/` holds 2013-14 to 2024-25.
+- Player names: `nba_players_2013_2025.csv` from nba-shot-quality, with newer players taken from
+  nba_data's `shotdetail_YYYY.tar.xz`.
 
-This project is built with:
+### Adding a season
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Download `nbastatsv3_YYYY.tar.xz` and `shotdetail_YYYY.tar.xz` from nba_data
+   (YYYY = the season's start year) and unpack the CSVs.
+2. Run nba-shot-quality's `enrich_shots.py` on it, from a copy of the script whose
+   `raw_data/` holds `nbastatsv3_YYYY.csv`:
+   `python enrich_shots.py --seasons YYYY --out-dir out`
+3. Rebuild the data (later `--enriched` folders win for the same season):
 
-## How can I deploy this project?
+   ```sh
+   python3 scripts/build_data.py \
+     --enriched ../nba-shot-quality/enriched_data path/to/out \
+     --players ../nba-shot-quality/nba_players_2013_2025.csv \
+     --shotdetail path/to/shotdetail_YYYY.csv
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/8bc2431a-ceef-4df5-9b2b-a84261007aca) and click on Share -> Publish.
+4. Commit `public/data/` and push. The newest season becomes the default.
 
-## Can I connect a custom domain to my Lovable project?
+## Deploy
 
-Yes, you can!
+`.github/workflows/pages.yml` lints, builds and publishes `dist/` to GitHub Pages on every
+push to `main`. The custom domain is set in the repo's Pages settings, with DNS at Cloudflare.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Code map
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-## OpenTelemetry Instrumentation
-
-This project includes comprehensive OpenTelemetry instrumentation for observability:
-
-### Features
-- **Distributed Tracing**: Automatic instrumentation for HTTP requests, user interactions, and business operations
-- **Structured Logging**: JSON-formatted logs with trace correlation
-- **Custom Metrics**: NBA analytics-specific metrics including user engagement, feature usage, and performance metrics
-- **Auto-instrumentation**: Built-in instrumentation for fetch requests, document load, and XMLHttpRequest
-
-### Configuration
-
-The application supports OpenTelemetry configuration via environment variables:
-
-```bash
-# Copy the example environment file
-cp .env.example .env.local
-
-# Edit the environment variables
-VITE_OTEL_EXPORTER_OTLP_ENDPOINT=https://your-otlp-endpoint
-VITE_OTEL_EXPORTER_OTLP_BEARER_TOKEN=your_bearer_token
-```
-
-### Testing OpenTelemetry
-
-To test the OpenTelemetry setup:
-
-1. Open the browser developer console
-2. Run: `testOpenTelemetrySetup()`
-3. Check the console for test results
-
-### Metrics Tracked
-
-The application tracks comprehensive NBA analytics metrics:
-- User sessions and engagement duration
-- Feature usage and interactions
-- Shot chart interactions and comparisons
-- API request performance and errors
-- Page load times and user satisfaction scores
-
-## Legacy Scripts
-
-The migration to Supabase is complete. Archived migration utilities can be found under [`scripts/legacy/`](scripts/legacy/) if future reference is needed.
+- `src/pages/Index.tsx`: the page, view state (kept in the URL so links can be shared)
+- `src/components/app/`: `SeasonView`, `CareerView`, `Court` (hex-bin and dot chart),
+  `TrendChart`, `EntityPicker`
+- `src/lib/`: `shotStats.ts` (percentages, court zones), `headline.ts` (the headline
+  sentence), `teams.ts`
+- `src/services/staticData.ts`, `src/hooks/useData.ts`: loading the JSON files
+- `src/otel-client.ts`, `src/services/metricsIntegration.ts`, `nbaAnalyticsMetrics.ts`:
+  OpenTelemetry code, currently switched off (nothing imports it)
+- `supabase/`: the former Supabase backend, no longer used; to be removed
