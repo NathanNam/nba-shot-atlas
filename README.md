@@ -18,6 +18,17 @@ Where NBA players and teams shoot from, and how well, season by season from
 The site is fully static: a Vite + React + TypeScript app plus JSON data files.
 There is no server, database or login, so the host holds no secrets.
 
+<p align="center">
+  <img src="docs/images/season.png" alt="Season view: the headline 'Six in ten of Curry's shots in 2025-26 were threes. The league's rate was 42%.', shooting numbers against the league, a hex-bin shot chart, a zone table and a season-by-season trend" width="68%">
+  <img src="docs/images/phone.png" alt="The same page on a phone" width="24%">
+</p>
+
+| Two players compared | Career view |
+|---|---|
+| ![Curry vs Lillard, 2024-25: a headline comparing their three-point rates, a stat table against the league, and two shot charts](docs/images/compare.png) | ![Curry's career since 2013-14: share of shots that were threes by season against the league average, and a season table](docs/images/career.png) |
+
+Link previews on LinkedIn and X use [`public/og-image.png`](public/og-image.png).
+
 ## Run it locally
 
 ```sh
