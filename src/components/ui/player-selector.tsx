@@ -21,9 +21,9 @@ interface PlayerOption {
 }
 
 const teams = [
-  "ATL", "BOS", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW", "HOU",
-  "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NYK", "OKC",
-  "ORL", "PHI", "PHX", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
+  "ATL", "BKN", "BOS", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW",
+  "HOU", "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NYK",
+  "OKC", "ORL", "PHI", "PHX", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
 ];
 
 export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, selectedSeason }: PlayerSelectorProps) {
@@ -32,7 +32,7 @@ export function PlayerSelector({ viewMode, selectedEntities, onEntitiesChange, s
   
   // Always call hook but only use results in player mode
   console.log(`🔍 PlayerSelector: viewMode=${viewMode}, calling useAvailablePlayers`);
-  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers();
+  const { players: rawPlayers, loading: rawLoading } = useAvailablePlayers(selectedSeason);
   
   // Only use player data in player mode
   const players = viewMode === "player" ? rawPlayers : [];

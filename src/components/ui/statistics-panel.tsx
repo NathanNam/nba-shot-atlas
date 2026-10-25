@@ -30,7 +30,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
     if (size === "compact") {
       return {
         title: "text-responsive-lg",
-        statValue: "text-responsive-xl font-semibold",
+        statValue: "text-responsive-xl font-semibold tabular-nums whitespace-nowrap",
         statLabel: "text-responsive-xs",
         statDetail: "text-responsive-xs",
         zoneTitle: "text-responsive-sm",
@@ -41,7 +41,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
     
     return {
       title: "text-fluid-title",
-      statValue: "text-responsive-2xl font-bold",
+      statValue: "text-responsive-2xl font-bold tabular-nums whitespace-nowrap",
       statLabel: "text-responsive-sm",
       statDetail: "text-responsive-xs",
       zoneTitle: "text-fluid-body",
@@ -67,7 +67,8 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mobile-gap mb-4 sm:mb-6">
+      {/* Columns follow the card width, not the window: side-by-side cards get a 2x2 grid */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] mobile-gap mb-4 sm:mb-6">
         {/* Field Goal Percentage */}
         <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
           <div className={`${fontSizes.statValue} text-primary`}>
@@ -102,7 +103,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
         </div>
 
         {/* Total Shots */}
-        <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border col-span-2 sm:col-span-1">
+        <div className="text-center p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
           <div className={`${fontSizes.statValue} text-foreground`}>
             {stats.totalShots.toLocaleString()}
           </div>
@@ -111,7 +112,7 @@ export function StatisticsPanel({ entityName, stats, size = "default" }: Statist
       </div>
 
       {/* Zone Analysis */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(12.5rem,1fr))] gap-3 sm:gap-4">
         {/* Hottest Zone */}
         <div className="p-3 sm:p-4 rounded-lg bg-heat-hot/10 border border-heat-hot/20">
           <div className="flex items-center mb-2">

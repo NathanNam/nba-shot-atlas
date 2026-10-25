@@ -21,6 +21,8 @@ export interface Player {
   playerFullName: string;
   id: string;
   name: string;
+  /** Season labels ('2025-26') in which the player took a shot. */
+  seasons: string[];
 }
 
 class SupabaseDataService {
@@ -29,11 +31,12 @@ class SupabaseDataService {
   static async getPlayers(): Promise<Player[]> {
     if (this.playerCache) return this.playerCache;
     const rows = await loadPlayers();
-    this.playerCache = rows.map(([personId, name]) => ({
+    this.playerCache = rows.map(([personId, name, years]) => ({
       personId,
       playerFullName: name,
       id: String(personId),
       name,
+      seasons: years.map(y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`),
     }));
     return this.playerCache;
   }

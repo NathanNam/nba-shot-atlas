@@ -32,7 +32,10 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 let seasonIndex: Promise<SeasonIndex> | null = null;
-let playerList: Promise<[number, string][]> | null = null;
+/** [personId, full name, season start years in which they took a shot] */
+export type PlayerRow = [number, string, number[]];
+
+let playerList: Promise<PlayerRow[]> | null = null;
 const seasonShots = new Map<string, Promise<ShotData[]>>();
 
 export function loadSeasonIndex(): Promise<SeasonIndex> {
@@ -40,8 +43,8 @@ export function loadSeasonIndex(): Promise<SeasonIndex> {
   return seasonIndex;
 }
 
-export function loadPlayers(): Promise<[number, string][]> {
-  playerList ??= getJson<[number, string][]>('players.json');
+export function loadPlayers(): Promise<PlayerRow[]> {
+  playerList ??= getJson<PlayerRow[]>('players.json');
   return playerList;
 }
 

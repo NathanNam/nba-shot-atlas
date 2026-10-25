@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SupabaseDataService } from '@/services/supabaseDataService';
 
 interface PlayerOption {
   id: string;
   name: string;
+  seasons: string[];
 }
 
 let cachedPlayers: PlayerOption[] | null = null;
@@ -12,48 +13,36 @@ let playersPromise: Promise<PlayerOption[]> | null = null;
 
 async function fetchPlayers(): Promise<PlayerOption[]> {
   try {
-    console.log('🔍 useAvailablePlayers: Starting to load players from Supabase...');
     const supabasePlayers = await SupabaseDataService.getPlayers();
-    console.log('🔍 useAvailablePlayers: Raw Supabase players:', supabasePlayers);
 
     const playerOptions: PlayerOption[] = supabasePlayers.map(player => ({
-      id: player.id, // Use the string id from the service
-      name: player.name // Use the name from the service
+      id: player.id,
+      name: player.name,
+      seasons: player.seasons,
     })).filter(player => player.id && player.name);
 
-    console.log('🔍 useAvailablePlayers: Mapped player options:', playerOptions);
 
-    // Deduplicate players by name, keeping the first occurrence
-    const uniquePlayerMap = new Map<string, PlayerOption>();
-    playerOptions.forEach(player => {
-      if (!uniquePlayerMap.has(player.name)) {
-        uniquePlayerMap.set(player.name, player);
-      }
-    });
-
-    const deduplicatedPlayers = Array.from(uniquePlayerMap.values());
-    console.log('🔍 useAvailablePlayers: Deduplicated players:', deduplicatedPlayers);
-
-    const sortedPlayers = deduplicatedPlayers.sort((a, b) => a.name.localeCompare(b.name));
-    console.log('🔍 useAvailablePlayers: Final sorted players:', sortedPlayers);
-
+    const sortedPlayers = playerOptions.sort((a, b) => a.name.localeCompare(b.name));
     cachedPlayers = sortedPlayers;
-    nameToIdMap = new Map(sortedPlayers.map(p => [p.name, p.id]));
+    nameToIdMap = new Map(uniqueByName(sortedPlayers).map(p => [p.name, p.id]));
     return sortedPlayers;
   } catch (error) {
     console.error('Error loading players:', error);
-    const fallback = [
-      { id: "2544", name: "LeBron James" },
-      { id: "201939", name: "Stephen Curry" },
-      { id: "201142", name: "Kevin Durant" },
-      { id: "203507", name: "Giannis Antetokounmpo" },
-      { id: "1629029", name: "Luka Dončić" },
-      { id: "1628369", name: "Jayson Tatum" }
-    ];
-    cachedPlayers = fallback;
-    nameToIdMap = new Map(fallback.map(p => [p.name, p.id]));
-    return fallback;
+    // Not cached, so the next mount retries.
+    return [];
   }
+}
+
+// Selections are made by name, so keep one player per name. Two different
+// players share a name (Mike James, Tony Mitchell): keep the more recent one.
+function uniqueByName(players: PlayerOption[]): PlayerOption[] {
+  const latest = (p: PlayerOption) => p.seasons[p.seasons.length - 1] ?? '';
+  const byName = new Map<string, PlayerOption>();
+  for (const player of players) {
+    const seen = byName.get(player.name);
+    if (!seen || latest(player) > latest(seen)) byName.set(player.name, player);
+  }
+  return Array.from(byName.values());
 }
 
 function getPlayersOnce(): Promise<PlayerOption[]> {
@@ -68,7 +57,10 @@ function getPlayersOnce(): Promise<PlayerOption[]> {
   return playersPromise;
 }
 
-export function useAvailablePlayers() {
+/**
+ * All players, or with a season only those who took a shot in that season.
+ */
+export function useAvailablePlayers(season?: string) {
   const [players, setPlayers] = useState<PlayerOption[]>(cachedPlayers ?? []);
   const [loading, setLoading] = useState(!cachedPlayers);
 
@@ -88,8 +80,13 @@ export function useAvailablePlayers() {
     };
   }, []);
 
+  const seasonPlayers = useMemo(
+    () => uniqueByName(season ? players.filter(p => p.seasons.includes(season)) : players),
+    [players, season]
+  );
+
   return {
-    players,
+    players: seasonPlayers,
     loading
   };
 }

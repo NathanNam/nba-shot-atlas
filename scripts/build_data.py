@@ -5,7 +5,7 @@ Each season becomes one compact, columnar JSON file under public/data/, so the
 app needs no database:
 
     public/data/seasons.json            season list (newest first) + default
-    public/data/players.json            [[personId, full name], ...] for every shooter
+    public/data/players.json            [[personId, full name, [season start years]], ...]
     public/data/shots/2025-26.json      one season of shots, columnar
 
 Inputs are the enriched CSVs written by nba-shot-quality's enrich_shots.py
@@ -100,7 +100,7 @@ def main(argv=None) -> int:
                 extra.setdefault(int(r["PLAYER_ID"]), r["PLAYER_NAME"])
 
     (OUT / "shots").mkdir(parents=True, exist_ok=True)
-    shooters: set[int] = set()
+    shooters: dict[int, list[int]] = {}
     seasons = []
     for start in sorted(files):
         label = season_label(start)
@@ -108,7 +108,8 @@ def main(argv=None) -> int:
         data["season"] = label
         out = OUT / "shots" / f"{label}.json"
         out.write_text(json.dumps(data, separators=(",", ":")))
-        shooters.update(data["playerIds"])
+        for pid in data["playerIds"]:
+            shooters.setdefault(pid, []).append(start)
         seasons.append(label)
         print(f"{label}: {data['count']:,} shots, {len(data['playerIds'])} players, "
               f"{len(data['teams'])} teams -> {out.relative_to(REPO)} "
@@ -118,7 +119,7 @@ def main(argv=None) -> int:
     for pid in sorted(shooters):
         name = names.get(pid) or extra.get(pid)
         if name:
-            players.append([pid, name])
+            players.append([pid, name, shooters[pid]])
         else:
             missing.append(pid)
     players.sort(key=lambda t: t[1])
