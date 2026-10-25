@@ -36,23 +36,23 @@ export class DataPreloader {
   }
 
   private static async performPreload(): Promise<void> {
-    const defaultSeason = '2024-25';
+    const defaultSeason = '2025-26';
     
     // Define default data to preload (excluding league to avoid stale sampled data)
     const preloadTasks = [
       {
-        key: 'player_stephen_curry_2024-25',
+        key: 'player_stephen_curry_2025-26',
         season: defaultSeason,
         entityId: '201939', // Stephen Curry's ID
         viewMode: 'player' as const,
-        label: 'Stephen Curry (2024-25)'
+        label: 'Stephen Curry (2025-26)'
       },
       {
-        key: 'team_gsw_2024-25',
+        key: 'team_gsw_2025-26',
         season: defaultSeason,
         entityId: 'GSW',
         viewMode: 'team' as const,
-        label: 'Golden State Warriors (2024-25)'
+        label: 'Golden State Warriors (2025-26)'
       }
       // Note: League data excluded from preload to ensure fresh full dataset loading
     ];

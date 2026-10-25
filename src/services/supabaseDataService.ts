@@ -1,10 +1,8 @@
-import { supabase } from '@/integrations/supabase/client';
-import { SpanStatusCode } from '@opentelemetry/api';
-import { SeverityNumber } from '@opentelemetry/api-logs';
-import { tracer, logger, meter } from '../otel-client';
+// Data access for the app. Despite the name (kept so existing imports work),
+// everything now comes from the static files in public/data/ (see staticData.ts).
 import { dataCache } from './dataCache';
-import { ParallelDataService } from './parallelDataService';
 import { LeagueStatsService } from './leagueStatsService';
+import { getShots, loadPlayers, loadSeason, loadSeasonIndex } from './staticData';
 
 export interface ShotData {
   personId: string;
@@ -25,331 +23,53 @@ export interface Player {
   name: string;
 }
 
-// Metrics
-const dbQueryCounter = meter.createCounter('supabase_queries_total', {
-  description: 'Total number of Supabase queries executed',
-});
-
-const dbQueryDuration = meter.createHistogram('supabase_query_duration_ms', {
-  description: 'Duration of Supabase queries in milliseconds',
-});
-
 class SupabaseDataService {
-  // Cache for player data
   private static playerCache: Player[] | null = null;
 
   static async getPlayers(): Promise<Player[]> {
-    if (this.playerCache) {
-      console.log('🔍 SupabaseDataService: Using cached player data');
-      return this.playerCache;
-    }
-
-    const span = tracer.startSpan('supabase.get_players');
-    const startTime = Date.now();
-
-    try {
-      dbQueryCounter.add(1, { table: 'players', operation: 'select' });
-
-      // Supabase limits queries to 1000 rows. Fetch in batches to ensure we
-      // retrieve the complete players table.
-      const batchSize = 1000;
-      let from = 0;
-      interface SupabasePlayerRow {
-        personId?: number;
-        playerFullName?: string;
-        id?: string | number;
-        name?: string;
-      }
-      let allPlayers: SupabasePlayerRow[] = [];
-
-      while (true) {
-        const { data, error } = await supabase
-          .from('players')
-          .select('*')
-          .range(from, from + batchSize - 1) as { data: SupabasePlayerRow[] | null; error: any };
-
-        if (error) {
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: error.message,
-          });
-          throw new Error(`Failed to fetch players: ${error.message}`);
-        }
-
-        if (!data || data.length === 0) {
-          break;
-        }
-
-        allPlayers = allPlayers.concat(data || []);
-
-        // If we received less than the batch size, we've fetched all rows
-        if (data.length < batchSize) {
-          break;
-        }
-
-        from += batchSize;
-      }
-
-      const players: Player[] = allPlayers.map(player => ({
-        // Support both column naming conventions: personId/playerFullName or
-        // id/name. Fall back to 0/empty string when not available.
-        personId: Number(player.personId || player.id || 0),
-        playerFullName: player.playerFullName || player.name || '',
-        id: (player.personId || player.id || 0).toString(),
-        name: player.playerFullName || player.name || ''
-      }));
-
-      this.playerCache = players;
-      span.setAttributes({ success: true, player_count: players.length });
-
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'players', operation: 'select' });
-
-      console.log(`🔍 SupabaseDataService: Fetched ${players.length} players`);
-      return players;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: errorMessage,
-      });
-      throw err;
-    } finally {
-      span.end();
-    }
+    if (this.playerCache) return this.playerCache;
+    const rows = await loadPlayers();
+    this.playerCache = rows.map(([personId, name]) => ({
+      personId,
+      playerFullName: name,
+      id: String(personId),
+      name,
+    }));
+    return this.playerCache;
   }
 
-  static async getShotData(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', progressCallback?: (loaded: number, total?: number) => void): Promise<ShotData[]> {
-    const span = tracer.startSpan('supabase.get_shot_data', {
-      attributes: {
-        season,
-        entity_id: entityId || 'none',
-        view_mode: viewMode,
-      },
-    });
-    const startTime = Date.now();
+  static async getShotData(
+    season: string,
+    entityId?: string,
+    viewMode: 'player' | 'team' | 'league' = 'league',
+    progressCallback?: (loaded: number, total?: number) => void
+  ): Promise<ShotData[]> {
+    const cached = dataCache.get(season, entityId || '', viewMode);
+    if (cached) return cached;
 
-    try {
-      // Check cache before executing any queries
-      const cached = dataCache.get(season, entityId || '', viewMode);
-      if (cached) {
-        console.log(`🔍 SupabaseDataService: Cache hit for ${season}_${viewMode}_${entityId || 'all'}`);
-        return cached;
-      }
-
-      console.log(`🔍 SupabaseDataService: Starting optimized fetch for ${season}_${viewMode}_${entityId || 'all'}`);
-      
-      // For league mode, redirect to server-side statistics calculation
-      if (viewMode === 'league') {
-        console.log(`🔍 SupabaseDataService: League mode detected - this should use LeagueStatsService instead`);
-        // This method should not be called for league statistics anymore
-        // League statistics should use the Edge Function via LeagueStatsService
-        throw new Error('League statistics should use server-side calculation via Edge Function');
-      }
-      
-      // Use cache for consistent data retrieval
-      console.log(`🔍 SupabaseDataService: Using cache-enabled data retrieval for ${viewMode} mode`);
-
-      // Use optimized parallel fetching for better performance
-      const shots = await ParallelDataService.getDataParallel(
-        season,
-        entityId,
-        viewMode,
-        progressCallback
-      );
-
-      // Ensure we always return an array
-      const safeShots = Array.isArray(shots) ? shots : [];
-
-      span.setAttributes({ success: true, shots_count: safeShots.length });
-
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'shots', operation: 'select' });
-
-      logger.emit({
-        severityNumber: SeverityNumber.INFO,
-        severityText: 'INFO',
-        body: 'Successfully loaded shot data with optimized approach',
-        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, shots_count: safeShots.length },
-      });
-      // Store in cache after successful fetch
-      dataCache.set(season, entityId || '', viewMode, safeShots);
-
-      return safeShots;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load shot data';
-      
-      span.setAttributes({ success: false, error: errorMessage });
-
-      logger.emit({
-        severityNumber: SeverityNumber.ERROR,
-        severityText: 'ERROR',
-        body: 'Error loading shot data with optimized approach',
-        attributes: { season, entity_id: entityId || 'all', view_mode: viewMode, error: errorMessage },
-      });
-
-      console.error('Error in optimized getShotData, falling back to original method:', err);
-      
-      // Fallback to original method if optimized approach fails
-      return this.getShotDataOriginal(season, entityId, viewMode, progressCallback);
-    } finally {
-      span.end();
-    }
+    const shots = await getShots(season, entityId, viewMode);
+    progressCallback?.(shots.length, shots.length);
+    dataCache.set(season, entityId || '', viewMode, shots);
+    return shots;
   }
 
-  /**
-   * Get league statistics efficiently using Edge Functions
-   */
   static async getLeagueStatistics(season: string) {
     return LeagueStatsService.getLeagueStats(season);
-  }
-
-  /**
-   * Original method as fallback
-   */
-  private static async getShotDataOriginal(season: string, entityId?: string, viewMode: 'player' | 'team' | 'league' = 'league', progressCallback?: (loaded: number, total?: number) => void): Promise<ShotData[]> {
-    // Check cache before executing fallback queries
-    const cached = dataCache.get(season, entityId || '', viewMode);
-    if (cached) {
-      console.log(`🔍 SupabaseDataService: Fallback cache hit for ${season}_${viewMode}_${entityId || 'all'}`);
-      return cached;
-    }
-
-    const tableName = `shots_${season}`;
-
-    let allData: any[] = [];
-    let hasMore = true;
-    let offset = 0;
-    const batchSize = 1000;
-    let batchCount = 0;
-
-    console.log(`🔍 SupabaseDataService: Using fallback sequential pagination`);
-
-    while (hasMore) { // Remove artificial limit - fetch all data
-      let batchQuery = (supabase as any)
-        .from(tableName)
-        .select('*')
-        .range(offset, offset + batchSize - 1);
-
-      if (viewMode === 'player' && entityId) {
-        const numericEntityId = parseInt(entityId);
-        if (!isNaN(numericEntityId)) {
-          batchQuery = batchQuery.eq('personId', numericEntityId);
-        }
-      } else if (viewMode === 'team' && entityId) {
-        batchQuery = batchQuery.eq('teamTricode', entityId);
-      }
-      
-      const { data: batchData, error: batchError } = await batchQuery;
-      
-      if (batchError) throw new Error(`Failed to fetch shot data: ${batchError.message}`);
-      
-      if (batchData && batchData.length > 0) {
-        allData = allData.concat(batchData);
-        offset += batchSize;
-        batchCount++;
-        hasMore = batchData.length === batchSize;
-        
-        console.log(`🔍 SupabaseDataService: Sequential batch ${batchCount} - ${batchData.length} records (total: ${allData.length})`);
-        
-        if (progressCallback) {
-          progressCallback(allData.length, undefined);
-        }
-      } else {
-        hasMore = false;
-      }
-    }
-
-    const shots: ShotData[] = allData.map(row => ({
-      personId: row.personId?.toString() || '',
-      teamTricode: row.teamTricode || '',
-      xLegacy: parseFloat(row.xLegacy?.toString() || '0'),
-      yLegacy: parseFloat(row.yLegacy?.toString() || '0'),
-      shotDistance: parseFloat(row.shotDistance?.toString() || '0'),
-      shotResult: row.shotResult || '',
-      shotValue: parseInt(row.shotValue?.toString() || '2'),
-      description: row.description || '',
-      subType: row.subType || '',
-    }));
-
-    // Cache results from fallback path
-    dataCache.set(season, entityId || '', viewMode, shots);
-
-    return shots;
   }
 
   static clearCache(): void {
     this.playerCache = null;
   }
 
-  // Method to get unique teams from shots data
   static async getTeams(season?: string): Promise<string[]> {
-    const span = tracer.startSpan('supabase.get_teams');
-    const startTime = Date.now();
-
-    try {
-      dbQueryCounter.add(1, { table: 'shots', operation: 'select_distinct' });
-
-      // Use the appropriate season table or default to 2024-25
-      const tableName = season ? `shots_${season}` : 'shots_2024-25';
-      
-      const { data, error } = await (supabase as any)
-        .from(tableName)
-        .select('teamTricode');
-
-      if (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error.message,
-        });
-        throw new Error(`Failed to fetch teams: ${error.message}`);
-      }
-
-      // Extract unique team tricodes
-      const allTeamTriCodes = (data || [])
-        .map((row: any) => row.teamTricode)
-        .filter((code): code is string => Boolean(code) && typeof code === 'string');
-      const teams = [...new Set(allTeamTriCodes)] as string[];
-      
-      span.setAttributes({ success: true, teams_count: teams.length });
-
-      const duration = Date.now() - startTime;
-      dbQueryDuration.record(duration, { table: 'shots', operation: 'select_distinct' });
-
-      console.log(`🔍 SupabaseDataService: Fetched ${teams.length} unique teams`);
-      return teams;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: errorMessage,
-      });
-      throw err;
-    } finally {
-      span.end();
-    }
+    const target = season ?? (await loadSeasonIndex()).default;
+    const shots = await loadSeason(target);
+    return [...new Set(shots.map(s => s.teamTricode))].sort();
   }
 
+  /** Seasons available, newest first. */
   static async getSeasons(): Promise<string[]> {
-    // Return hardcoded list of available seasons
-    // This could be made dynamic by querying available shot tables
-    return [
-      '2013-14',
-      '2014-15', 
-      '2015-16',
-      '2016-17',
-      '2017-18',
-      '2018-19',
-      '2019-20',
-      '2020-21',
-      '2021-22',
-      '2022-23',
-      '2023-24',
-      '2024-25'
-    ];
+    return (await loadSeasonIndex()).seasons;
   }
 }
 

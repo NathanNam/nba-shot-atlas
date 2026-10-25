@@ -92,7 +92,7 @@ export function BatchEntityLayout({
       <div className="space-y-8">
       {/* Statistics Grid - Reorganized by season rows */}
       <div className="space-y-6">
-        {/* Row 3: Two stats charts for 2024-25 Season */}
+        {/* Row 3: Two stats charts for the first season */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <EntityStatistics 
             entityName={`${entity1} (${season1})`}
@@ -108,7 +108,7 @@ export function BatchEntityLayout({
           />
         </div>
 
-        {/* Row 4: Two stats charts for 2023-24 Season */}
+        {/* Row 4: Two stats charts for the second season */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <EntityStatistics 
             entityName={`${entity1} (${season2})`}

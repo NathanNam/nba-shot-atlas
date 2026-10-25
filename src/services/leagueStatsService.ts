@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { loadSeason } from './staticData';
 
 export interface LeagueStats {
   totalShots: number;
@@ -15,47 +15,86 @@ export interface LeagueStats {
   favoriteSpot: string;
 }
 
+// Same zones as the former get-league-stats edge function.
+function zoneOf(x: number, y: number): string {
+  const distance = Math.sqrt(x * x + y * y);
+  if (distance <= 40) return 'Restricted Area';
+  if (distance <= 80) return 'Paint';
+  if (distance <= 140) return 'Mid Range';
+  if (y > 140) {
+    if (x < -80) return 'Left Corner 3';
+    if (x > 80) return 'Right Corner 3';
+    return 'Above the Break 3';
+  }
+  return 'Long 2';
+}
+
+const cache = new Map<string, Promise<LeagueStats>>();
+
 export class LeagueStatsService {
   /**
-   * Get pre-computed league statistics from Edge Function
+   * League statistics computed in the browser from the season's static shot file.
    */
-  static async getLeagueStats(season: string): Promise<LeagueStats> {
-    try {
-      console.log(`📊 LeagueStatsService: Fetching stats for ${season}`);
-      
-      const response = await fetch('https://icfqngdeohzzjvzcmawo.supabase.co/functions/v1/get-league-stats', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZnFuZ2Rlb2h6emp2emNtYXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjY3NTgsImV4cCI6MjA3MjYwMjc1OH0.NQfIrtGzH60IwDJ0VJEq4XyLq36HHI2y9CyWZ9aLmNE`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ season }),
+  static getLeagueStats(season: string): Promise<LeagueStats> {
+    let stats = cache.get(season);
+    if (!stats) {
+      stats = this.compute(season).catch(error => {
+        console.error('Error computing league stats:', error);
+        cache.delete(season);
+        return this.getFallbackStats();
       });
-
-      if (!response.ok) {
-        throw new Error(`Edge function error: ${response.status}`);
-      }
-
-      const stats = await response.json();
-      console.log(`📊 LeagueStatsService: Got league stats:`, stats);
-      
-      // Add zone analysis (simplified for performance)
-      return {
-        ...stats,
-        hottestZone: "Restricted Area", // Placeholder - could be computed server-side
-        coldestZone: "Deep 3",
-        favoriteSpot: "Paint"
-      };
-    } catch (error) {
-      console.error('Error fetching league stats:', error);
-      // Return fallback stats
-      return this.getFallbackStats();
+      cache.set(season, stats);
     }
+    return stats;
   }
 
-  /**
-   * Fallback stats when Edge Function fails
-   */
+  private static async compute(season: string): Promise<LeagueStats> {
+    const shots = await loadSeason(season);
+    let made = 0, twoMade = 0, twoAtt = 0, threeMade = 0, threeAtt = 0;
+    const zones = new Map<string, { made: number; total: number }>();
+
+    for (const shot of shots) {
+      const isMade = shot.shotResult === 'Made';
+      if (isMade) made++;
+      if (shot.shotValue === 3) {
+        threeAtt++;
+        if (isMade) threeMade++;
+      } else {
+        twoAtt++;
+        if (isMade) twoMade++;
+      }
+      const zone = zoneOf(shot.xLegacy, shot.yLegacy);
+      const z = zones.get(zone) ?? { made: 0, total: 0 };
+      z.total++;
+      if (isMade) z.made++;
+      zones.set(zone, z);
+    }
+
+    const ranked = [...zones.entries()]
+      .filter(([, z]) => z.total >= 100)
+      .map(([zone, z]) => ({ zone, pct: z.made / z.total }))
+      .sort((a, b) => b.pct - a.pct);
+    const hottest = ranked[0];
+    const coldest = ranked[ranked.length - 1];
+    const favorite = [...zones.entries()].sort((a, b) => b[1].total - a[1].total)[0];
+
+    const total = shots.length;
+    return {
+      totalShots: total,
+      madeShots: made,
+      fieldGoalPercentage: total ? made / total : 0,
+      twoPointMade: twoMade,
+      twoPointAttempted: twoAtt,
+      twoPointPercentage: twoAtt ? twoMade / twoAtt : 0,
+      threePointMade: threeMade,
+      threePointAttempted: threeAtt,
+      threePointPercentage: threeAtt ? threeMade / threeAtt : 0,
+      hottestZone: hottest ? `${hottest.zone} (${(hottest.pct * 100).toFixed(1)}%)` : 'N/A',
+      coldestZone: coldest ? `${coldest.zone} (${(coldest.pct * 100).toFixed(1)}%)` : 'N/A',
+      favoriteSpot: favorite ? `${favorite[0]} (${favorite[1].total} shots)` : 'N/A',
+    };
+  }
+
   private static getFallbackStats(): LeagueStats {
     return {
       totalShots: 0,
@@ -67,9 +106,9 @@ export class LeagueStatsService {
       threePointMade: 0,
       threePointAttempted: 0,
       threePointPercentage: 0,
-      hottestZone: "No data",
-      coldestZone: "No data",
-      favoriteSpot: "No data"
+      hottestZone: 'No data',
+      coldestZone: 'No data',
+      favoriteSpot: 'No data',
     };
   }
 }

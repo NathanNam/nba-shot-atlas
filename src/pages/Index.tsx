@@ -7,10 +7,10 @@ import { useComparisonBatchShotData } from "@/hooks/useComparisonBatchShotData";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
-  const [selectedSeason, setSelectedSeason] = useState("2024-25");
+  const [selectedSeason, setSelectedSeason] = useState("2025-26");
   const [viewMode, setViewMode] = useState<"player" | "team">("player");
   const [isComparisonMode, setIsComparisonMode] = useState(false);
-  const [selectedSeason2, setSelectedSeason2] = useState("2023-24");
+  const [selectedSeason2, setSelectedSeason2] = useState("2024-25");
   
   
   // Cache selections for each view mode
@@ -81,7 +81,7 @@ const Index = () => {
                 selectedEntities.length > 1 ? (
                   // Two entities + comparison mode: Reorganized layout
                   <div className="space-y-6">
-                    {/* Row 1: Two shot charts for 2024-25 Season */}
+                    {/* Row 1: Two shot charts for the first season */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {selectedEntities.map((entity) => (
                         <ComponentLoader
@@ -95,7 +95,7 @@ const Index = () => {
                       ))}
                     </div>
                     
-                    {/* Row 2: Two shot charts for 2023-24 Season */}
+                    {/* Row 2: Two shot charts for the second season */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {selectedEntities.map((entity) => (
                         <ComponentLoader
@@ -233,7 +233,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
             <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-              NBA Shot Analytics • Data from 2013-2014 to 2024-2025 seasons
+              NBA Shot Analytics • Data from 2013-2014 to 2025-2026 seasons
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
               <span className="text-center">Built with modern web technologies</span>
