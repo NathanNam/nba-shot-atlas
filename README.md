@@ -1,4 +1,4 @@
-# Shot Atlas
+# The Shot Atlas
 
 **[theshotatlas.com](https://theshotatlas.com)**
 
