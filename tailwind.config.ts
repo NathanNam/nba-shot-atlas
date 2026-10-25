@@ -1,140 +1,51 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
+// Colours and fonts are CSS variables, defined in src/index.css.
 export default {
-	darkMode: ["class"],
-	content: [
-		"./pages/**/*.{ts,tsx}",
-		"./components/**/*.{ts,tsx}",
-		"./app/**/*.{ts,tsx}",
-		"./src/**/*.{ts,tsx}",
-	],
-	prefix: "",
+	content: ["./index.html", "./src/**/*.{ts,tsx}"],
 	theme: {
-		container: {
-			center: true,
-			padding: '2rem',
-			screens: {
-				'2xl': '1400px'
-			}
-		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-				'display': ['Inter', 'system-ui', 'sans-serif'],
-			},
-			fontSize: {
-				'xs': ['0.75rem', { lineHeight: '1rem' }],
-				'sm': ['0.875rem', { lineHeight: '1.25rem' }], 
-				'base': ['1rem', { lineHeight: '1.5rem' }],
-				'lg': ['1.125rem', { lineHeight: '1.75rem' }],
-				'xl': ['1.25rem', { lineHeight: '1.75rem' }],
-				'2xl': ['1.5rem', { lineHeight: '2rem' }],
-				'3xl': ['1.875rem', { lineHeight: '2.25rem' }],
-				// Mobile-first responsive sizes (clamp for fluid scaling)
-				'mobile-xs': ['clamp(0.75rem, 2vw, 0.8125rem)', { lineHeight: '1.125rem' }],
-				'mobile-sm': ['clamp(0.8125rem, 2.2vw, 0.875rem)', { lineHeight: '1.25rem' }],
-				'mobile-base': ['clamp(0.9375rem, 2.5vw, 1rem)', { lineHeight: '1.5rem' }],
-				'mobile-lg': ['clamp(1.0625rem, 3vw, 1.125rem)', { lineHeight: '1.625rem' }],
-				'mobile-xl': ['clamp(1.1875rem, 3.5vw, 1.25rem)', { lineHeight: '1.75rem' }],
-				'mobile-2xl': ['clamp(1.25rem, 4vw, 1.5rem)', { lineHeight: '2rem' }],
-				// Responsive sizes that scale better across devices
-				'fluid-sm': ['clamp(0.875rem, 2.5vw, 1rem)', { lineHeight: '1.5rem' }],
-				'fluid-base': ['clamp(1rem, 3vw, 1.125rem)', { lineHeight: '1.75rem' }],
-				'fluid-lg': ['clamp(1.125rem, 3.5vw, 1.25rem)', { lineHeight: '1.75rem' }],
-				'fluid-xl': ['clamp(1.25rem, 4vw, 1.5rem)', { lineHeight: '2rem' }],
-				'fluid-2xl': ['clamp(1.5rem, 5vw, 1.875rem)', { lineHeight: '2.25rem' }],
+				display: ["var(--font-display)"],
+				body: ["var(--font-body)"],
+				ui: ["var(--font-ui)"],
+				sans: ["var(--font-ui)"],
 			},
 			colors: {
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
-				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+				paper: "rgb(var(--paper) / <alpha-value>)",
+				panel: "rgb(var(--panel) / <alpha-value>)",
+				ink: "rgb(var(--ink) / <alpha-value>)",
+				"ink-2": "rgb(var(--ink-2) / <alpha-value>)",
+				"ink-3": "rgb(var(--ink-3) / <alpha-value>)",
+				rule: "rgb(var(--rule) / <alpha-value>)",
+				"rule-soft": "rgb(var(--rule-soft) / <alpha-value>)",
+				brand: "rgb(var(--brand) / <alpha-value>)",
+				good: "rgb(var(--good) / <alpha-value>)",
+				bad: "rgb(var(--bad) / <alpha-value>)",
+				series: {
+					1: "rgb(var(--series-1) / <alpha-value>)",
+					2: "rgb(var(--series-2) / <alpha-value>)",
 				},
-				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
-				},
-				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
-				},
-				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
-				},
-				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
-				},
-				popover: {
-					DEFAULT: 'hsl(var(--popover))',
-					foreground: 'hsl(var(--popover-foreground))'
-				},
-				card: {
-					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
-				},
-				/* NBA Theme Colors */
-				'nba-blue': {
-					DEFAULT: 'hsl(var(--nba-blue))',
-					foreground: 'hsl(var(--nba-blue-foreground))'
-				},
-				'court': {
-					background: 'hsl(var(--court-background))',
-					lines: 'hsl(var(--court-lines))',
-					restricted: 'hsl(var(--court-restricted))'
-				},
-				'heat': {
-					cold: 'hsl(var(--heat-cold))',
-					neutral: 'hsl(var(--heat-neutral))',
-					warm: 'hsl(var(--heat-warm))',
-					hot: 'hsl(var(--heat-hot))'
-				}
+				// shadcn primitives (popover, command) read these
+				border: "rgb(var(--rule-soft))",
+				input: "rgb(var(--rule-soft))",
+				ring: "rgb(var(--brand))",
+				background: "rgb(var(--paper))",
+				foreground: "rgb(var(--ink))",
+				popover: { DEFAULT: "rgb(var(--panel))", foreground: "rgb(var(--ink))" },
+				accent: { DEFAULT: "rgb(var(--rule-soft))", foreground: "rgb(var(--ink))" },
+				muted: { DEFAULT: "rgb(var(--rule-soft))", foreground: "rgb(var(--ink-2))" },
+				primary: { DEFAULT: "rgb(var(--ink))", foreground: "rgb(var(--paper))" },
+				secondary: { DEFAULT: "rgb(var(--rule-soft))", foreground: "rgb(var(--ink))" },
+				destructive: { DEFAULT: "rgb(var(--bad))", foreground: "rgb(var(--paper))" },
 			},
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				lg: "var(--radius)",
+				md: "calc(var(--radius) - 2px)",
+				sm: "calc(var(--radius) - 4px)",
 			},
-			keyframes: {
-				'accordion-down': {
-					from: { height: '0' },
-					to: { height: 'var(--radix-accordion-content-height)' }
-				},
-				'accordion-up': {
-					from: { height: 'var(--radix-accordion-content-height)' },
-					to: { height: '0' }
-				},
-				'fade-in': {
-					'0%': { opacity: '0', transform: 'translateY(10px)' },
-					'100%': { opacity: '1', transform: 'translateY(0)' }
-				},
-				'slide-up': {
-					'0%': { opacity: '0', transform: 'translateY(20px)' },
-					'100%': { opacity: '1', transform: 'translateY(0)' }
-				},
-				'bounce-subtle': {
-					'0%, 100%': { transform: 'translateY(0)' },
-					'50%': { transform: 'translateY(-5px)' }
-				},
-				'pulse-glow': {
-					'0%, 100%': { boxShadow: '0 0 20px hsl(var(--accent) / 0.2)' },
-					'50%': { boxShadow: '0 0 40px hsl(var(--accent) / 0.4)' }
-				}
-			},
-			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out',
-				'slide-up': 'slide-up 0.4s ease-out',
-				'bounce-subtle': 'bounce-subtle 0.6s ease-out',
-				'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
-			}
-		}
+		},
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [animate],
 } satisfies Config;

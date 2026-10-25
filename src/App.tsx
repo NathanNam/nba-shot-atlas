@@ -1,34 +1,13 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Lazy load heavy providers  
-const AppProviders = lazy(() => import("./AppProviders"));
-
-// Lazy load pages
-const Index = lazy(() => import("./pages/Index"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-
-// Import only essential components for initial load
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ErrorBoundary from "./components/ErrorBoundary";
-
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background">
-    <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
-  </div>
-);
+const Index = lazy(() => import('./pages/Index'));
 
 const App = () => (
   <ErrorBoundary>
-    <BrowserRouter>
-      <Suspense fallback={<LoadingFallback />}>
-        <AppProviders>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppProviders>
-      </Suspense>
-    </BrowserRouter>
+    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
+      <Index />
+    </Suspense>
   </ErrorBoundary>
 );
 
