@@ -68,6 +68,10 @@ push to `main`. The custom domain is set in the repo's Pages settings, with DNS 
 - `src/lib/`: `shotStats.ts` (percentages, court zones), `headline.ts` (the headline
   sentence), `teams.ts`
 - `src/services/staticData.ts`, `src/hooks/useData.ts`: loading the JSON files
-- `src/otel-client.ts`, `src/services/metricsIntegration.ts`, `nbaAnalyticsMetrics.ts`:
-  OpenTelemetry code, currently switched off (nothing imports it)
-- `supabase/`: the former Supabase backend, no longer used; to be removed
+
+## History
+
+The app began as a Lovable project on Supabase with browser OpenTelemetry. Both were
+removed in October 2026 when it became a static site; the Supabase backend
+(`supabase/`) and the telemetry code (`src/otel-client.ts`) are in the git history
+before that change if they are ever wanted again.

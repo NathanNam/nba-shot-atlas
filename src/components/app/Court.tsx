@@ -59,7 +59,7 @@ function hexPath(cx: number, cy: number, r: number): string {
 }
 
 /** Diverging colour from the theme: --hex-cold below the league, --hex-mid at it, --hex-hot above. */
-export function ppsColor(pps: number, league: number): string {
+function ppsColor(pps: number, league: number): string {
   const t = Math.max(-1, Math.min(1, (pps - league) / PPS_RANGE));
   const end = t < 0 ? '--hex-cold' : '--hex-hot';
   return `color-mix(in srgb, rgb(var(${end})) ${Math.round(Math.abs(t) * 100)}%, rgb(var(--hex-mid)))`;
