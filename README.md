@@ -1,4 +1,4 @@
-# Shot Quality
+# Shot Atlas
 
 Where NBA players and teams shoot from, and how well, season by season since
 2013-14. Each page opens with the finding in a headline, then the numbers

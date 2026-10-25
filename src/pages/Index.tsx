@@ -87,8 +87,8 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-rule bg-paper">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-8 gap-y-3">
-          <a href="./" className="font-display text-2xl leading-none whitespace-nowrap" aria-label="Shot Quality, home">
-            Shot <i className="text-brand">Quality</i>
+          <a href="./" className="font-display text-2xl leading-none whitespace-nowrap" aria-label="Shot Atlas, home">
+            Shot <i className="text-brand">Atlas</i>
           </a>
           <nav className="seg" aria-label="View">
             <button aria-pressed={view.mode === 'season'} onClick={() => update({ mode: 'season' })}>Season</button>
